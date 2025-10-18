@@ -39,57 +39,102 @@ public class api
         {
             if (string.IsNullOrEmpty(userid))
             {
+                Console.WriteLine("ERRO: UserID está vazio");
                 return false;
             }
 
-            Console.WriteLine($"Iniciando autenticação para usuário: {userid}");
+            Console.WriteLine($"=== INICIANDO AUTENTICAÇÃO ===");
+            Console.WriteLine($"Usuário: {userid}");
+            Console.WriteLine($"OwnerID: {this.ownerid}");
+            Console.WriteLine($"Secret: {this.secret?.Substring(0, 8)}...");
+            Console.WriteLine($"App Name: {this.name}");
 
-            // Preparar dados para autenticação KeyAuth
+            // Primeiro, inicializar a aplicação
+            Console.WriteLine("Passo 1: Inicializando aplicação...");
+            var initData = new
+            {
+                type = "init",
+                ownerid = this.ownerid,
+                name = this.name,
+                version = this.version
+            };
+
+            string initJson = JsonConvert.SerializeObject(initData);
+            var initContent = new StringContent(initJson, Encoding.UTF8, "application/json");
+            var initResponse = httpClient.PostAsync("https://keyauth.win/api/1.2/", initContent).Result;
+            string initResponseContent = initResponse.Content.ReadAsStringAsync().Result;
+            
+            Console.WriteLine($"Resposta de inicialização: {initResponseContent}");
+            Console.WriteLine($"Status inicialização: {initResponse.StatusCode}");
+
+            // Agora fazer o login
+            Console.WriteLine("Passo 2: Fazendo login...");
             var loginData = new
             {
                 type = "login",
                 username = userid,
-                password = "", // Sem senha para autenticação por IP
+                password = "",
                 ownerid = this.ownerid,
                 secret = this.secret
             };
 
             string jsonData = JsonConvert.SerializeObject(loginData);
+            Console.WriteLine($"Dados enviados: {jsonData}");
+            
             var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
 
             // Fazer requisição síncrona para o servidor KeyAuth
             var response = httpClient.PostAsync("https://keyauth.win/api/1.2/", content).Result;
             string responseContent = response.Content.ReadAsStringAsync().Result;
 
-            Console.WriteLine($"Resposta KeyAuth: {responseContent}");
+            Console.WriteLine($"=== RESPOSTA COMPLETA ===");
             Console.WriteLine($"Status Code: {response.StatusCode}");
+            Console.WriteLine($"Resposta: {responseContent}");
 
             if (response.IsSuccessStatusCode)
             {
                 var result = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseContent);
                 if (result != null)
                 {
-                    Console.WriteLine($"Resultado parseado: {string.Join(", ", result.Select(kv => $"{kv.Key}={kv.Value}"))}");
-                    
-                    if (result.ContainsKey("success") && result["success"] is bool success && success)
+                    Console.WriteLine($"Resultado parseado:");
+                    foreach (var kv in result)
                     {
-                        Console.WriteLine($"Autenticação bem-sucedida para usuário: {userid}");
-                        this.initialized = true;
-                        return true;
+                        Console.WriteLine($"  {kv.Key} = {kv.Value}");
                     }
-                    else if (result.ContainsKey("message"))
+                    
+                    if (result.ContainsKey("success"))
                     {
-                        Console.WriteLine($"Mensagem de erro: {result["message"]}");
+                        bool success = Convert.ToBoolean(result["success"]);
+                        Console.WriteLine($"Success: {success}");
+                        
+                        if (success)
+                        {
+                            Console.WriteLine($"✅ AUTENTICAÇÃO BEM-SUCEDIDA para usuário: {userid}");
+                            this.initialized = true;
+                            return true;
+                        }
+                        else
+                        {
+                            if (result.ContainsKey("message"))
+                            {
+                                Console.WriteLine($"❌ Erro: {result["message"]}");
+                            }
+                        }
                     }
                 }
             }
+            else
+            {
+                Console.WriteLine($"❌ Erro HTTP: {response.StatusCode}");
+            }
 
-            Console.WriteLine($"Falha na autenticação para usuário: {userid}");
+            Console.WriteLine($"❌ FALHA na autenticação para usuário: {userid}");
             return false;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Erro na autenticação: {ex.Message}");
+            Console.WriteLine($"❌ EXCEÇÃO na autenticação: {ex.Message}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
             return false;
         }
     }
