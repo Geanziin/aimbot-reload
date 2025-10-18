@@ -17,6 +17,12 @@ namespace WindowsFormsApp1
 {
 public class api
 {
+    // Instância estática do KeyAuth igual ao projeto de bypass
+    public static api KeyAuthApp = new api(
+        name: "x7 aimlock", // App name
+        ownerid: "IBz1XyIXTp", // Account ID
+        version: "1.0" // Application version
+    );
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
 
