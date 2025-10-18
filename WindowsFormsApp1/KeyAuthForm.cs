@@ -11,14 +11,14 @@ namespace WindowsFormsApp1
         private bool isAuthenticating = false;
 
         // Controles da interface
-        private Panel mainPanel;
-        private Label lblX7;
-        private Label lblPrivate;
-        private Label lblThankYou;
-        private TextBox txtUserID;
-        private Button btnEnter;
-        private Label lblStatus;
-        private ProgressBar progressBar;
+        private Panel mainPanel = null!;
+        private Label lblX7 = null!;
+        private Label lblPrivate = null!;
+        private Label lblThankYou = null!;
+        private TextBox txtUserID = null!;
+        private Button btnEnter = null!;
+        private Label lblStatus = null!;
+        private ProgressBar progressBar = null!;
 
         public KeyAuthForm(api keyAuthApp)
         {
@@ -88,8 +88,24 @@ namespace WindowsFormsApp1
             txtUserID.BackColor = Color.FromArgb(35, 35, 36);
             txtUserID.ForeColor = Color.White;
             txtUserID.BorderStyle = BorderStyle.FixedSingle;
-            txtUserID.PlaceholderText = "Enter your ID";
+            txtUserID.Text = "Enter your ID";
             txtUserID.TextAlign = HorizontalAlignment.Center;
+            txtUserID.ForeColor = Color.FromArgb(150, 150, 150);
+            
+            // Eventos para simular placeholder
+            txtUserID.Enter += (s, e) => {
+                if (txtUserID.Text == "Enter your ID") {
+                    txtUserID.Text = "";
+                    txtUserID.ForeColor = Color.White;
+                }
+            };
+            
+            txtUserID.Leave += (s, e) => {
+                if (string.IsNullOrWhiteSpace(txtUserID.Text)) {
+                    txtUserID.Text = "Enter your ID";
+                    txtUserID.ForeColor = Color.FromArgb(150, 150, 150);
+                }
+            };
 
             // Botão "Enter"
             btnEnter = new Button();
@@ -148,8 +164,12 @@ namespace WindowsFormsApp1
                 string userIP = await keyAuthApp.GetUserIP();
                 if (!string.IsNullOrEmpty(userIP))
                 {
-                    // Definir IP como placeholder do campo ID
-                    txtUserID.PlaceholderText = $"Your IP: {userIP}";
+                    // Definir IP como texto do campo ID se estiver vazio
+                    if (txtUserID.Text == "Enter your ID")
+                    {
+                        txtUserID.Text = $"Your IP: {userIP}";
+                        txtUserID.ForeColor = Color.FromArgb(150, 150, 150);
+                    }
                 }
             }
             catch (Exception ex)
@@ -163,7 +183,7 @@ namespace WindowsFormsApp1
             if (isAuthenticating) return;
 
             string userID = txtUserID.Text.Trim();
-            if (string.IsNullOrEmpty(userID))
+            if (string.IsNullOrEmpty(userID) || userID == "Enter your ID" || userID.StartsWith("Your IP:"))
             {
                 ShowError("Please enter your ID");
                 return;
