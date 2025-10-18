@@ -33,7 +33,7 @@ public class api
         this.httpClient = new HttpClient();
     }
 
-    public async Task<bool> Login(string userid)
+    public bool Login(string userid)
     {
         try
         {
@@ -43,32 +43,6 @@ public class api
             }
 
             Console.WriteLine($"Iniciando autenticação para usuário: {userid}");
-
-            // Primeiro, inicializar a aplicação no KeyAuth
-            var initData = new
-            {
-                type = "init",
-                ownerid = this.ownerid,
-                name = this.name,
-                version = this.version
-            };
-
-            string initJson = JsonConvert.SerializeObject(initData);
-            var initContent = new StringContent(initJson, Encoding.UTF8, "application/json");
-            var initResponse = await httpClient.PostAsync("https://keyauth.win/api/1.2/", initContent);
-            string initResponseContent = await initResponse.Content.ReadAsStringAsync();
-            
-            Console.WriteLine($"Resposta de inicialização: {initResponseContent}");
-
-            // Obter IP público do usuário
-            string userIP = await GetPublicIP();
-            if (string.IsNullOrEmpty(userIP))
-            {
-                Console.WriteLine("Não foi possível obter o IP público");
-                return false;
-            }
-
-            Console.WriteLine($"IP do usuário: {userIP}");
 
             // Preparar dados para autenticação KeyAuth
             var loginData = new
@@ -83,9 +57,9 @@ public class api
             string jsonData = JsonConvert.SerializeObject(loginData);
             var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
 
-            // Fazer requisição para o servidor KeyAuth
-            var response = await httpClient.PostAsync("https://keyauth.win/api/1.2/", content);
-            string responseContent = await response.Content.ReadAsStringAsync();
+            // Fazer requisição síncrona para o servidor KeyAuth
+            var response = httpClient.PostAsync("https://keyauth.win/api/1.2/", content).Result;
+            string responseContent = response.Content.ReadAsStringAsync().Result;
 
             Console.WriteLine($"Resposta KeyAuth: {responseContent}");
             Console.WriteLine($"Status Code: {response.StatusCode}");
@@ -120,59 +94,9 @@ public class api
         }
     }
 
-    private async Task<string?> GetPublicIP()
-    {
-        try
-        {
-            var response = await httpClient.GetStringAsync("https://api.ipify.org");
-            return response?.Trim();
-        }
-        catch
-        {
-            try
-            {
-                var response = await httpClient.GetStringAsync("https://ipinfo.io/ip");
-                return response?.Trim();
-            }
-            catch
-            {
-                return null;
-            }
-        }
-    }
-
     public bool IsInitialized()
     {
         return this.initialized;
-    }
-
-    public async Task<bool> TestConnection()
-    {
-        try
-        {
-            // Testar conexão básica com o servidor KeyAuth
-            var testData = new
-            {
-                type = "init",
-                ownerid = this.ownerid,
-                name = this.name,
-                version = this.version
-            };
-
-            string jsonData = JsonConvert.SerializeObject(testData);
-            var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
-
-            var response = await httpClient.PostAsync("https://keyauth.win/api/1.2/", content);
-            string responseContent = await response.Content.ReadAsStringAsync();
-
-            Console.WriteLine($"Teste de conexão KeyAuth: {responseContent}");
-            return response.IsSuccessStatusCode;
-        }
-        catch (Exception ex)
-        {
-            Console.WriteLine($"Erro no teste de conexão: {ex.Message}");
-            return false;
-        }
     }
 
     public void Dispose()

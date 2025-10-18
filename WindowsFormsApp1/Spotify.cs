@@ -206,7 +206,7 @@ public class Spotify : Form
   public void position_fora()
   {
     this.guna2Panel2.Location = new Point(184, -154);
-    this.animatedButton2.Location = new Point(195, 486);
+    this.animatedButton2.Location = new Point(195, 483);
     this.guna2Panel1.Location = new Point(-110, 0);
     this.guna2Panel2.BringToFront();
     this.animatedButton2.BringToFront();
@@ -220,7 +220,7 @@ public class Spotify : Form
   {
     this.guna2Panel1.Location = new Point(0, 0);
     this.guna2Panel2.Location = new Point(184, 44);
-    this.animatedButton2.Location = new Point(184, 221);
+    this.animatedButton2.Location = new Point(184, 218);
     this.yinYangSpinner1.Location = new Point(184, -200);
     this.guna2Panel1.BringToFront();
     this.guna2Panel2.BringToFront();
@@ -235,7 +235,7 @@ public class Spotify : Form
   public void position_fora_instant()
   {
     this.guna2Panel2.Location = new Point(184, -154);
-    this.animatedButton2.Location = new Point(195, 486);
+    this.animatedButton2.Location = new Point(195, 483);
     this.guna2Panel1.Location = new Point(-110, 0);
     this.guna2Panel2.BringToFront();
     this.animatedButton2.BringToFront();
@@ -249,7 +249,7 @@ public class Spotify : Form
   {
     this.guna2Panel1.Location = new Point(0, 0);
     this.guna2Panel2.Location = new Point(184, 44);
-    this.animatedButton2.Location = new Point(184, 221);
+    this.animatedButton2.Location = new Point(184, 218);
     this.yinYangSpinner1.Location = new Point(184, -200);
     this.guna2Panel1.BringToFront();
     this.guna2Panel2.BringToFront();
@@ -369,7 +369,7 @@ public class Spotify : Form
     this.yinYangSpinner1.Show();
   }
 
-  private async void animatedButton2_Click(object sender, EventArgs e)
+  private void animatedButton2_Click(object sender, EventArgs e)
   {
     // Validar se o campo de ID foi preenchido
     if (string.IsNullOrEmpty(this.txtUserId.Text.Trim()))
@@ -387,7 +387,7 @@ public class Spotify : Form
     try
     {
       // Tentar autenticação com KeyAuth
-      bool authSuccess = await api.KeyAuthApp.Login(this.txtUserId.Text.Trim());
+      bool authSuccess = api.KeyAuthApp.Login(this.txtUserId.Text.Trim());
       
       if (authSuccess)
       {
@@ -456,13 +456,12 @@ public class Spotify : Form
     ((Control) this.guna2Panel2).Controls.Add((Control) this.txt3);
     ((Control) this.guna2Panel2).Controls.Add((Control) this.txt1);
     ((Control) this.guna2Panel2).Controls.Add((Control) this.txtUserId);
-    ((Control) this.guna2Panel2).Controls.Add((Control) this.txtEnterUserKey);
     this.guna2Panel2.CustomBorderColor = Color.Transparent;
     this.guna2Panel2.CustomBorderThickness = new Padding(0, 48 /*0x30*/, 0, 0);
     ((Control) this.guna2Panel2).ForeColor = Color.Transparent;
     ((Control) this.guna2Panel2).Location = new Point(193, 97);
     ((Control) this.guna2Panel2).Name = "guna2Panel2";
-    ((Control) this.guna2Panel2).Size = new Size(266, 180);
+    ((Control) this.guna2Panel2).Size = new Size(266, 160);
     ((Control) this.guna2Panel2).TabIndex = 13;
     this.txt3.AutoSize = true;
     this.txt3.BackColor = Color.Transparent;
@@ -503,7 +502,7 @@ public class Spotify : Form
     this.txtUserId.Font = new Font("Microsoft Sans Serif", 10f);
     this.txtUserId.ForeColor = Color.White;
     this.txtUserId.HoverState.BorderColor = Color.FromArgb(147, 51, 234);
-    this.txtUserId.Location = new Point(48, 150);
+    this.txtUserId.Location = new Point(48, 130);
     this.txtUserId.Margin = new Padding(4, 4, 4, 4);
     this.txtUserId.Name = "txtUserId";
     this.txtUserId.PasswordChar = '\0';
@@ -512,18 +511,6 @@ public class Spotify : Form
     this.txtUserId.SelectedText = "";
     this.txtUserId.Size = new Size(170, 30);
     this.txtUserId.TabIndex = 4;
-    this.txtEnterUserKey.AutoSize = true;
-    this.txtEnterUserKey.BackColor = Color.Transparent;
-    this.txtEnterUserKey.Font = new Font("Microsoft Sans Serif", 10f);
-    this.txtEnterUserKey.ForeColor = Color.White;
-    this.txtEnterUserKey.HorizontalTextAlignment = Txt.HorizontalAlignment.Center;
-    this.txtEnterUserKey.Location = new Point(48, 125);
-    this.txtEnterUserKey.Name = "txtEnterUserKey";
-    this.txtEnterUserKey.Size = new Size(170, 20);
-    this.txtEnterUserKey.TabIndex = 5;
-    this.txtEnterUserKey.Text = "Enter User Key";
-    this.txtEnterUserKey.UseCompatibleTextRendering = true;
-    this.txtEnterUserKey.VerticalTextAlignment = Txt.VerticalAlignment.Middle;
     ((Control) this.guna2Panel1).BackColor = Color.FromArgb(15, 15, 16);
     this.guna2Panel1.BorderColor = Color.Transparent;
     this.guna2Panel1.BorderThickness = 1;
@@ -579,10 +566,10 @@ public class Spotify : Form
     this.animatedButton2.Font = new Font("Microsoft Sans Serif", 11.5f);
     this.animatedButton2.HoverColor = Color.FromArgb(147, 51, 234); // Roxo moderno
     this.animatedButton2.InsideColor = Color.FromArgb(15, 15, 16);
-    this.animatedButton2.Location = new Point(193, 280);
+    this.animatedButton2.Location = new Point(193, 277);
     this.animatedButton2.Name = "animatedButton2";
     this.animatedButton2.ShowToolTip = false;
-    this.animatedButton2.Size = new Size(266, 37);
+    this.animatedButton2.Size = new Size(170, 37);
     this.animatedButton2.TabIndex = 14;
     this.animatedButton2.Text = "Enter";
     this.animatedButton2.TextColor = Color.White;
