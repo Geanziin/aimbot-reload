@@ -435,7 +435,6 @@ public class api
             
             using (WebClient client = new WebClient())
             {
-                client.Timeout = 10000; // 10 segundos
                 client.Headers.Add("User-Agent", "KeyAuth/1.0");
                 
                 // Teste simples de conectividade
@@ -473,7 +472,6 @@ public class api
                 
                 using (WebClient client = new WebClient())
                 {
-                    client.Timeout = 5000;
                     client.Headers.Add("User-Agent", "KeyAuth/1.0");
                     
                     byte[] testData = Encoding.UTF8.GetBytes("{\"type\":\"test\"}");
