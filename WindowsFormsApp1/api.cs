@@ -2,227 +2,115 @@
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using System.Windows.Forms;
-using Newtonsoft.Json.Linq;
+using Newtonsoft.Json;
 
-#nullable disable
 namespace WindowsFormsApp1;
 
 public class api
 {
-  private string name;
-  private string ownerid;
-  private string secret;
-  private string version;
-  private static readonly HttpClient client = new HttpClient();
-  private static readonly string apiUrl = "https://keyauth.win/api/1.2/";
-  
-  // Propriedades para controle de autenticação
-  public bool IsAuthenticated { get; private set; } = false;
-  public string UserIP { get; private set; } = "";
-  public string SessionID { get; private set; } = "";
+    private string name;
+    private string ownerid;
+    private string secret;
+    private string version;
+    private HttpClient httpClient;
+    private bool initialized = false;
 
-  public api(string name, string ownerid, string secret, string version)
-  {
-    this.name = name;
-    this.ownerid = ownerid;
-    this.secret = secret;
-    this.version = version;
-  }
+    public static api KeyAuthApp = new api(
+        name: "x7 aimlock", // App name
+        ownerid: "IBz1XyIXTp", // Account ID
+        secret: "bc10f3702f8d3295c9542895ea2ae21c053cc43cb219e2f46d212c3e258d8e7e", // Secret (opcional para autenticação por IP)
+        version: "1.0" // Application version
+    );
 
-  // Método para obter IP público do usuário
-  public async Task<string> GetUserIP()
-  {
-    try
+    public api(string name, string ownerid, string secret, string version)
     {
-      using (var httpClient = new HttpClient())
-      {
-        httpClient.Timeout = TimeSpan.FromSeconds(10);
-        var response = await httpClient.GetStringAsync("https://api.ipify.org");
-        UserIP = response.Trim();
-        return UserIP;
-      }
+        this.name = name;
+        this.ownerid = ownerid;
+        this.secret = secret;
+        this.version = version;
+        this.httpClient = new HttpClient();
     }
-    catch (Exception ex)
+
+    public async Task<bool> Login(string userid)
     {
-      MessageBox.Show($"Erro ao obter IP: {ex.Message}", "Erro de Conexão", MessageBoxButtons.OK, MessageBoxIcon.Error);
-      return "";
-    }
-  }
-
-  // Método principal de autenticação KeyAuth por IP
-  public async Task<bool> AuthenticateByIP()
-  {
-    try
-    {
-      // Obter IP do usuário
-      string userIP = await GetUserIP();
-      if (string.IsNullOrEmpty(userIP))
-      {
-        MessageBox.Show("Não foi possível obter seu IP. Verifique sua conexão com a internet.", "Erro de IP", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        return false;
-      }
-
-      // Preparar dados para autenticação
-      var authData = new
-      {
-        type = "login",
-        username = userIP, // Usar IP como username
-        password = "", // Sem senha necessária
-        ownerid = this.ownerid,
-        secret = this.secret,
-        version = this.version,
-        name = this.name
-      };
-
-      string jsonData = Newtonsoft.Json.JsonConvert.SerializeObject(authData);
-      var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
-
-      // Fazer requisição para KeyAuth
-      var response = await client.PostAsync(apiUrl, content);
-      string responseContent = await response.Content.ReadAsStringAsync();
-
-      if (response.IsSuccessStatusCode)
-      {
-        var jsonResponse = JObject.Parse(responseContent);
-        
-        if (jsonResponse["success"]?.ToString() == "true")
+        try
         {
-          IsAuthenticated = true;
-          SessionID = jsonResponse["sessionid"]?.ToString() ?? "";
-          
-          MessageBox.Show($"Autenticação bem-sucedida!\nIP autorizado: {userIP}", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-          return true;
+            if (string.IsNullOrEmpty(userid))
+            {
+                return false;
+            }
+
+            // Obter IP público do usuário
+            string userIP = await GetPublicIP();
+            if (string.IsNullOrEmpty(userIP))
+            {
+                return false;
+            }
+
+            // Preparar dados para autenticação por IP
+            var loginData = new
+            {
+                type = "login",
+                username = userid,
+                password = "", // Sem senha para autenticação por IP
+                ownerid = this.ownerid,
+                ip = userIP
+            };
+
+            string jsonData = JsonConvert.SerializeObject(loginData);
+            var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
+
+            // Fazer requisição para o servidor KeyAuth
+            var response = await httpClient.PostAsync("https://keyauth.win/api/1.2/", content);
+            string responseContent = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonConvert.DeserializeObject<dynamic>(responseContent);
+                if (result.success == true)
+                {
+                    this.initialized = true;
+                    return true;
+                }
+            }
+
+            return false;
         }
-        else
+        catch (Exception ex)
         {
-          string errorMessage = jsonResponse["message"]?.ToString() ?? "Erro desconhecido na autenticação";
-          MessageBox.Show($"Falha na autenticação: {errorMessage}\nSeu IP ({userIP}) não está autorizado.", "Acesso Negado", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-          return false;
+            Console.WriteLine($"Erro na autenticação: {ex.Message}");
+            return false;
         }
-      }
-      else
-      {
-        MessageBox.Show($"Erro na comunicação com KeyAuth: {response.StatusCode}", "Erro de Servidor", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        return false;
-      }
     }
-    catch (Exception ex)
+
+    private async Task<string> GetPublicIP()
     {
-      MessageBox.Show($"Erro durante autenticação: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-      return false;
+        try
+        {
+            var response = await httpClient.GetStringAsync("https://api.ipify.org");
+            return response.Trim();
+        }
+        catch
+        {
+            try
+            {
+                var response = await httpClient.GetStringAsync("https://ipinfo.io/ip");
+                return response.Trim();
+            }
+            catch
+            {
+                return null;
+            }
+        }
     }
-  }
 
-  // Método para verificar se a sessão ainda é válida
-  public async Task<bool> ValidateSession()
-  {
-    if (!IsAuthenticated || string.IsNullOrEmpty(SessionID))
-      return false;
-
-    try
+    public bool IsInitialized()
     {
-      var validateData = new
-      {
-        type = "validate",
-        sessionid = SessionID,
-        ownerid = this.ownerid,
-        secret = this.secret
-      };
-
-      string jsonData = Newtonsoft.Json.JsonConvert.SerializeObject(validateData);
-      var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
-
-      var response = await client.PostAsync(apiUrl, content);
-      string responseContent = await response.Content.ReadAsStringAsync();
-
-      if (response.IsSuccessStatusCode)
-      {
-        var jsonResponse = JObject.Parse(responseContent);
-        return jsonResponse["success"]?.ToString() == "true";
-      }
+        return this.initialized;
     }
-    catch (Exception ex)
+
+    public void Dispose()
     {
-      Console.WriteLine($"Erro ao validar sessão: {ex.Message}");
+        httpClient?.Dispose();
     }
-
-    return false;
-  }
-
-  // Método para fazer logout
-  public async Task Logout()
-  {
-    if (!IsAuthenticated || string.IsNullOrEmpty(SessionID))
-      return;
-
-    try
-    {
-      var logoutData = new
-      {
-        type = "logout",
-        sessionid = SessionID,
-        ownerid = this.ownerid,
-        secret = this.secret
-      };
-
-      string jsonData = Newtonsoft.Json.JsonConvert.SerializeObject(logoutData);
-      var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
-
-      await client.PostAsync(apiUrl, content);
-    }
-    catch (Exception ex)
-    {
-      Console.WriteLine($"Erro ao fazer logout: {ex.Message}");
-    }
-    finally
-    {
-      IsAuthenticated = false;
-      SessionID = "";
-      UserIP = "";
-    }
-  }
-
-  // Método para verificar status da aplicação
-  public async Task<bool> CheckAppStatus()
-  {
-    try
-    {
-      var statusData = new
-      {
-        type = "app",
-        ownerid = this.ownerid,
-        secret = this.secret
-      };
-
-      string jsonData = Newtonsoft.Json.JsonConvert.SerializeObject(statusData);
-      var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
-
-      var response = await client.PostAsync(apiUrl, content);
-      string responseContent = await response.Content.ReadAsStringAsync();
-
-      if (response.IsSuccessStatusCode)
-      {
-        var jsonResponse = JObject.Parse(responseContent);
-        return jsonResponse["success"]?.ToString() == "true";
-      }
-    }
-    catch (Exception ex)
-    {
-      Console.WriteLine($"Erro ao verificar status da aplicação: {ex.Message}");
-    }
-
-    return false;
-  }
-
-  // Métodos para acessar propriedades privadas
-  public string GetOwnerID() => this.ownerid;
-  public string GetSecret() => this.secret;
-  public string GetVersion() => this.version;
-  public string GetName() => this.name;
-
-  // Métodos para definir propriedades (para compatibilidade com KeyAuthForm)
-  public void SetAuthenticated(bool value) => this.IsAuthenticated = value;
-  public void SetSessionID(string value) => this.SessionID = value;
-  public void SetUserIP(string value) => this.UserIP = value;
 }
