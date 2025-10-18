@@ -77,7 +77,7 @@ public class api
                     }
                     else
                     {
-                        Console.WriteLine($"❌ Erro na inicialização: {result.ContainsKey("message") ? result["message"] : "Erro desconhecido"}");
+                        Console.WriteLine($"❌ Erro na inicialização: {(result.ContainsKey("message") ? result["message"] : "Erro desconhecido")}");
                     }
                 }
             }
