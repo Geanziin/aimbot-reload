@@ -34,8 +34,27 @@ public class api
         this.initialized = false;
         this.logged = false;
         
+        // Configurar console para mostrar logs
+        SetupConsoleLogging();
+        
         // Verificar arquitetura e configurações do sistema
         LogSystemInfo();
+    }
+
+    private void SetupConsoleLogging()
+    {
+        try
+        {
+            // Garantir que o console está disponível
+            Console.OutputEncoding = Encoding.UTF8;
+            Console.WriteLine("🔧 Console de debug configurado");
+            Console.WriteLine("📋 Logs detalhados habilitados");
+        }
+        catch (Exception ex)
+        {
+            // Se não conseguir configurar console, tentar MessageBox como fallback
+            System.Windows.Forms.MessageBox.Show($"Erro ao configurar console: {ex.Message}", "Debug Info", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+        }
     }
 
     private void LogSystemInfo()
@@ -80,32 +99,86 @@ public class api
 
     private string CreateInitData()
     {
-        var initData = new
+        try
         {
-            type = "init",
-            ver = this.version,
-            hash = "",
-            enckey = "",
-            name = this.name,
-            ownerid = this.ownerid
-        };
-        return JsonConvert.SerializeObject(initData);
+            Console.WriteLine("🔧 Criando dados de inicialização...");
+            Console.WriteLine($"📝 App Name: {this.name}");
+            Console.WriteLine($"🆔 Owner ID: {this.ownerid}");
+            Console.WriteLine($"🔑 Secret: {this.secret?.Substring(0, Math.Min(8, this.secret?.Length ?? 0))}...");
+            Console.WriteLine($"📦 Version: {this.version}");
+
+            // Validar credenciais
+            if (string.IsNullOrEmpty(this.name) || string.IsNullOrEmpty(this.ownerid) || string.IsNullOrEmpty(this.secret))
+            {
+                Console.WriteLine("❌ ERRO: Credenciais incompletas!");
+                Console.WriteLine($"Name vazio: {string.IsNullOrEmpty(this.name)}");
+                Console.WriteLine($"OwnerID vazio: {string.IsNullOrEmpty(this.ownerid)}");
+                Console.WriteLine($"Secret vazio: {string.IsNullOrEmpty(this.secret)}");
+                throw new ArgumentException("Credenciais KeyAuth incompletas");
+            }
+
+            var initData = new
+            {
+                type = "init",
+                ver = this.version,
+                hash = "",
+                enckey = "",
+                name = this.name,
+                ownerid = this.ownerid
+            };
+
+            string jsonData = JsonConvert.SerializeObject(initData);
+            Console.WriteLine($"✅ Dados de inicialização criados com sucesso");
+            Console.WriteLine($"📊 JSON gerado: {jsonData.Length} caracteres");
+            
+            return jsonData;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Erro ao criar dados de inicialização: {ex.Message}");
+            throw;
+        }
     }
 
     private bool ProcessInitResponse(string responseContent)
     {
+        Console.WriteLine("🔍 Processando resposta de inicialização...");
+        
         if (string.IsNullOrEmpty(responseContent))
         {
             Console.WriteLine("❌ Resposta vazia na inicialização");
+            Console.WriteLine("🔧 Possíveis causas:");
+            Console.WriteLine("   - Servidor KeyAuth não respondeu");
+            Console.WriteLine("   - Problema de conectividade");
+            Console.WriteLine("   - URL incorreta");
+            Console.WriteLine("   - Firewall bloqueando requisição");
             return false;
         }
+
+        Console.WriteLine($"📥 Resposta recebida: {responseContent.Length} caracteres");
+        Console.WriteLine($"📄 Conteúdo da resposta: {responseContent}");
 
         try
         {
             var jsonResult = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseContent);
-            if (jsonResult != null && jsonResult.ContainsKey("success"))
+            
+            if (jsonResult == null)
+            {
+                Console.WriteLine("❌ Falha ao deserializar JSON - resposta inválida");
+                return false;
+            }
+
+            Console.WriteLine("🔍 Analisando campos da resposta:");
+            foreach (var kv in jsonResult)
+            {
+                Console.WriteLine($"   {kv.Key}: {kv.Value}");
+            }
+
+            if (jsonResult.ContainsKey("success"))
             {
                 bool success = Convert.ToBoolean(jsonResult["success"]);
+                Console.WriteLine($"✅ Campo 'success' encontrado: {success}");
+                
                 if (success)
                 {
                     return SetInitSuccess(jsonResult);
@@ -115,14 +188,26 @@ public class api
                     return HandleInitError(jsonResult);
                 }
             }
+            else
+            {
+                Console.WriteLine("❌ Campo 'success' não encontrado na resposta");
+                Console.WriteLine("🔧 Resposta pode estar em formato incorreto");
+                return false;
+            }
         }
         catch (JsonException jsonEx)
         {
             Console.WriteLine($"❌ Erro ao processar JSON: {jsonEx.Message}");
+            Console.WriteLine($"🔧 Resposta pode não ser JSON válido");
+            Console.WriteLine($"📄 Resposta original: {responseContent}");
+            return false;
         }
-
-        Console.WriteLine("❌ Falha na inicialização da aplicação");
-        return false;
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Erro inesperado ao processar resposta: {ex.Message}");
+            Console.WriteLine($"📄 Resposta original: {responseContent}");
+            return false;
+        }
     }
 
     private bool SetInitSuccess(Dictionary<string, object> jsonResult)
@@ -320,6 +405,16 @@ public class api
         try
         {
             Console.WriteLine("🔗 Enviando requisição HTTP...");
+            Console.WriteLine($"🌐 URL: https://keyauth.win/api/1.0/");
+            Console.WriteLine($"📊 Tamanho dos dados: {jsonData.Length} bytes");
+            
+            // Testar conectividade primeiro
+            if (!TestConnectivity())
+            {
+                Console.WriteLine("❌ Falha no teste de conectividade");
+                return "";
+            }
+            
             return ExecuteHttpRequest(jsonData);
         }
         catch (WebException webEx)
@@ -330,6 +425,72 @@ public class api
         {
             return HandleGenericException(ex);
         }
+    }
+
+    private bool TestConnectivity()
+    {
+        try
+        {
+            Console.WriteLine("🔍 Testando conectividade com KeyAuth...");
+            
+            using (WebClient client = new WebClient())
+            {
+                client.Timeout = 10000; // 10 segundos
+                client.Headers.Add("User-Agent", "KeyAuth/1.0");
+                
+                // Teste simples de conectividade
+                string testUrl = "https://keyauth.win/api/1.0/";
+                byte[] testData = Encoding.UTF8.GetBytes("{\"type\":\"test\"}");
+                
+                byte[] response = client.UploadData(testUrl, "POST", testData);
+                Console.WriteLine("✅ Conectividade OK - Servidor respondeu");
+                return true;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Falha na conectividade: {ex.Message}");
+            Console.WriteLine($"🔧 Tentando URLs alternativas...");
+            
+            // Tentar URLs alternativas
+            return TestAlternativeUrls();
+        }
+    }
+
+    private bool TestAlternativeUrls()
+    {
+        string[] alternativeUrls = {
+            "https://keyauth.win/api/1.2/",
+            "https://keyauth.win/api/1.1/",
+            "https://keyauth.win/api/"
+        };
+
+        foreach (string url in alternativeUrls)
+        {
+            try
+            {
+                Console.WriteLine($"🔄 Testando URL alternativa: {url}");
+                
+                using (WebClient client = new WebClient())
+                {
+                    client.Timeout = 5000;
+                    client.Headers.Add("User-Agent", "KeyAuth/1.0");
+                    
+                    byte[] testData = Encoding.UTF8.GetBytes("{\"type\":\"test\"}");
+                    byte[] response = client.UploadData(url, "POST", testData);
+                    
+                    Console.WriteLine($"✅ URL alternativa funcionando: {url}");
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"❌ URL alternativa falhou: {url} - {ex.Message}");
+            }
+        }
+        
+        Console.WriteLine("❌ Todas as URLs falharam");
+        return false;
     }
 
     private string ExecuteHttpRequest(string jsonData)
