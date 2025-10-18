@@ -50,6 +50,7 @@ public class Spotify : Form
   private Guna2DragControl guna2DragControl1;
   private Main main1;
   private Guna2TextBox txtUserId;
+  private Txt txtEnterUserKey;
 
   [DllImport("kernel32.dll")]
   private static extern IntPtr OpenProcess(
@@ -431,6 +432,7 @@ public class Spotify : Form
     this.txt3 = new Txt();
     this.txt1 = new Txt();
     this.txtUserId = new Guna2TextBox();
+    this.txtEnterUserKey = new Txt();
     this.guna2Panel1 = new Guna2Panel();
     this.pictureBox1 = new PictureBox();
     this.pictureBox2 = new PictureBox();
@@ -451,10 +453,10 @@ public class Spotify : Form
     this.guna2Panel2.BorderColor = Color.Transparent;
     this.guna2Panel2.BorderRadius = 10;
     this.guna2Panel2.BorderThickness = 1;
-    ((Control) this.guna2Panel2).Controls.Add((Control) this.txt2);
     ((Control) this.guna2Panel2).Controls.Add((Control) this.txt3);
     ((Control) this.guna2Panel2).Controls.Add((Control) this.txt1);
     ((Control) this.guna2Panel2).Controls.Add((Control) this.txtUserId);
+    ((Control) this.guna2Panel2).Controls.Add((Control) this.txtEnterUserKey);
     this.guna2Panel2.CustomBorderColor = Color.Transparent;
     this.guna2Panel2.CustomBorderThickness = new Padding(0, 48 /*0x30*/, 0, 0);
     ((Control) this.guna2Panel2).ForeColor = Color.Transparent;
@@ -462,24 +464,12 @@ public class Spotify : Form
     ((Control) this.guna2Panel2).Name = "guna2Panel2";
     ((Control) this.guna2Panel2).Size = new Size(266, 180);
     ((Control) this.guna2Panel2).TabIndex = 13;
-    this.txt2.AutoSize = true;
-    this.txt2.BackColor = Color.Transparent;
-    this.txt2.Font = new Font("Microsoft Sans Serif", 11.25f, FontStyle.Regular, GraphicsUnit.Point, (byte) 0);
-    this.txt2.ForeColor = Color.White;
-    this.txt2.HorizontalTextAlignment = Txt.HorizontalAlignment.Center;
-    this.txt2.Location = new Point(48 /*0x30*/, 175);
-    this.txt2.Name = "txt2";
-    this.txt2.Size = new Size(170, 22);
-    this.txt2.TabIndex = 2;
-    this.txt2.Text = "Thank you for choosing.";
-    this.txt2.UseCompatibleTextRendering = true;
-    this.txt2.VerticalTextAlignment = Txt.VerticalAlignment.Middle;
     this.txt3.AutoSize = true;
     this.txt3.BackColor = Color.Transparent;
     this.txt3.Font = new Font("Microsoft Sans Serif", 14.5f);
     this.txt3.ForeColor = Color.FromArgb(147, 51, 234); // Roxo moderno
     this.txt3.HorizontalTextAlignment = Txt.HorizontalAlignment.Center;
-    this.txt3.Location = new Point(130, 96 /*0x60*/);
+    this.txt3.Location = new Point(135, 96 /*0x60*/);
     this.txt3.Name = "txt3";
     this.txt3.Size = new Size(48 /*0x30*/, 28);
     this.txt3.TabIndex = 3;
@@ -495,7 +485,7 @@ public class Spotify : Form
     this.txt1.Name = "txt1";
     this.txt1.Size = new Size(47, 28);
     this.txt1.TabIndex = 1;
-    this.txt1.Text = 	"x7";
+    this.txt1.Text = "x7";
     this.txt1.UseCompatibleTextRendering = true;
     this.txt1.VerticalTextAlignment = Txt.VerticalAlignment.Middle;
     this.txtUserId.BackColor = Color.FromArgb(25, 25, 26);
@@ -513,15 +503,27 @@ public class Spotify : Form
     this.txtUserId.Font = new Font("Microsoft Sans Serif", 10f);
     this.txtUserId.ForeColor = Color.White;
     this.txtUserId.HoverState.BorderColor = Color.FromArgb(147, 51, 234);
-    this.txtUserId.Location = new Point(48, 140);
+    this.txtUserId.Location = new Point(48, 150);
     this.txtUserId.Margin = new Padding(4, 4, 4, 4);
     this.txtUserId.Name = "txtUserId";
     this.txtUserId.PasswordChar = '\0';
     this.txtUserId.PlaceholderForeColor = Color.FromArgb(125, 125, 125);
-    this.txtUserId.PlaceholderText = "Digite seu ID de usuário";
+    this.txtUserId.PlaceholderText = "";
     this.txtUserId.SelectedText = "";
     this.txtUserId.Size = new Size(170, 30);
     this.txtUserId.TabIndex = 4;
+    this.txtEnterUserKey.AutoSize = true;
+    this.txtEnterUserKey.BackColor = Color.Transparent;
+    this.txtEnterUserKey.Font = new Font("Microsoft Sans Serif", 10f);
+    this.txtEnterUserKey.ForeColor = Color.White;
+    this.txtEnterUserKey.HorizontalTextAlignment = Txt.HorizontalAlignment.Center;
+    this.txtEnterUserKey.Location = new Point(48, 125);
+    this.txtEnterUserKey.Name = "txtEnterUserKey";
+    this.txtEnterUserKey.Size = new Size(170, 20);
+    this.txtEnterUserKey.TabIndex = 5;
+    this.txtEnterUserKey.Text = "Enter User Key";
+    this.txtEnterUserKey.UseCompatibleTextRendering = true;
+    this.txtEnterUserKey.VerticalTextAlignment = Txt.VerticalAlignment.Middle;
     ((Control) this.guna2Panel1).BackColor = Color.FromArgb(15, 15, 16);
     this.guna2Panel1.BorderColor = Color.Transparent;
     this.guna2Panel1.BorderThickness = 1;
