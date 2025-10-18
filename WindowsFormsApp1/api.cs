@@ -4,8 +4,6 @@ using System.Collections.Specialized;
 using System.Text;
 using System.Net;
 using System.IO;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Json;
 using System.Diagnostics;
 using System.Security.Principal;
 using System.Collections.Generic;
@@ -39,7 +37,7 @@ public class api
         /// <param name="name">Application Name</param>
         /// <param name="ownerid">Your OwnerID, found in your account settings.</param>
         /// <param name="version">Application Version, if version doesnt match it will open the download link you set up in your application settings and close the app, if empty the app will close</param>
-        public api(string name, string ownerid, string version, string path = null)
+        public api(string name, string ownerid, string version, string? path = null)
         {
             if (ownerid.Length != 10)
             {
@@ -57,43 +55,42 @@ public class api
         }
 
         #region structures
-        [DataContract]
         private class response_structure
         {
-            [DataMember]
+            [JsonProperty("success")]
             public bool success { get; set; }
 
-            [DataMember]
+            [JsonProperty("newSession")]
             public bool newSession { get; set; }
 
-            [DataMember]
+            [JsonProperty("sessionid")]
             public string sessionid { get; set; }
 
-            [DataMember]
+            [JsonProperty("contents")]
             public string contents { get; set; }
 
-            [DataMember]
+            [JsonProperty("response")]
             public string response { get; set; }
 
-            [DataMember]
+            [JsonProperty("message")]
             public string message { get; set; }
 
-            [DataMember]
+            [JsonProperty("ownerid")]
             public string ownerid { get; set; }
 
-            [DataMember]
+            [JsonProperty("download")]
             public string download { get; set; }
 
-            [DataMember(IsRequired = false, EmitDefaultValue = false)]
+            [JsonProperty("info")]
             public user_data_structure info { get; set; }
 
-            [DataMember(IsRequired = false, EmitDefaultValue = false)]
+            [JsonProperty("appinfo")]
             public app_data_structure appinfo { get; set; }
 
-            [DataMember]
+            [JsonProperty("messages")]
             public List<msg> messages { get; set; }
 
-            [DataMember]
+            [JsonProperty("users")]
             public List<users> users { get; set; }
         }
 
@@ -109,38 +106,36 @@ public class api
             public string credential { get; set; }
         }
 
-        [DataContract]
         private class user_data_structure
         {
-            [DataMember]
+            [JsonProperty("username")]
             public string username { get; set; }
 
-            [DataMember]
+            [JsonProperty("ip")]
             public string ip { get; set; }
-            [DataMember]
+            [JsonProperty("hwid")]
             public string hwid { get; set; }
-            [DataMember]
+            [JsonProperty("createdate")]
             public string createdate { get; set; }
-            [DataMember]
+            [JsonProperty("lastlogin")]
             public string lastlogin { get; set; }
-            [DataMember]
+            [JsonProperty("subscriptions")]
             public List<Data> subscriptions { get; set; } // array of subscriptions (basically multiple user ranks for user with individual expiry dates
         }
 
-        [DataContract]
         private class app_data_structure
         {
-            [DataMember]
+            [JsonProperty("numUsers")]
             public string numUsers { get; set; }
-            [DataMember]
+            [JsonProperty("numOnlineUsers")]
             public string numOnlineUsers { get; set; }
-            [DataMember]
+            [JsonProperty("numKeys")]
             public string numKeys { get; set; }
-            [DataMember]
+            [JsonProperty("version")]
             public string version { get; set; }
-            [DataMember]
+            [JsonProperty("customerPanelLink")]
             public string customerPanelLink { get; set; }
-            [DataMember]
+            [JsonProperty("downloadLink")]
             public string downloadLink { get; set; }
         }
         #endregion
@@ -192,7 +187,7 @@ public class api
                 TerminateProcess(GetCurrentProcess(), 1);
             }
 
-            var json = response_decoder.string_to_generic<response_structure>(response);
+            var json = JsonConvert.DeserializeObject<response_structure>(response);
             if (json.ownerid == ownerid)
             {
                 load_response_struct(json);
@@ -279,7 +274,7 @@ public class api
 
             var response = req(values_to_upload);
 
-            var json = response_decoder.string_to_generic<response_structure>(response);
+            var json = JsonConvert.DeserializeObject<response_structure>(response);
             if (json.ownerid == ownerid)
             {
                 GlobalAddAtom(seed);
@@ -309,7 +304,7 @@ public class api
 
             var response = req(values_to_upload);
 
-            var json = response_decoder.string_to_generic<response_structure>(response);
+            var json = JsonConvert.DeserializeObject<response_structure>(response);
             if (json.ownerid == ownerid)
             {
                 load_response_struct(json);
@@ -342,7 +337,7 @@ public class api
 
             var response = req(values_to_upload);
 
-            var json = response_decoder.string_to_generic<response_structure>(response);
+            var json = JsonConvert.DeserializeObject<response_structure>(response);
 
             if (json.ownerid == ownerid)
             {
@@ -376,7 +371,7 @@ public class api
 
             var response = req(values_to_upload);
 
-            var json = response_decoder.string_to_generic<response_structure>(response);
+            var json = JsonConvert.DeserializeObject<response_structure>(response);
             if (json.ownerid == ownerid)
             {
                 load_response_struct(json);
@@ -651,8 +646,6 @@ public class api
             response.message = data.message;
         }
         #endregion
-
-        private json_wrapper response_decoder = new json_wrapper(new response_structure());
     }
 
     public static class encryption
@@ -699,41 +692,6 @@ public class api
 
         public static string iv_key() =>
             Guid.NewGuid().ToString().Substring(0, 16);
-    }
-
-    public class json_wrapper
-    {
-        public static bool is_serializable(Type to_check) =>
-            to_check.IsSerializable || to_check.IsDefined(typeof(DataContractAttribute), true);
-
-        public json_wrapper(object obj_to_work_with)
-        {
-            current_object = obj_to_work_with;
-
-            var object_type = current_object.GetType();
-
-            serializer = new DataContractJsonSerializer(object_type);
-
-            if (!is_serializable(object_type))
-                throw new Exception($"the object {current_object} isn't a serializable");
-        }
-
-        public object string_to_object(string json)
-        {
-            var buffer = Encoding.Default.GetBytes(json);
-
-            //SerializationException = session expired
-
-            using (var mem_stream = new MemoryStream(buffer))
-                return serializer.ReadObject(mem_stream);
-        }
-
-        public T string_to_generic<T>(string json) =>
-            (T)string_to_object(json);
-
-        private DataContractJsonSerializer serializer;
-
-        private object current_object;
     }
 
     // Ed25519 implementation (simplified)
