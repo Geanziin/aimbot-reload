@@ -107,6 +107,9 @@ public class Spotify : Form
     this.position_fora_instant();
     this.hide_controls();
     
+    // Inicializar KeyAuth da mesma forma que o projeto de bypass
+    api.KeyAuthApp.init();
+    
     // Verificar privilégios de administrador
     this.CheckAdminPrivileges();
   }
@@ -371,11 +374,8 @@ public class Spotify : Form
 
   private void animatedButton2_Click(object sender, EventArgs e)
   {
-    // Proteção máxima contra crashes
     try
     {
-      LogMessage("🚀 INÍCIO DO PROCESSO DE LOGIN");
-      
       // Validar se o campo de ID foi preenchido
       if (string.IsNullOrEmpty(this.txtUserId?.Text?.Trim()))
       {
@@ -384,143 +384,55 @@ public class Spotify : Form
         return;
       }
 
-      LogMessage($"✅ Campo ID validado: '{this.txtUserId.Text.Trim()}'");
-
       // Desabilitar botão para evitar múltiplos cliques
       this.animatedButton2.Enabled = false;
-      LogMessage("🔒 Botão desabilitado para evitar múltiplos cliques");
       
       // Mostrar spinner de carregamento
       this.yinYangSpinner1.Location = new Point(184, 104);
       this.yinYangSpinner1.BringToFront();
       this.yinYangSpinner1.Show();
-      LogMessage("🔄 Spinner de carregamento ativado");
       
       // Processar eventos da UI
       Application.DoEvents();
 
-      LogMessage($"=== TENTATIVA DE LOGIN ===");
-      LogMessage($"ID inserido: '{this.txtUserId.Text.Trim()}'");
+      // Usar a implementação do KeyAuth igual ao projeto de bypass
+      api.KeyAuthApp.login(this.txtUserId.Text.Trim(), ""); // Usar ID como username, senha vazia
       
-      // Processar eventos da UI antes de continuar
-      Application.DoEvents();
-      
-      // Primeiro, inicializar a aplicação se não foi inicializada
-      if (!api.KeyAuthApp.IsInitialized())
+      if (api.KeyAuthApp.response.success)
       {
-        LogMessage("🔧 Inicializando aplicação KeyAuth...");
-        Application.DoEvents(); // Processar eventos da UI
-        
-        bool initSuccess = api.KeyAuthApp.Init();
-        LogMessage($"📊 Resultado da inicialização: {initSuccess}");
-        
-        if (!initSuccess)
-        {
-          LogMessage("❌ Falha na inicialização da aplicação!");
-          MessageBox.Show("Erro na inicialização da aplicação. Tente novamente.", "Erro de Inicialização", MessageBoxButtons.OK, MessageBoxIcon.Error);
-          return;
-        }
-        
-        LogMessage("✅ Inicialização bem-sucedida!");
-      }
-      else
-      {
-        LogMessage("✅ Aplicação já estava inicializada");
-      }
-      
-      // Processar eventos da UI antes do login
-      Application.DoEvents();
-      
-      // Tentar autenticação com KeyAuth
-      LogMessage("🔐 Iniciando processo de login...");
-      bool authSuccess = api.KeyAuthApp.Login(this.txtUserId.Text.Trim());
-      
-      LogMessage($"📊 Resultado da autenticação: {authSuccess}");
-      
-      if (authSuccess)
-      {
-        LogMessage("✅ Login bem-sucedido! Abrindo aplicação...");
         // Autenticação bem-sucedida - prosseguir para a aplicação
         this.position_fora_instant();
         this.main1.Location = new Point(0, 0);
         this.main1.BringToFront();
         this.main1.Show();
-        LogMessage("🎉 Aplicação principal aberta com sucesso!");
       }
       else
       {
-        LogMessage("❌ Login falhou!");
         // Falha na autenticação
-        MessageBox.Show("Falha na autenticação. Verifique seu ID de usuário e tente novamente.\n\nVerifique o console para mais detalhes.", "Erro de Autenticação", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        MessageBox.Show("Status: " + api.KeyAuthApp.response.message, "Erro de Autenticação", MessageBoxButtons.OK, MessageBoxIcon.Error);
         this.txtUserId.Focus();
       }
     }
-    catch (System.InvalidProgramException clrEx)
-    {
-      LogMessage($"❌ ERRO CLR DETECTADO: {clrEx.Message}");
-      LogMessage($"Stack trace: {clrEx.StackTrace}");
-      MessageBox.Show("Erro interno do sistema detectado. Reinicie a aplicação e tente novamente.", "Erro do Sistema", MessageBoxButtons.OK, MessageBoxIcon.Error);
-    }
-    catch (System.OutOfMemoryException memEx)
-    {
-      LogMessage($"❌ ERRO DE MEMÓRIA: {memEx.Message}");
-      MessageBox.Show("Erro de memória insuficiente. Feche outros programas e tente novamente.", "Erro de Memória", MessageBoxButtons.OK, MessageBoxIcon.Error);
-    }
-    catch (System.StackOverflowException stackEx)
-    {
-      LogMessage($"❌ ERRO DE STACK OVERFLOW: {stackEx.Message}");
-      MessageBox.Show("Erro de estouro de pilha. Reinicie a aplicação.", "Erro de Pilha", MessageBoxButtons.OK, MessageBoxIcon.Error);
-    }
     catch (Exception ex)
     {
-      LogMessage($"❌ EXCEÇÃO GERAL no botão Enter: {ex.Message}");
-      LogMessage($"Tipo da exceção: {ex.GetType().Name}");
-      LogMessage($"Stack trace: {ex.StackTrace}");
-      if (ex.InnerException != null)
-      {
-        LogMessage($"Exceção interna: {ex.InnerException.Message}");
-      }
-      MessageBox.Show($"Erro durante a autenticação: {ex.Message}\n\nVerifique o console para mais detalhes.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      MessageBox.Show($"Erro durante a autenticação: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
     finally
     {
       try
       {
-        LogMessage("🧹 Executando limpeza final...");
         // Esconder spinner e reabilitar botão
         this.yinYangSpinner1.Hide();
         this.animatedButton2.Enabled = true;
         Application.DoEvents();
-        LogMessage("✅ Limpeza final concluída");
       }
       catch (Exception finallyEx)
       {
-        LogMessage($"❌ Erro no finally: {finallyEx.Message}");
+        // Ignorar erros no finally
       }
     }
   }
 
-  private void LogMessage(string message)
-  {
-    try
-    {
-      // Tentar usar Console primeiro
-      Console.WriteLine(message);
-    }
-    catch
-    {
-      try
-      {
-        // Fallback para Debug
-        System.Diagnostics.Debug.WriteLine(message);
-      }
-      catch
-      {
-        // Se tudo falhar, usar MessageBox como último recurso
-        System.Windows.Forms.MessageBox.Show(message, "KeyAuth Debug", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
-      }
-    }
-  }
 
   protected override void Dispose(bool disposing)
   {
