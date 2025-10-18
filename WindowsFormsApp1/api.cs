@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Http;
+using System.IO;
+using System.Net;
 using System.Text;
-using System.Threading.Tasks;
 using Newtonsoft.Json;
 
 namespace WindowsFormsApp1;
@@ -17,7 +17,6 @@ public class api
     public string enckey;
     public bool initialized;
     public bool logged;
-    public HttpClient httpClient;
 
     public static api KeyAuthApp = new api(
         name: "x7 aimlock",
@@ -32,7 +31,6 @@ public class api
         this.ownerid = ownerid;
         this.secret = secret;
         this.version = version;
-        this.httpClient = new HttpClient();
         this.initialized = false;
         this.logged = false;
     }
@@ -42,11 +40,6 @@ public class api
         try
         {
             Console.WriteLine("=== INICIALIZANDO APLICAÇÃO ===");
-            
-            // Configurar HttpClient com timeout e headers adequados
-            httpClient.Timeout = TimeSpan.FromSeconds(30);
-            httpClient.DefaultRequestHeaders.Clear();
-            httpClient.DefaultRequestHeaders.Add("User-Agent", "KeyAuth/1.0");
             
             var initData = new
             {
@@ -61,24 +54,14 @@ public class api
             string jsonData = JsonConvert.SerializeObject(initData);
             Console.WriteLine($"Dados de inicialização: {jsonData}");
             
-            var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
+            string responseContent = SendHttpRequest(jsonData);
+            Console.WriteLine($"Resposta de inicialização: {responseContent}");
 
-            // Usar Task.Run para evitar deadlock
-            var task = Task.Run(async () =>
-            {
-                var response = await httpClient.PostAsync("https://keyauth.win/api/1.0/", content);
-                string responseContent = await response.Content.ReadAsStringAsync();
-                return new { Response = response, Content = responseContent };
-            });
-
-            var result = task.Result;
-            Console.WriteLine($"Resposta de inicialização: {result.Content}");
-
-            if (result.Response.IsSuccessStatusCode)
+            if (!string.IsNullOrEmpty(responseContent))
             {
                 try
                 {
-                    var jsonResult = JsonConvert.DeserializeObject<Dictionary<string, object>>(result.Content);
+                    var jsonResult = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseContent);
                     if (jsonResult != null && jsonResult.ContainsKey("success"))
                     {
                         bool success = Convert.ToBoolean(jsonResult["success"]);
@@ -101,10 +84,6 @@ public class api
                 {
                     Console.WriteLine($"❌ Erro ao processar JSON: {jsonEx.Message}");
                 }
-            }
-            else
-            {
-                Console.WriteLine($"❌ Erro HTTP: {result.Response.StatusCode}");
             }
 
             Console.WriteLine("❌ Falha na inicialização da aplicação");
@@ -156,27 +135,16 @@ public class api
             string jsonData = JsonConvert.SerializeObject(loginData);
             Console.WriteLine($"Dados enviados: {jsonData}");
             
-            var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
-
-            // Usar Task.Run para evitar deadlock
-            var task = Task.Run(async () =>
-            {
-                var response = await httpClient.PostAsync("https://keyauth.win/api/1.0/", content);
-                string responseContent = await response.Content.ReadAsStringAsync();
-                return new { Response = response, Content = responseContent };
-            });
-
-            var result = task.Result;
+            string responseContent = SendHttpRequest(jsonData);
 
             Console.WriteLine($"=== RESPOSTA DE LOGIN ===");
-            Console.WriteLine($"Status Code: {result.Response.StatusCode}");
-            Console.WriteLine($"Resposta: {result.Content}");
+            Console.WriteLine($"Resposta: {responseContent}");
 
-            if (result.Response.IsSuccessStatusCode)
+            if (!string.IsNullOrEmpty(responseContent))
             {
                 try
                 {
-                    var jsonResult = JsonConvert.DeserializeObject<Dictionary<string, object>>(result.Content);
+                    var jsonResult = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseContent);
                     if (jsonResult != null)
                     {
                         Console.WriteLine($"Resultado parseado:");
@@ -211,10 +179,6 @@ public class api
                     Console.WriteLine($"❌ Erro ao processar JSON: {jsonEx.Message}");
                 }
             }
-            else
-            {
-                Console.WriteLine($"❌ Erro HTTP: {result.Response.StatusCode}");
-            }
 
             Console.WriteLine($"❌ FALHA no login para usuário: {userid}");
             return false;
@@ -241,8 +205,56 @@ public class api
         return this.logged;
     }
 
-    public void Dispose()
+    private string SendHttpRequest(string jsonData)
     {
-        httpClient?.Dispose();
+        try
+        {
+            HttpWebRequest request = (HttpWebRequest)WebRequest.Create("https://keyauth.win/api/1.0/");
+            request.Method = "POST";
+            request.ContentType = "application/json";
+            request.UserAgent = "KeyAuth/1.0";
+            request.Timeout = 30000; // 30 segundos
+            
+            byte[] data = Encoding.UTF8.GetBytes(jsonData);
+            request.ContentLength = data.Length;
+            
+            using (Stream requestStream = request.GetRequestStream())
+            {
+                requestStream.Write(data, 0, data.Length);
+            }
+            
+            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
+            {
+                using (Stream responseStream = response.GetResponseStream())
+                {
+                    using (StreamReader reader = new StreamReader(responseStream))
+                    {
+                        return reader.ReadToEnd();
+                    }
+                }
+            }
+        }
+        catch (WebException webEx)
+        {
+            Console.WriteLine($"❌ Erro de rede: {webEx.Message}");
+            if (webEx.Response != null)
+            {
+                using (Stream responseStream = webEx.Response.GetResponseStream())
+                {
+                    using (StreamReader reader = new StreamReader(responseStream))
+                    {
+                        string errorResponse = reader.ReadToEnd();
+                        Console.WriteLine($"Resposta de erro: {errorResponse}");
+                        return errorResponse;
+                    }
+                }
+            }
+            return "";
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Erro na requisição HTTP: {ex.Message}");
+            return "";
+        }
     }
 }
