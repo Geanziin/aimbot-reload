@@ -127,7 +127,20 @@ public class api
             LogMessage("=== INICIALIZANDO APLICAÇÃO VIA API ===");
             LogMessage("🔄 Sempre buscando dados frescos da API KeyAuth...");
 
+            // Validar estado antes de continuar
+            if (this.initialized)
+            {
+                LogMessage("⚠️ Aplicação já foi inicializada anteriormente");
+                return true;
+            }
+
             string jsonData = CreateInitData();
+            if (string.IsNullOrEmpty(jsonData))
+            {
+                LogMessage("❌ Falha ao criar dados de inicialização");
+                return false;
+            }
+
             LogMessage($"📤 Dados de inicialização: {jsonData}");
 
             string responseContent = SendHttpRequest(jsonData);
@@ -137,6 +150,12 @@ public class api
         }
         catch (Exception ex)
         {
+            LogMessage($"❌ EXCEÇÃO CRÍTICA no Init: {ex.Message}");
+            LogMessage($"Tipo: {ex.GetType().Name}");
+            if (ex.InnerException != null)
+            {
+                LogMessage($"Exceção interna: {ex.InnerException.Message}");
+            }
             return HandleInitException(ex);
         }
     }
@@ -450,7 +469,14 @@ public class api
         {
             LogMessage("🔗 Enviando requisição HTTP...");
             LogMessage($"🌐 URL: https://keyauth.win/api/1.0/");
-            LogMessage($"📊 Tamanho dos dados: {jsonData.Length} bytes");
+            LogMessage($"📊 Tamanho dos dados: {jsonData?.Length ?? 0} bytes");
+            
+            // Validar dados de entrada
+            if (string.IsNullOrEmpty(jsonData))
+            {
+                LogMessage("❌ Dados JSON vazios para envio");
+                return "";
+            }
             
             // Testar conectividade primeiro
             if (!TestConnectivity())
@@ -463,10 +489,13 @@ public class api
         }
         catch (WebException webEx)
         {
+            LogMessage($"❌ WebException capturada: {webEx.Message}");
             return HandleWebException(webEx);
         }
         catch (Exception ex)
         {
+            LogMessage($"❌ Exceção genérica capturada: {ex.Message}");
+            LogMessage($"Tipo: {ex.GetType().Name}");
             return HandleGenericException(ex);
         }
     }
