@@ -1,10 +1,5 @@
-﻿// Decompiled with JetBrains decompiler
-// Type: WindowsFormsApp1.Program
-// Assembly: Spotify, Version=1.2.66.447, Culture=neutral, PublicKeyToken=null
-// MVID: 86D05C46-F66B-4354-A0DD-74F2377DCB52
-// Assembly location: C:\Users\gean\Desktop\Spotify.exe
-
-using System;
+﻿using System;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 #nullable disable
@@ -12,19 +7,79 @@ namespace WindowsFormsApp1;
 
 internal static class Program
 {
+  // Instância global do KeyAuth
+  public static api KeyAuthApp = new api(
+    name: "x7 aimlock", // App name
+    ownerid: "IBz1XyIXTp", // Account ID
+    secret: "YOUR_SECRET_KEY", // Secret key (substitua pela sua chave secreta)
+    version: "1.0" // Application version
+  );
+
   [STAThread]
-  private static void Main()
+  private static async void Main()
   {
     try
     {
       Application.EnableVisualStyles();
       Application.SetCompatibleTextRenderingDefault(false);
-      Application.Run((Form) new Spotify());
+
+      // Mostrar formulário de autenticação KeyAuth
+      using (var authForm = new KeyAuthForm(KeyAuthApp))
+      {
+        var authResult = authForm.ShowDialog();
+        
+        if (authResult == DialogResult.OK && KeyAuthApp.IsAuthenticated)
+        {
+          // Autenticação bem-sucedida, iniciar aplicação principal
+          Application.Run(new Spotify());
+        }
+        else
+        {
+          // Usuário cancelou ou falhou na autenticação
+          MessageBox.Show("Acesso negado. Aplicação será encerrada.", "Acesso Negado", 
+                        MessageBoxButtons.OK, MessageBoxIcon.Warning);
+          Environment.Exit(0);
+        }
+      }
     }
-    catch (Exception)
+    catch (Exception ex)
     {
-      // Em caso de erro, termina a aplicação
+      MessageBox.Show($"Erro crítico: {ex.Message}", "Erro", 
+                     MessageBoxButtons.OK, MessageBoxIcon.Error);
       Environment.Exit(1);
+    }
+  }
+
+  // Método para verificar periodicamente se a sessão ainda é válida
+  public static async Task<bool> ValidateKeyAuthSession()
+  {
+    if (KeyAuthApp == null || !KeyAuthApp.IsAuthenticated)
+      return false;
+
+    try
+    {
+      return await KeyAuthApp.ValidateSession();
+    }
+    catch (Exception ex)
+    {
+      Console.WriteLine($"Erro ao validar sessão KeyAuth: {ex.Message}");
+      return false;
+    }
+  }
+
+  // Método para fazer logout do KeyAuth
+  public static async Task LogoutKeyAuth()
+  {
+    if (KeyAuthApp != null && KeyAuthApp.IsAuthenticated)
+    {
+      try
+      {
+        await KeyAuthApp.Logout();
+      }
+      catch (Exception ex)
+      {
+        Console.WriteLine($"Erro ao fazer logout KeyAuth: {ex.Message}");
+      }
     }
   }
 }
