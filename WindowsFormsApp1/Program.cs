@@ -16,7 +16,7 @@ internal static class Program
   );
 
   [STAThread]
-  private static async void Main()
+  private static void Main()
   {
     try
     {

@@ -92,6 +92,7 @@
     <Compile Include="WindowsFormsApp1\Aimbot.cs" />
     <Compile Include="WindowsFormsApp1\api.cs" />
     <Compile Include="WindowsFormsApp1\Bypass.cs" />
+    <Compile Include="WindowsFormsApp1\KeyAuthForm.cs" />
     <Compile Include="WindowsFormsApp1\Spotify.cs" />
     <Compile Include="WindowsFormsApp1\Main.cs" />
     <Compile Include="WindowsFormsApp1\Program.cs" />
