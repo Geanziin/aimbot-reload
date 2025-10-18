@@ -214,4 +214,15 @@ public class api
 
     return false;
   }
+
+  // Métodos para acessar propriedades privadas
+  public string GetOwnerID() => this.ownerid;
+  public string GetSecret() => this.secret;
+  public string GetVersion() => this.version;
+  public string GetName() => this.name;
+
+  // Métodos para definir propriedades (para compatibilidade com KeyAuthForm)
+  public void SetAuthenticated(bool value) => this.IsAuthenticated = value;
+  public void SetSessionID(string value) => this.SessionID = value;
+  public void SetUserIP(string value) => this.UserIP = value;
 }

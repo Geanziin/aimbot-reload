@@ -11,7 +11,7 @@ internal static class Program
   public static api KeyAuthApp = new api(
     name: "x7 aimlock", // App name
     ownerid: "IBz1XyIXTp", // Account ID
-    secret: "YOUR_SECRET_KEY", // Secret key (substitua pela sua chave secreta)
+    secret: "bc10f3702f8d3295c9542895ea2ae21c053cc43cb219e2f46d212c3e258d8e7e", // Secret key
     version: "1.0" // Application version
   );
 
