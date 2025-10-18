@@ -43,6 +43,11 @@ public class api
         {
             Console.WriteLine("=== INICIALIZANDO APLICAÇÃO ===");
             
+            // Configurar HttpClient com timeout e headers adequados
+            httpClient.Timeout = TimeSpan.FromSeconds(30);
+            httpClient.DefaultRequestHeaders.Clear();
+            httpClient.DefaultRequestHeaders.Add("User-Agent", "KeyAuth/1.0");
+            
             var initData = new
             {
                 type = "init",
@@ -54,32 +59,52 @@ public class api
             };
 
             string jsonData = JsonConvert.SerializeObject(initData);
+            Console.WriteLine($"Dados de inicialização: {jsonData}");
+            
             var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
 
-            var response = httpClient.PostAsync("https://keyauth.win/api/1.2/", content).Result;
-            string responseContent = response.Content.ReadAsStringAsync().Result;
-
-            Console.WriteLine($"Resposta de inicialização: {responseContent}");
-
-            if (response.IsSuccessStatusCode)
+            // Usar Task.Run para evitar deadlock
+            var task = Task.Run(async () =>
             {
-                var result = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseContent);
-                if (result != null && result.ContainsKey("success"))
+                var response = await httpClient.PostAsync("https://keyauth.win/api/1.0/", content);
+                string responseContent = await response.Content.ReadAsStringAsync();
+                return new { Response = response, Content = responseContent };
+            });
+
+            var result = task.Result;
+            Console.WriteLine($"Resposta de inicialização: {result.Content}");
+
+            if (result.Response.IsSuccessStatusCode)
+            {
+                try
                 {
-                    bool success = Convert.ToBoolean(result["success"]);
-                    if (success)
+                    var jsonResult = JsonConvert.DeserializeObject<Dictionary<string, object>>(result.Content);
+                    if (jsonResult != null && jsonResult.ContainsKey("success"))
                     {
-                        this.sessionid = result.ContainsKey("sessionid") ? result["sessionid"].ToString() : "";
-                        this.enckey = result.ContainsKey("enckey") ? result["enckey"].ToString() : "";
-                        this.initialized = true;
-                        Console.WriteLine("✅ Aplicação inicializada com sucesso!");
-                        return true;
-                    }
-                    else
-                    {
-                        Console.WriteLine($"❌ Erro na inicialização: {(result.ContainsKey("message") ? result["message"] : "Erro desconhecido")}");
+                        bool success = Convert.ToBoolean(jsonResult["success"]);
+                        if (success)
+                        {
+                            this.sessionid = jsonResult.ContainsKey("sessionid") ? jsonResult["sessionid"].ToString() : "";
+                            this.enckey = jsonResult.ContainsKey("enckey") ? jsonResult["enckey"].ToString() : "";
+                            this.initialized = true;
+                            Console.WriteLine("✅ Aplicação inicializada com sucesso!");
+                            return true;
+                        }
+                        else
+                        {
+                            string errorMsg = jsonResult.ContainsKey("message") ? jsonResult["message"].ToString() : "Erro desconhecido";
+                            Console.WriteLine($"❌ Erro na inicialização: {errorMsg}");
+                        }
                     }
                 }
+                catch (JsonException jsonEx)
+                {
+                    Console.WriteLine($"❌ Erro ao processar JSON: {jsonEx.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"❌ Erro HTTP: {result.Response.StatusCode}");
             }
 
             Console.WriteLine("❌ Falha na inicialização da aplicação");
@@ -88,6 +113,11 @@ public class api
         catch (Exception ex)
         {
             Console.WriteLine($"❌ EXCEÇÃO na inicialização: {ex.Message}");
+            Console.WriteLine($"Tipo da exceção: {ex.GetType().Name}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Exceção interna: {ex.InnerException.Message}");
+            }
             return false;
         }
     }
@@ -111,7 +141,7 @@ public class api
             Console.WriteLine($"=== FAZENDO LOGIN ===");
             Console.WriteLine($"Usuário: {userid}");
             Console.WriteLine($"SessionID: {this.sessionid}");
-            Console.WriteLine($"Enckey: {this.enckey?.Substring(0, 8)}...");
+            Console.WriteLine($"Enckey: {this.enckey?.Substring(0, Math.Min(8, this.enckey?.Length ?? 0))}...");
 
             var loginData = new
             {
@@ -128,48 +158,62 @@ public class api
             
             var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
 
-            var response = httpClient.PostAsync("https://keyauth.win/api/1.2/", content).Result;
-            string responseContent = response.Content.ReadAsStringAsync().Result;
+            // Usar Task.Run para evitar deadlock
+            var task = Task.Run(async () =>
+            {
+                var response = await httpClient.PostAsync("https://keyauth.win/api/1.0/", content);
+                string responseContent = await response.Content.ReadAsStringAsync();
+                return new { Response = response, Content = responseContent };
+            });
+
+            var result = task.Result;
 
             Console.WriteLine($"=== RESPOSTA DE LOGIN ===");
-            Console.WriteLine($"Status Code: {response.StatusCode}");
-            Console.WriteLine($"Resposta: {responseContent}");
+            Console.WriteLine($"Status Code: {result.Response.StatusCode}");
+            Console.WriteLine($"Resposta: {result.Content}");
 
-            if (response.IsSuccessStatusCode)
+            if (result.Response.IsSuccessStatusCode)
             {
-                var result = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseContent);
-                if (result != null)
+                try
                 {
-                    Console.WriteLine($"Resultado parseado:");
-                    foreach (var kv in result)
+                    var jsonResult = JsonConvert.DeserializeObject<Dictionary<string, object>>(result.Content);
+                    if (jsonResult != null)
                     {
-                        Console.WriteLine($"  {kv.Key} = {kv.Value}");
-                    }
-                    
-                    if (result.ContainsKey("success"))
-                    {
-                        bool success = Convert.ToBoolean(result["success"]);
-                        Console.WriteLine($"Success: {success}");
-                        
-                        if (success)
+                        Console.WriteLine($"Resultado parseado:");
+                        foreach (var kv in jsonResult)
                         {
-                            this.logged = true;
-                            Console.WriteLine($"✅ LOGIN BEM-SUCEDIDO para usuário: {userid}");
-                            return true;
+                            Console.WriteLine($"  {kv.Key} = {kv.Value}");
                         }
-                        else
+                        
+                        if (jsonResult.ContainsKey("success"))
                         {
-                            if (result.ContainsKey("message"))
+                            bool success = Convert.ToBoolean(jsonResult["success"]);
+                            Console.WriteLine($"Success: {success}");
+                            
+                            if (success)
                             {
-                                Console.WriteLine($"❌ Erro: {result["message"]}");
+                                this.logged = true;
+                                Console.WriteLine($"✅ LOGIN BEM-SUCEDIDO para usuário: {userid}");
+                                return true;
+                            }
+                            else
+                            {
+                                if (jsonResult.ContainsKey("message"))
+                                {
+                                    Console.WriteLine($"❌ Erro: {jsonResult["message"]}");
+                                }
                             }
                         }
                     }
                 }
+                catch (JsonException jsonEx)
+                {
+                    Console.WriteLine($"❌ Erro ao processar JSON: {jsonEx.Message}");
+                }
             }
             else
             {
-                Console.WriteLine($"❌ Erro HTTP: {response.StatusCode}");
+                Console.WriteLine($"❌ Erro HTTP: {result.Response.StatusCode}");
             }
 
             Console.WriteLine($"❌ FALHA no login para usuário: {userid}");
@@ -178,7 +222,11 @@ public class api
         catch (Exception ex)
         {
             Console.WriteLine($"❌ EXCEÇÃO no login: {ex.Message}");
-            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            Console.WriteLine($"Tipo da exceção: {ex.GetType().Name}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Exceção interna: {ex.InnerException.Message}");
+            }
             return false;
         }
     }
