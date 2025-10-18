@@ -139,7 +139,7 @@ namespace WindowsFormsApp1
         public static Process GetProcessByName(string processName)
         {
             Process[] processes = Process.GetProcessesByName(processName);
-            return processes.Length > 0 ? processes[0] : null;
+            return processes.Length > 0 ? processes[0] : null!;
         }
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -66,8 +67,8 @@ public class api
 
             if (response.IsSuccessStatusCode)
             {
-                var result = JsonConvert.DeserializeObject<dynamic>(responseContent);
-                if (result.success == true)
+                var result = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseContent);
+                if (result != null && result.ContainsKey("success") && result["success"] is bool success && success)
                 {
                     this.initialized = true;
                     return true;
@@ -83,19 +84,19 @@ public class api
         }
     }
 
-    private async Task<string> GetPublicIP()
+    private async Task<string?> GetPublicIP()
     {
         try
         {
             var response = await httpClient.GetStringAsync("https://api.ipify.org");
-            return response.Trim();
+            return response?.Trim();
         }
         catch
         {
             try
             {
                 var response = await httpClient.GetStringAsync("https://ipinfo.io/ip");
-                return response.Trim();
+                return response?.Trim();
             }
             catch
             {

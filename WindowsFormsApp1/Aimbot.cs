@@ -1433,7 +1433,7 @@ public class Aimbot : UserControl
     }
   }
 
-  private async Task ApplyNoRecoilValues(bool activate)
+  private Task ApplyNoRecoilValues(bool activate)
   {
     try
     {
@@ -1524,6 +1524,8 @@ public class Aimbot : UserControl
       this.status.Text = $"Erro: {ex.Message}";
       throw;
     }
+    
+    return Task.CompletedTask;
   }
 
 
