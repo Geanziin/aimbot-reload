@@ -395,8 +395,8 @@ public class Spotify : Form
       // Processar eventos da UI
       Application.DoEvents();
 
-      // Usar a implementação do KeyAuth igual ao projeto de bypass
-      api.KeyAuthApp.login(this.txtUserId.Text.Trim(), ""); // Usar ID como username, senha vazia
+      // Usar o método login() com ID como username e senha padrão "1"
+      api.KeyAuthApp.login(this.txtUserId.Text.Trim(), "1"); // ID como username, senha padrão "1"
       
       if (api.KeyAuthApp.response.success)
       {
