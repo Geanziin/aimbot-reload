@@ -1,0 +1,136 @@
+name: Build Spotify - Costura + Protector
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: 🧾 Checkout código
+        uses: actions/checkout@v4
+
+      - name: ⚙️ Configurar .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '6.0.x'
+
+      - name: ⚙️ Configurar Visual Studio
+        uses: microsoft/setup-msbuild@v1.3
+
+      - name: 📦 Instalar NuGet CLI
+        run: choco install nuget.commandline -y
+
+      - name: 🔧 Configurar FodyWeavers.xml
+        shell: pwsh
+        run: |
+          Write-Host "🔧 Criando FodyWeavers.xml..."
+        
+          $xml = '<?xml version="1.0" encoding="utf-8"?>'
+          $xml += '<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">'
+          $xml += '  <Costura />'
+          $xml += '</Weavers>'
+        
+          $xml | Out-File -FilePath "FodyWeavers.xml" -Encoding UTF8 -Force
+          Write-Host "✅ FodyWeavers.xml configurado!"
+
+      - name: 🗑️ Limpar bin/obj
+        shell: pwsh
+        run: |
+          @("bin", "obj") | ForEach-Object {
+            if (Test-Path $_) { Remove-Item -Recurse -Force $_ -ErrorAction SilentlyContinue }
+          }
+
+      - name: 🔄 Restaurar dependências solução
+        shell: pwsh
+        run: |
+          nuget restore Spotify.sln -Verbosity detailed
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: 🔨 Compilar Release com Costura
+        shell: pwsh
+        run: |
+          msbuild Spotify.sln /p:Configuration=Release /p:Platform="Any CPU" /t:Rebuild /verbosity:minimal /p:UseSharedCompilation=false
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          if (!(Test-Path "bin\Release\Spotify.exe")) { Write-Host "❌ Executável não gerado"; exit 1 }
+
+      - name: 🛡️ Compilar Protector (Mono.Cecil)
+        shell: pwsh
+        run: |
+          if (!(Test-Path "Protector\Protector.csproj")) { Write-Host "❌ Projeto Protector não encontrado"; exit 1 }
+          dotnet restore Protector\Protector.csproj
+          dotnet build Protector\Protector.csproj -c Release -v minimal
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: 🛡️ Compilar Loader (Protector.Loader)
+        shell: pwsh
+        run: |
+          if (!(Test-Path "Protector.Loader\Protector.Loader.csproj")) { Write-Host "❌ Projeto Loader não encontrado"; exit 1 }
+          dotnet restore Protector.Loader\Protector.Loader.csproj
+          dotnet build Protector.Loader\Protector.Loader.csproj -c Release -v minimal
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          $global:loaderPath = (Get-ChildItem "Protector.Loader\bin\Release" -Recurse -Filter Protector.Loader.exe | Select-Object -First 1).FullName
+          if (!$global:loaderPath) { Write-Host "❌ Loader compilado não encontrado"; exit 1 }
+
+      - name: 🛡️ Aplicar Protector (empacotar Loader + payload)
+        shell: pwsh
+        run: |
+          $protExe = (Get-ChildItem "Protector\bin\Release" -Recurse -Filter Protector.exe | Select-Object -First 1).FullName
+          if (!$protExe) { Write-Host "❌ Protector.exe não encontrado"; exit 1 }
+          $input = "bin\Release\Spotify.exe"
+          $outDir = "bin\Protected"
+          if (!(Test-Path $outDir)) { New-Item -ItemType Directory -Path $outDir | Out-Null }
+          $output = "$outDir\Spotify.exe"
+          $loader = (Get-ChildItem "Protector.Loader\bin\Release" -Recurse -Filter Protector.Loader.exe | Select-Object -First 1).FullName
+          if (!$loader) { Write-Host "❌ Loader não encontrado"; exit 1 }
+          & $protExe $input $output $loader
+          if ($LASTEXITCODE -ne 0) { Write-Host "❌ Falha ao proteger"; exit 1 }
+
+      - name: 🔍 Verificar resultado protegido
+        shell: pwsh
+        run: |
+          $protected = "bin\Protected\Spotify.exe"
+          if (!(Test-Path $protected)) { Write-Host "❌ Arquivo protegido não gerado"; exit 1 }
+          $orig = (Get-Item "bin\Release\Spotify.exe").Length
+          $prot = (Get-Item $protected).Length
+          Write-Host "📊 Original: $([math]::Round($orig/1MB,2)) MB"
+          Write-Host "🛡️ Protegido: $([math]::Round($prot/1MB,2)) MB"
+
+      - name: 🧪 Teste de execução
+        shell: pwsh
+        run: |
+          function Test-Exe { param([string]$Path,[string]$Label)
+            Write-Host "📋 $Label"
+            $testDir = "test_$([guid]::NewGuid().ToString('N').Substring(0,8))"
+            try {
+              New-Item -ItemType Directory -Path $testDir | Out-Null
+              Copy-Item $Path "$testDir\Spotify.exe"
+              $p = Start-Process -FilePath "$testDir\Spotify.exe" -PassThru -WindowStyle Hidden -ErrorAction Stop
+              Start-Sleep -Seconds 2
+              if ($p -and !$p.HasExited) { Write-Host "✅ OK (PID $($p.Id))"; $p.Kill(); return $true } else { return $false }
+            } catch { Write-Host "❌ Erro: $($_.Exception.Message)"; return $false } finally { if (Test-Path $testDir) { Remove-Item -Recurse -Force $testDir -ErrorAction SilentlyContinue } }
+          }
+          $ok1 = Test-Exe "bin\Release\Spotify.exe" "RELEASE"
+          $ok2 = Test-Exe "bin\Protected\Spotify.exe" "PROTEGIDO"
+          if (-not $ok1 -or -not $ok2) { exit 1 }
+
+      - name: 📁 Upload Release
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotify-release
+          path: bin/Release/
+          retention-days: 30
+        if: always()
+
+      - name: 📁 Upload Protegido (Protector)
+        uses: actions/upload-artifact@v4
+        with:
+          name: spotify-protected-protector
+          path: bin/Protected/
+          retention-days: 90
+        if: always()

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Weavers xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="FodyWeavers.xsd">
+  <Costura />
+  <Obfuscator>
+    <HidePrivateApi>true</HidePrivateApi>
+    <HideStrings>true</HideStrings>
+    <HideNamespaces>true</HideNamespaces>
+    <HideClasses>true</HideClasses>
+    <HideMethods>true</HideMethods>
+    <HideFields>true</HideFields>
+    <RemoveMetadata>true</RemoveMetadata>
+    <RemoveDebugInfo>true</RemoveDebugInfo>
+    <RemoveSymbols>true</RemoveSymbols>
+    <FlattenNamespaces>true</FlattenNamespaces>
+    <RenameNamespaces>true</RenameNamespaces>
+    <RenameClasses>true</RenameClasses>
+    <RenameMethods>true</RenameMethods>
+    <RenameFields>true</RenameFields>
+    <ControlFlowObfuscation>true</ControlFlowObfuscation>
+    <StringEncryption>true</StringEncryption>
+    <AntiDebug>true</AntiDebug>
+    <AntiDump>true</AntiDump>
+    <AntiTamper>true</AntiTamper>
+  </Obfuscator>
+</Weavers>

@@ -1,0 +1,81 @@
+<project xmlns="http://confuser.codeplex.com" baseDir="." outputDir="bin\Protected">
+  
+  <!-- Config geral de paths de probe -->
+  <probe>
+    <paths>
+      <path>bin\Release</path>
+    </paths>
+  </probe>
+
+  <!-- Módulo principal a proteger -->
+  <module path="bin\Release\Spotify.exe" />
+
+  <!-- EXCEPTIONS (prioritárias) -->
+  <!-- Não renomear Program/Main e preservar Costura -->
+  <rule pattern="member('System.Void WindowsFormsApp1.Program::Main(System.String[])')" inherit="true">
+    <protection id="rename" action="remove" />
+  </rule>
+
+  <rule pattern="type('WindowsFormsApp1.Program')" inherit="true">
+    <protection id="rename" action="remove" />
+  </rule>
+
+  <rule pattern="namespace('Costura')" inherit="true">
+    <protection id="rename" action="remove" />
+    <protection id="ctrl flow" action="remove" />
+  </rule>
+
+  <!-- REGRA GLOBAL (aplicada a tudo) -->
+  <rule pattern="true" inherit="false">
+    <protection id="anti tamper" />
+    <protection id="anti debug" />
+    <protection id="anti dump" />
+    <protection id="anti ildasm" />
+
+    <protection id="constants">
+      <argument name="mode" value="dynamic" />
+      <argument name="decoderCount" value="5" />
+      <argument name="cfg" value="true" />
+    </protection>
+
+    <protection id="ctrl flow">
+      <argument name="type" value="switch" />
+      <argument name="intensity" value="high" />
+      <argument name="junk" value="true" />
+    </protection>
+
+    <protection id="ref proxy">
+      <argument name="mode" value="strong" />
+      <argument name="typeErasure" value="true" />
+      <argument name="depth" value="5" />
+    </protection>
+
+    <protection id="rename">
+      <argument name="mode" value="unicode" />
+      <argument name="password" value="SpotifyProtection2025" />
+      <argument name="renPublic" value="true" />
+      <argument name="flatten" value="true" />
+      <argument name="renameArgs" value="true" />
+    </protection>
+
+    <protection id="resources">
+      <argument name="mode" value="dynamic" />
+      <argument name="compress" value="true" />
+    </protection>
+
+    <protection id="watermark">
+      <argument name="msg" value="Protected by Neo-ConfuserEx" />
+      <argument name="key" value="StrongWatermark" />
+    </protection>
+
+    <protection id="invalid metadata" />
+    <protection id="harden" />
+  </rule>
+
+  <!-- Packer/Compressor -->
+  <packer id="compressor">
+    <argument name="compat" value="true" />
+  </packer>
+
+</project>
+

@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net48</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>Protector.Loader</AssemblyName>
+    <RootNamespace>Protector.Loader</RootNamespace>
+    <ApplicationIcon>..\Spotify.ico</ApplicationIcon>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="..\Spotify.ico" Pack="false" Visible="false" />
+  </ItemGroup>
+</Project>
