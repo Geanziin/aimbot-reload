@@ -45,15 +45,37 @@ public class api
     {
         try
         {
-            // Garantir que o console está disponível
-            Console.OutputEncoding = Encoding.UTF8;
-            Console.WriteLine("🔧 Console de debug configurado");
-            Console.WriteLine("📋 Logs detalhados habilitados");
+            // Para aplicações Windows Forms, usar Debug.WriteLine em vez de Console
+            System.Diagnostics.Debug.WriteLine("🔧 Sistema de debug configurado");
+            System.Diagnostics.Debug.WriteLine("📋 Logs detalhados habilitados");
+            
+            // Tentar alocar console se não existir
+            AllocateConsole();
         }
         catch (Exception ex)
         {
-            // Se não conseguir configurar console, tentar MessageBox como fallback
-            System.Windows.Forms.MessageBox.Show($"Erro ao configurar console: {ex.Message}", "Debug Info", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+            // Se não conseguir configurar, continuar sem console
+            System.Diagnostics.Debug.WriteLine($"⚠️ Console não disponível: {ex.Message}");
+        }
+    }
+
+    private void AllocateConsole()
+    {
+        try
+        {
+            // Tentar alocar console para aplicação Windows Forms
+            if (!System.Diagnostics.Debugger.IsAttached)
+            {
+                // Só alocar console se não estiver em debug mode
+                return;
+            }
+            
+            // Usar Debug.WriteLine para logs em aplicações Windows Forms
+            System.Diagnostics.Debug.WriteLine("🔧 Console alocado para debug");
+        }
+        catch
+        {
+            // Ignorar erros de alocação de console
         }
     }
 
@@ -61,18 +83,40 @@ public class api
     {
         try
         {
-            Console.WriteLine("=== INFORMAÇÕES DO SISTEMA ===");
-            Console.WriteLine($"Arquitetura do processo: {Environment.Is64BitProcess}");
-            Console.WriteLine($"Arquitetura do sistema operacional: {Environment.Is64BitOperatingSystem}");
-            Console.WriteLine($"Versão do .NET Framework: {Environment.Version}");
-            Console.WriteLine($"Versão do sistema operacional: {Environment.OSVersion}");
-            Console.WriteLine($"Processador: {Environment.ProcessorCount} cores");
-            Console.WriteLine($"Memória disponível: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
-            Console.WriteLine("================================");
+            LogMessage("=== INFORMAÇÕES DO SISTEMA ===");
+            LogMessage($"Arquitetura do processo: {Environment.Is64BitProcess}");
+            LogMessage($"Arquitetura do sistema operacional: {Environment.Is64BitOperatingSystem}");
+            LogMessage($"Versão do .NET Framework: {Environment.Version}");
+            LogMessage($"Versão do sistema operacional: {Environment.OSVersion}");
+            LogMessage($"Processador: {Environment.ProcessorCount} cores");
+            LogMessage($"Memória disponível: {GC.GetTotalMemory(false) / 1024 / 1024} MB");
+            LogMessage("================================");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"⚠️ Erro ao obter informações do sistema: {ex.Message}");
+            LogMessage($"⚠️ Erro ao obter informações do sistema: {ex.Message}");
+        }
+    }
+
+    private void LogMessage(string message)
+    {
+        try
+        {
+            // Tentar usar Console primeiro
+            LogMessage(message);
+        }
+        catch
+        {
+            try
+            {
+                // Fallback para Debug
+                System.Diagnostics.Debug.WriteLine(message);
+            }
+            catch
+            {
+                // Se tudo falhar, usar MessageBox como último recurso
+                System.Windows.Forms.MessageBox.Show(message, "KeyAuth Debug", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+            }
         }
     }
 
@@ -80,14 +124,14 @@ public class api
     {
         try
         {
-            Console.WriteLine("=== INICIALIZANDO APLICAÇÃO VIA API ===");
-            Console.WriteLine("🔄 Sempre buscando dados frescos da API KeyAuth...");
+            LogMessage("=== INICIALIZANDO APLICAÇÃO VIA API ===");
+            LogMessage("🔄 Sempre buscando dados frescos da API KeyAuth...");
 
             string jsonData = CreateInitData();
-            Console.WriteLine($"📤 Dados de inicialização: {jsonData}");
+            LogMessage($"📤 Dados de inicialização: {jsonData}");
 
             string responseContent = SendHttpRequest(jsonData);
-            Console.WriteLine($"📥 Resposta de inicialização: {responseContent}");
+            LogMessage($"📥 Resposta de inicialização: {responseContent}");
 
             return ProcessInitResponse(responseContent);
         }
@@ -101,19 +145,19 @@ public class api
     {
         try
         {
-            Console.WriteLine("🔧 Criando dados de inicialização...");
-            Console.WriteLine($"📝 App Name: {this.name}");
-            Console.WriteLine($"🆔 Owner ID: {this.ownerid}");
-            Console.WriteLine($"🔑 Secret: {this.secret?.Substring(0, Math.Min(8, this.secret?.Length ?? 0))}...");
-            Console.WriteLine($"📦 Version: {this.version}");
+            LogMessage("🔧 Criando dados de inicialização...");
+            LogMessage($"📝 App Name: {this.name}");
+            LogMessage($"🆔 Owner ID: {this.ownerid}");
+            LogMessage($"🔑 Secret: {this.secret?.Substring(0, Math.Min(8, this.secret?.Length ?? 0))}...");
+            LogMessage($"📦 Version: {this.version}");
 
             // Validar credenciais
             if (string.IsNullOrEmpty(this.name) || string.IsNullOrEmpty(this.ownerid) || string.IsNullOrEmpty(this.secret))
             {
-                Console.WriteLine("❌ ERRO: Credenciais incompletas!");
-                Console.WriteLine($"Name vazio: {string.IsNullOrEmpty(this.name)}");
-                Console.WriteLine($"OwnerID vazio: {string.IsNullOrEmpty(this.ownerid)}");
-                Console.WriteLine($"Secret vazio: {string.IsNullOrEmpty(this.secret)}");
+                LogMessage("❌ ERRO: Credenciais incompletas!");
+                LogMessage($"Name vazio: {string.IsNullOrEmpty(this.name)}");
+                LogMessage($"OwnerID vazio: {string.IsNullOrEmpty(this.ownerid)}");
+                LogMessage($"Secret vazio: {string.IsNullOrEmpty(this.secret)}");
                 throw new ArgumentException("Credenciais KeyAuth incompletas");
             }
 
@@ -128,35 +172,35 @@ public class api
             };
 
             string jsonData = JsonConvert.SerializeObject(initData);
-            Console.WriteLine($"✅ Dados de inicialização criados com sucesso");
-            Console.WriteLine($"📊 JSON gerado: {jsonData.Length} caracteres");
+            LogMessage($"✅ Dados de inicialização criados com sucesso");
+            LogMessage($"📊 JSON gerado: {jsonData.Length} caracteres");
             
             return jsonData;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Erro ao criar dados de inicialização: {ex.Message}");
+            LogMessage($"❌ Erro ao criar dados de inicialização: {ex.Message}");
             throw;
         }
     }
 
     private bool ProcessInitResponse(string responseContent)
     {
-        Console.WriteLine("🔍 Processando resposta de inicialização...");
+        LogMessage("🔍 Processando resposta de inicialização...");
         
         if (string.IsNullOrEmpty(responseContent))
         {
-            Console.WriteLine("❌ Resposta vazia na inicialização");
-            Console.WriteLine("🔧 Possíveis causas:");
-            Console.WriteLine("   - Servidor KeyAuth não respondeu");
-            Console.WriteLine("   - Problema de conectividade");
-            Console.WriteLine("   - URL incorreta");
-            Console.WriteLine("   - Firewall bloqueando requisição");
+            LogMessage("❌ Resposta vazia na inicialização");
+            LogMessage("🔧 Possíveis causas:");
+            LogMessage("   - Servidor KeyAuth não respondeu");
+            LogMessage("   - Problema de conectividade");
+            LogMessage("   - URL incorreta");
+            LogMessage("   - Firewall bloqueando requisição");
             return false;
         }
 
-        Console.WriteLine($"📥 Resposta recebida: {responseContent.Length} caracteres");
-        Console.WriteLine($"📄 Conteúdo da resposta: {responseContent}");
+        LogMessage($"📥 Resposta recebida: {responseContent.Length} caracteres");
+        LogMessage($"📄 Conteúdo da resposta: {responseContent}");
 
         try
         {
@@ -164,20 +208,20 @@ public class api
             
             if (jsonResult == null)
             {
-                Console.WriteLine("❌ Falha ao deserializar JSON - resposta inválida");
+                LogMessage("❌ Falha ao deserializar JSON - resposta inválida");
                 return false;
             }
 
-            Console.WriteLine("🔍 Analisando campos da resposta:");
+            LogMessage("🔍 Analisando campos da resposta:");
             foreach (var kv in jsonResult)
             {
-                Console.WriteLine($"   {kv.Key}: {kv.Value}");
+                LogMessage($"   {kv.Key}: {kv.Value}");
             }
 
             if (jsonResult.ContainsKey("success"))
             {
                 bool success = Convert.ToBoolean(jsonResult["success"]);
-                Console.WriteLine($"✅ Campo 'success' encontrado: {success}");
+                LogMessage($"✅ Campo 'success' encontrado: {success}");
                 
                 if (success)
                 {
@@ -190,22 +234,22 @@ public class api
             }
             else
             {
-                Console.WriteLine("❌ Campo 'success' não encontrado na resposta");
-                Console.WriteLine("🔧 Resposta pode estar em formato incorreto");
+                LogMessage("❌ Campo 'success' não encontrado na resposta");
+                LogMessage("🔧 Resposta pode estar em formato incorreto");
                 return false;
             }
         }
         catch (JsonException jsonEx)
         {
-            Console.WriteLine($"❌ Erro ao processar JSON: {jsonEx.Message}");
-            Console.WriteLine($"🔧 Resposta pode não ser JSON válido");
-            Console.WriteLine($"📄 Resposta original: {responseContent}");
+            LogMessage($"❌ Erro ao processar JSON: {jsonEx.Message}");
+            LogMessage($"🔧 Resposta pode não ser JSON válido");
+            LogMessage($"📄 Resposta original: {responseContent}");
             return false;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Erro inesperado ao processar resposta: {ex.Message}");
-            Console.WriteLine($"📄 Resposta original: {responseContent}");
+            LogMessage($"❌ Erro inesperado ao processar resposta: {ex.Message}");
+            LogMessage($"📄 Resposta original: {responseContent}");
             return false;
         }
     }
@@ -215,24 +259,24 @@ public class api
         this.sessionid = jsonResult.ContainsKey("sessionid") ? jsonResult["sessionid"].ToString() : "";
         this.enckey = jsonResult.ContainsKey("enckey") ? jsonResult["enckey"].ToString() : "";
         this.initialized = true;
-        Console.WriteLine("✅ Aplicação inicializada com sucesso!");
+        LogMessage("✅ Aplicação inicializada com sucesso!");
         return true;
     }
 
     private bool HandleInitError(Dictionary<string, object> jsonResult)
     {
         string errorMsg = jsonResult.ContainsKey("message") ? jsonResult["message"].ToString() : "Erro desconhecido";
-        Console.WriteLine($"❌ Erro na inicialização: {errorMsg}");
+        LogMessage($"❌ Erro na inicialização: {errorMsg}");
         return false;
     }
 
     private bool HandleInitException(Exception ex)
     {
-        Console.WriteLine($"❌ EXCEÇÃO na inicialização: {ex.Message}");
-        Console.WriteLine($"Tipo da exceção: {ex.GetType().Name}");
+        LogMessage($"❌ EXCEÇÃO na inicialização: {ex.Message}");
+        LogMessage($"Tipo da exceção: {ex.GetType().Name}");
         if (ex.InnerException != null)
         {
-            Console.WriteLine($"Exceção interna: {ex.InnerException.Message}");
+            LogMessage($"Exceção interna: {ex.InnerException.Message}");
         }
         return false;
     }
@@ -244,18 +288,18 @@ public class api
             if (!ValidateLoginPreconditions(userid))
                 return false;
 
-            Console.WriteLine($"=== FAZENDO LOGIN ===");
-            Console.WriteLine($"Usuário: {userid}");
-            Console.WriteLine($"SessionID: {this.sessionid}");
-            Console.WriteLine($"Enckey: {this.enckey?.Substring(0, Math.Min(8, this.enckey?.Length ?? 0))}...");
+            LogMessage($"=== FAZENDO LOGIN ===");
+            LogMessage($"Usuário: {userid}");
+            LogMessage($"SessionID: {this.sessionid}");
+            LogMessage($"Enckey: {this.enckey?.Substring(0, Math.Min(8, this.enckey?.Length ?? 0))}...");
 
             string jsonData = CreateLoginData(userid);
-            Console.WriteLine($"Dados enviados: {jsonData}");
+            LogMessage($"Dados enviados: {jsonData}");
             
             string responseContent = SendHttpRequest(jsonData);
 
-            Console.WriteLine($"=== RESPOSTA DE LOGIN ===");
-            Console.WriteLine($"Resposta: {responseContent}");
+            LogMessage($"=== RESPOSTA DE LOGIN ===");
+            LogMessage($"Resposta: {responseContent}");
 
             return ProcessLoginResponse(responseContent, userid);
         }
@@ -269,13 +313,13 @@ public class api
     {
         if (!this.initialized)
         {
-            Console.WriteLine("❌ Aplicação não foi inicializada. Execute Init() primeiro.");
+            LogMessage("❌ Aplicação não foi inicializada. Execute Init() primeiro.");
             return false;
         }
 
         if (string.IsNullOrEmpty(userid))
         {
-            Console.WriteLine("❌ ERRO: UserID está vazio");
+            LogMessage("❌ ERRO: UserID está vazio");
             return false;
         }
 
@@ -300,7 +344,7 @@ public class api
     {
         if (string.IsNullOrEmpty(responseContent))
         {
-            Console.WriteLine($"❌ FALHA no login para usuário: {userid}");
+            LogMessage($"❌ FALHA no login para usuário: {userid}");
             return false;
         }
 
@@ -314,7 +358,7 @@ public class api
                 if (jsonResult.ContainsKey("success"))
                 {
                     bool success = Convert.ToBoolean(jsonResult["success"]);
-                    Console.WriteLine($"Success: {success}");
+                    LogMessage($"Success: {success}");
                     
                     if (success)
                     {
@@ -329,26 +373,26 @@ public class api
         }
         catch (JsonException jsonEx)
         {
-            Console.WriteLine($"❌ Erro ao processar JSON: {jsonEx.Message}");
+            LogMessage($"❌ Erro ao processar JSON: {jsonEx.Message}");
         }
 
-        Console.WriteLine($"❌ FALHA no login para usuário: {userid}");
+        LogMessage($"❌ FALHA no login para usuário: {userid}");
         return false;
     }
 
     private void LogLoginResponse(Dictionary<string, object> jsonResult)
     {
-        Console.WriteLine($"Resultado parseado:");
+        LogMessage($"Resultado parseado:");
         foreach (var kv in jsonResult)
         {
-            Console.WriteLine($"  {kv.Key} = {kv.Value}");
+            LogMessage($"  {kv.Key} = {kv.Value}");
         }
     }
 
     private bool SetLoginSuccess(string userid)
     {
         this.logged = true;
-        Console.WriteLine($"✅ LOGIN BEM-SUCEDIDO para usuário: {userid}");
+        LogMessage($"✅ LOGIN BEM-SUCEDIDO para usuário: {userid}");
         return true;
     }
 
@@ -356,18 +400,18 @@ public class api
     {
         if (jsonResult.ContainsKey("message"))
         {
-            Console.WriteLine($"❌ Erro: {jsonResult["message"]}");
+            LogMessage($"❌ Erro: {jsonResult["message"]}");
         }
         return false;
     }
 
     private bool HandleLoginException(Exception ex)
     {
-        Console.WriteLine($"❌ EXCEÇÃO no login: {ex.Message}");
-        Console.WriteLine($"Tipo da exceção: {ex.GetType().Name}");
+        LogMessage($"❌ EXCEÇÃO no login: {ex.Message}");
+        LogMessage($"Tipo da exceção: {ex.GetType().Name}");
         if (ex.InnerException != null)
         {
-            Console.WriteLine($"Exceção interna: {ex.InnerException.Message}");
+            LogMessage($"Exceção interna: {ex.InnerException.Message}");
         }
         return false;
     }
@@ -386,17 +430,17 @@ public class api
     {
         try
         {
-            Console.WriteLine("=== FAZENDO LOGOUT ===");
+            LogMessage("=== FAZENDO LOGOUT ===");
             this.logged = false;
             this.initialized = false;
             this.sessionid = null;
             this.enckey = null;
             
-            Console.WriteLine("✅ Logout realizado com sucesso!");
+            LogMessage("✅ Logout realizado com sucesso!");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Erro durante logout: {ex.Message}");
+            LogMessage($"❌ Erro durante logout: {ex.Message}");
         }
     }
 
@@ -404,14 +448,14 @@ public class api
     {
         try
         {
-            Console.WriteLine("🔗 Enviando requisição HTTP...");
-            Console.WriteLine($"🌐 URL: https://keyauth.win/api/1.0/");
-            Console.WriteLine($"📊 Tamanho dos dados: {jsonData.Length} bytes");
+            LogMessage("🔗 Enviando requisição HTTP...");
+            LogMessage($"🌐 URL: https://keyauth.win/api/1.0/");
+            LogMessage($"📊 Tamanho dos dados: {jsonData.Length} bytes");
             
             // Testar conectividade primeiro
             if (!TestConnectivity())
             {
-                Console.WriteLine("❌ Falha no teste de conectividade");
+                LogMessage("❌ Falha no teste de conectividade");
                 return "";
             }
             
@@ -431,7 +475,7 @@ public class api
     {
         try
         {
-            Console.WriteLine("🔍 Testando conectividade com KeyAuth...");
+            LogMessage("🔍 Testando conectividade com KeyAuth...");
             
             using (WebClient client = new WebClient())
             {
@@ -442,14 +486,14 @@ public class api
                 byte[] testData = Encoding.UTF8.GetBytes("{\"type\":\"test\"}");
                 
                 byte[] response = client.UploadData(testUrl, "POST", testData);
-                Console.WriteLine("✅ Conectividade OK - Servidor respondeu");
+                LogMessage("✅ Conectividade OK - Servidor respondeu");
                 return true;
             }
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ Falha na conectividade: {ex.Message}");
-            Console.WriteLine($"🔧 Tentando URLs alternativas...");
+            LogMessage($"❌ Falha na conectividade: {ex.Message}");
+            LogMessage($"🔧 Tentando URLs alternativas...");
             
             // Tentar URLs alternativas
             return TestAlternativeUrls();
@@ -468,7 +512,7 @@ public class api
         {
             try
             {
-                Console.WriteLine($"🔄 Testando URL alternativa: {url}");
+                LogMessage($"🔄 Testando URL alternativa: {url}");
                 
                 using (WebClient client = new WebClient())
                 {
@@ -477,17 +521,17 @@ public class api
                     byte[] testData = Encoding.UTF8.GetBytes("{\"type\":\"test\"}");
                     byte[] response = client.UploadData(url, "POST", testData);
                     
-                    Console.WriteLine($"✅ URL alternativa funcionando: {url}");
+                    LogMessage($"✅ URL alternativa funcionando: {url}");
                     return true;
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"❌ URL alternativa falhou: {url} - {ex.Message}");
+                LogMessage($"❌ URL alternativa falhou: {url} - {ex.Message}");
             }
         }
         
-        Console.WriteLine("❌ Todas as URLs falharam");
+        LogMessage("❌ Todas as URLs falharam");
         return false;
     }
 
@@ -500,8 +544,8 @@ public class api
         }
         catch (Exception webClientEx)
         {
-            Console.WriteLine($"⚠️ WebClient falhou: {webClientEx.Message}");
-            Console.WriteLine("🔄 Tentando com HttpWebRequest...");
+            LogMessage($"⚠️ WebClient falhou: {webClientEx.Message}");
+            LogMessage("🔄 Tentando com HttpWebRequest...");
             
             // Fallback para HttpWebRequest
             try
@@ -510,7 +554,7 @@ public class api
             }
             catch (Exception httpWebRequestEx)
             {
-                Console.WriteLine($"❌ HttpWebRequest também falhou: {httpWebRequestEx.Message}");
+                LogMessage($"❌ HttpWebRequest também falhou: {httpWebRequestEx.Message}");
                 throw; // Re-throw para ser capturado pelo catch principal
             }
         }
@@ -520,11 +564,11 @@ public class api
     {
         using (WebClient client = CreateWebClient())
         {
-            Console.WriteLine($"📤 Dados sendo enviados via WebClient: {jsonData}");
+            LogMessage($"📤 Dados sendo enviados via WebClient: {jsonData}");
             
             string response = client.UploadString("https://keyauth.win/api/1.0/", "POST", jsonData);
             
-            Console.WriteLine($"📥 Resposta recebida via WebClient: {response}");
+            LogMessage($"📥 Resposta recebida via WebClient: {response}");
             
             return response;
         }
@@ -532,7 +576,7 @@ public class api
 
     private string ExecuteWithHttpWebRequest(string jsonData)
     {
-        Console.WriteLine($"📤 Dados sendo enviados via HttpWebRequest: {jsonData}");
+        LogMessage($"📤 Dados sendo enviados via HttpWebRequest: {jsonData}");
         
         HttpWebRequest request = (HttpWebRequest)WebRequest.Create("https://keyauth.win/api/1.0/");
         request.Method = "POST";
@@ -557,7 +601,7 @@ public class api
                 using (StreamReader reader = new StreamReader(responseStream))
                 {
                     string responseContent = reader.ReadToEnd();
-                    Console.WriteLine($"📥 Resposta recebida via HttpWebRequest: {responseContent}");
+                    LogMessage($"📥 Resposta recebida via HttpWebRequest: {responseContent}");
                     return responseContent;
                 }
             }
@@ -575,8 +619,8 @@ public class api
 
     private string HandleWebException(WebException webEx)
     {
-        Console.WriteLine($"❌ Erro de rede: {webEx.Message}");
-        Console.WriteLine($"Status: {webEx.Status}");
+        LogMessage($"❌ Erro de rede: {webEx.Message}");
+        LogMessage($"Status: {webEx.Status}");
         
         if (webEx.Response != null)
         {
@@ -592,24 +636,24 @@ public class api
             using (var reader = new StreamReader(response.GetResponseStream()))
             {
                 string errorResponse = reader.ReadToEnd();
-                Console.WriteLine($"Resposta de erro: {errorResponse}");
+                LogMessage($"Resposta de erro: {errorResponse}");
                 return errorResponse;
             }
         }
         catch (Exception readEx)
         {
-            Console.WriteLine($"❌ Erro ao ler resposta de erro: {readEx.Message}");
+            LogMessage($"❌ Erro ao ler resposta de erro: {readEx.Message}");
             return "";
         }
     }
 
     private string HandleGenericException(Exception ex)
     {
-        Console.WriteLine($"❌ Erro na requisição HTTP: {ex.Message}");
-        Console.WriteLine($"Tipo: {ex.GetType().Name}");
+        LogMessage($"❌ Erro na requisição HTTP: {ex.Message}");
+        LogMessage($"Tipo: {ex.GetType().Name}");
         if (ex.InnerException != null)
         {
-            Console.WriteLine($"Exceção interna: {ex.InnerException.Message}");
+            LogMessage($"Exceção interna: {ex.InnerException.Message}");
         }
         return "";
     }
