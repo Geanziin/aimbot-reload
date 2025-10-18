@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json;
@@ -209,44 +208,42 @@ public class api
     {
         try
         {
-            HttpWebRequest request = (HttpWebRequest)WebRequest.Create("https://keyauth.win/api/1.0/");
-            request.Method = "POST";
-            request.ContentType = "application/json";
-            request.UserAgent = "KeyAuth/1.0";
-            request.Timeout = 30000; // 30 segundos
+            Console.WriteLine("🔗 Enviando requisição HTTP...");
             
-            byte[] data = Encoding.UTF8.GetBytes(jsonData);
-            request.ContentLength = data.Length;
-            
-            using (Stream requestStream = request.GetRequestStream())
+            using (WebClient client = new WebClient())
             {
-                requestStream.Write(data, 0, data.Length);
-            }
-            
-            using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-            {
-                using (Stream responseStream = response.GetResponseStream())
-                {
-                    using (StreamReader reader = new StreamReader(responseStream))
-                    {
-                        return reader.ReadToEnd();
-                    }
-                }
+                client.Headers.Add("Content-Type", "application/json");
+                client.Headers.Add("User-Agent", "KeyAuth/1.0");
+                client.Encoding = Encoding.UTF8;
+                
+                Console.WriteLine($"📤 Dados sendo enviados: {jsonData}");
+                
+                string response = client.UploadString("https://keyauth.win/api/1.0/", "POST", jsonData);
+                
+                Console.WriteLine($"📥 Resposta recebida: {response}");
+                
+                return response;
             }
         }
         catch (WebException webEx)
         {
             Console.WriteLine($"❌ Erro de rede: {webEx.Message}");
+            Console.WriteLine($"Status: {webEx.Status}");
+            
             if (webEx.Response != null)
             {
-                using (Stream responseStream = webEx.Response.GetResponseStream())
+                try
                 {
-                    using (StreamReader reader = new StreamReader(responseStream))
+                    using (var reader = new System.IO.StreamReader(webEx.Response.GetResponseStream()))
                     {
                         string errorResponse = reader.ReadToEnd();
                         Console.WriteLine($"Resposta de erro: {errorResponse}");
                         return errorResponse;
                     }
+                }
+                catch (Exception readEx)
+                {
+                    Console.WriteLine($"❌ Erro ao ler resposta de erro: {readEx.Message}");
                 }
             }
             return "";
@@ -254,6 +251,11 @@ public class api
         catch (Exception ex)
         {
             Console.WriteLine($"❌ Erro na requisição HTTP: {ex.Message}");
+            Console.WriteLine($"Tipo: {ex.GetType().Name}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Exceção interna: {ex.InnerException.Message}");
+            }
             return "";
         }
     }

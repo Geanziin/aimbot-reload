@@ -379,20 +379,31 @@ public class Spotify : Form
       return;
     }
 
+    // Desabilitar botão para evitar múltiplos cliques
+    this.animatedButton2.Enabled = false;
+    
     // Mostrar spinner de carregamento
     this.yinYangSpinner1.Location = new Point(184, 104);
     this.yinYangSpinner1.BringToFront();
     this.yinYangSpinner1.Show();
+    
+    // Processar eventos da UI
+    Application.DoEvents();
 
     try
     {
       Console.WriteLine($"=== TENTATIVA DE LOGIN ===");
       Console.WriteLine($"ID inserido: '{this.txtUserId.Text.Trim()}'");
       
+      // Processar eventos da UI antes de continuar
+      Application.DoEvents();
+      
       // Primeiro, inicializar a aplicação se não foi inicializada
       if (!api.KeyAuthApp.IsInitialized())
       {
         Console.WriteLine("Inicializando aplicação KeyAuth...");
+        Application.DoEvents(); // Processar eventos da UI
+        
         bool initSuccess = api.KeyAuthApp.Init();
         if (!initSuccess)
         {
@@ -401,6 +412,9 @@ public class Spotify : Form
           return;
         }
       }
+      
+      // Processar eventos da UI antes do login
+      Application.DoEvents();
       
       // Tentar autenticação com KeyAuth
       bool authSuccess = api.KeyAuthApp.Login(this.txtUserId.Text.Trim());
@@ -424,16 +438,29 @@ public class Spotify : Form
         this.txtUserId.Focus();
       }
     }
+    catch (System.InvalidProgramException clrEx)
+    {
+      Console.WriteLine($"❌ ERRO CLR DETECTADO: {clrEx.Message}");
+      Console.WriteLine($"Stack trace: {clrEx.StackTrace}");
+      MessageBox.Show("Erro interno do sistema detectado. Reinicie a aplicação e tente novamente.", "Erro do Sistema", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
     catch (Exception ex)
     {
       Console.WriteLine($"❌ EXCEÇÃO no botão Enter: {ex.Message}");
+      Console.WriteLine($"Tipo da exceção: {ex.GetType().Name}");
       Console.WriteLine($"Stack trace: {ex.StackTrace}");
+      if (ex.InnerException != null)
+      {
+        Console.WriteLine($"Exceção interna: {ex.InnerException.Message}");
+      }
       MessageBox.Show($"Erro durante a autenticação: {ex.Message}\n\nVerifique o console para mais detalhes.", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
     finally
     {
-      // Esconder spinner
+      // Esconder spinner e reabilitar botão
       this.yinYangSpinner1.Hide();
+      this.animatedButton2.Enabled = true;
+      Application.DoEvents();
     }
   }
 
