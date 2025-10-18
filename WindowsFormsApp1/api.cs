@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Net;
 using System.Text;
 using Newtonsoft.Json;
@@ -12,8 +13,8 @@ public class api
     public string ownerid;
     public string secret;
     public string version;
-    public string sessionid;
-    public string enckey;
+    public string? sessionid;
+    public string? enckey;
     public bool initialized;
     public bool logged;
 
@@ -410,7 +411,7 @@ public class api
     {
         try
         {
-            using (var reader = new System.IO.StreamReader(response.GetResponseStream()))
+            using (var reader = new StreamReader(response.GetResponseStream()))
             {
                 string errorResponse = reader.ReadToEnd();
                 Console.WriteLine($"Resposta de erro: {errorResponse}");
