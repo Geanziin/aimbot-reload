@@ -61,13 +61,14 @@ public class api
     {
         try
         {
-            Console.WriteLine("=== INICIALIZANDO APLICAÇÃO ===");
-            
+            Console.WriteLine("=== INICIALIZANDO APLICAÇÃO VIA API ===");
+            Console.WriteLine("🔄 Sempre buscando dados frescos da API KeyAuth...");
+
             string jsonData = CreateInitData();
-            Console.WriteLine($"Dados de inicialização: {jsonData}");
-            
+            Console.WriteLine($"📤 Dados de inicialização: {jsonData}");
+
             string responseContent = SendHttpRequest(jsonData);
-            Console.WriteLine($"Resposta de inicialização: {responseContent}");
+            Console.WriteLine($"📥 Resposta de inicialização: {responseContent}");
 
             return ProcessInitResponse(responseContent);
         }
@@ -294,6 +295,24 @@ public class api
     public bool IsLogged()
     {
         return this.logged;
+    }
+
+    public void Logout()
+    {
+        try
+        {
+            Console.WriteLine("=== FAZENDO LOGOUT ===");
+            this.logged = false;
+            this.initialized = false;
+            this.sessionid = null;
+            this.enckey = null;
+            
+            Console.WriteLine("✅ Logout realizado com sucesso!");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ Erro durante logout: {ex.Message}");
+        }
     }
 
     private string SendHttpRequest(string jsonData)
