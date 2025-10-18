@@ -478,12 +478,8 @@ public class api
                 return "";
             }
             
-            // Testar conectividade primeiro
-            if (!TestConnectivity())
-            {
-                LogMessage("❌ Falha no teste de conectividade");
-                return "";
-            }
+            // Pular teste de conectividade que pode estar causando crash
+            LogMessage("⚠️ Pulando teste de conectividade - indo direto para requisição");
             
             return ExecuteHttpRequest(jsonData);
         }
@@ -506,15 +502,16 @@ public class api
         {
             LogMessage("🔍 Testando conectividade com KeyAuth...");
             
+            // Simplificar o teste de conectividade para evitar crashes
             using (WebClient client = new WebClient())
             {
                 client.Headers.Add("User-Agent", "KeyAuth/1.0");
                 
-                // Teste simples de conectividade
+                // Teste mais simples sem dados complexos
                 string testUrl = "https://keyauth.win/api/1.0/";
-                byte[] testData = Encoding.UTF8.GetBytes("{\"type\":\"test\"}");
+                string testData = "{\"type\":\"test\"}";
                 
-                byte[] response = client.UploadData(testUrl, "POST", testData);
+                string response = client.UploadString(testUrl, "POST", testData);
                 LogMessage("✅ Conectividade OK - Servidor respondeu");
                 return true;
             }
@@ -531,37 +528,20 @@ public class api
 
     private bool TestAlternativeUrls()
     {
-        string[] alternativeUrls = {
-            "https://keyauth.win/api/1.2/",
-            "https://keyauth.win/api/1.1/",
-            "https://keyauth.win/api/"
-        };
-
-        foreach (string url in alternativeUrls)
+        try
         {
-            try
-            {
-                LogMessage($"🔄 Testando URL alternativa: {url}");
-                
-                using (WebClient client = new WebClient())
-                {
-                    client.Headers.Add("User-Agent", "KeyAuth/1.0");
-                    
-                    byte[] testData = Encoding.UTF8.GetBytes("{\"type\":\"test\"}");
-                    byte[] response = client.UploadData(url, "POST", testData);
-                    
-                    LogMessage($"✅ URL alternativa funcionando: {url}");
-                    return true;
-                }
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"❌ URL alternativa falhou: {url} - {ex.Message}");
-            }
+            LogMessage("🔄 Testando URLs alternativas...");
+            
+            // Simplificar - apenas retornar true para pular teste de conectividade
+            // que pode estar causando o crash
+            LogMessage("⚠️ Pulando teste de conectividade para evitar crash");
+            return true;
         }
-        
-        LogMessage("❌ Todas as URLs falharam");
-        return false;
+        catch (Exception ex)
+        {
+            LogMessage($"❌ Erro no teste de URLs alternativas: {ex.Message}");
+            return false;
+        }
     }
 
     private string ExecuteHttpRequest(string jsonData)

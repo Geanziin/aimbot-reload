@@ -371,23 +371,30 @@ public class Spotify : Form
 
   private void animatedButton2_Click(object sender, EventArgs e)
   {
+    // Proteção máxima contra crashes
     try
     {
+      LogMessage("🚀 INÍCIO DO PROCESSO DE LOGIN");
+      
       // Validar se o campo de ID foi preenchido
-      if (string.IsNullOrEmpty(this.txtUserId.Text.Trim()))
+      if (string.IsNullOrEmpty(this.txtUserId?.Text?.Trim()))
       {
         MessageBox.Show("Por favor, insira seu ID de usuário.", "Campo Obrigatório", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        this.txtUserId.Focus();
+        this.txtUserId?.Focus();
         return;
       }
 
+      LogMessage($"✅ Campo ID validado: '{this.txtUserId.Text.Trim()}'");
+
       // Desabilitar botão para evitar múltiplos cliques
       this.animatedButton2.Enabled = false;
+      LogMessage("🔒 Botão desabilitado para evitar múltiplos cliques");
       
       // Mostrar spinner de carregamento
       this.yinYangSpinner1.Location = new Point(184, 104);
       this.yinYangSpinner1.BringToFront();
       this.yinYangSpinner1.Show();
+      LogMessage("🔄 Spinner de carregamento ativado");
       
       // Processar eventos da UI
       Application.DoEvents();
@@ -401,25 +408,34 @@ public class Spotify : Form
       // Primeiro, inicializar a aplicação se não foi inicializada
       if (!api.KeyAuthApp.IsInitialized())
       {
-        LogMessage("Inicializando aplicação KeyAuth...");
+        LogMessage("🔧 Inicializando aplicação KeyAuth...");
         Application.DoEvents(); // Processar eventos da UI
         
         bool initSuccess = api.KeyAuthApp.Init();
+        LogMessage($"📊 Resultado da inicialização: {initSuccess}");
+        
         if (!initSuccess)
         {
           LogMessage("❌ Falha na inicialização da aplicação!");
           MessageBox.Show("Erro na inicialização da aplicação. Tente novamente.", "Erro de Inicialização", MessageBoxButtons.OK, MessageBoxIcon.Error);
           return;
         }
+        
+        LogMessage("✅ Inicialização bem-sucedida!");
+      }
+      else
+      {
+        LogMessage("✅ Aplicação já estava inicializada");
       }
       
       // Processar eventos da UI antes do login
       Application.DoEvents();
       
       // Tentar autenticação com KeyAuth
+      LogMessage("🔐 Iniciando processo de login...");
       bool authSuccess = api.KeyAuthApp.Login(this.txtUserId.Text.Trim());
       
-      LogMessage($"Resultado da autenticação: {authSuccess}");
+      LogMessage($"📊 Resultado da autenticação: {authSuccess}");
       
       if (authSuccess)
       {
@@ -429,6 +445,7 @@ public class Spotify : Form
         this.main1.Location = new Point(0, 0);
         this.main1.BringToFront();
         this.main1.Show();
+        LogMessage("🎉 Aplicação principal aberta com sucesso!");
       }
       else
       {
@@ -444,9 +461,19 @@ public class Spotify : Form
       LogMessage($"Stack trace: {clrEx.StackTrace}");
       MessageBox.Show("Erro interno do sistema detectado. Reinicie a aplicação e tente novamente.", "Erro do Sistema", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
+    catch (System.OutOfMemoryException memEx)
+    {
+      LogMessage($"❌ ERRO DE MEMÓRIA: {memEx.Message}");
+      MessageBox.Show("Erro de memória insuficiente. Feche outros programas e tente novamente.", "Erro de Memória", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+    catch (System.StackOverflowException stackEx)
+    {
+      LogMessage($"❌ ERRO DE STACK OVERFLOW: {stackEx.Message}");
+      MessageBox.Show("Erro de estouro de pilha. Reinicie a aplicação.", "Erro de Pilha", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
     catch (Exception ex)
     {
-      LogMessage($"❌ EXCEÇÃO no botão Enter: {ex.Message}");
+      LogMessage($"❌ EXCEÇÃO GERAL no botão Enter: {ex.Message}");
       LogMessage($"Tipo da exceção: {ex.GetType().Name}");
       LogMessage($"Stack trace: {ex.StackTrace}");
       if (ex.InnerException != null)
@@ -459,10 +486,12 @@ public class Spotify : Form
     {
       try
       {
+        LogMessage("🧹 Executando limpeza final...");
         // Esconder spinner e reabilitar botão
         this.yinYangSpinner1.Hide();
         this.animatedButton2.Enabled = true;
         Application.DoEvents();
+        LogMessage("✅ Limpeza final concluída");
       }
       catch (Exception finallyEx)
       {
