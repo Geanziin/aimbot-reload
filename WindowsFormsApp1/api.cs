@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,18 +9,21 @@ namespace WindowsFormsApp1;
 
 public class api
 {
-    private string name;
-    private string ownerid;
-    private string secret;
-    private string version;
-    private HttpClient httpClient;
-    private bool initialized = false;
+    public string name;
+    public string ownerid;
+    public string secret;
+    public string version;
+    public string sessionid;
+    public string enckey;
+    public bool initialized;
+    public bool logged;
+    public HttpClient httpClient;
 
     public static api KeyAuthApp = new api(
-        name: "x7 aimlock", // App name
-        ownerid: "IBz1XyIXTp", // Account ID
-        secret: "bc10f3702f8d3295c9542895ea2ae21c053cc43cb219e2f46d212c3e258d8e7e", // Secret (opcional para autenticação por IP)
-        version: "1.0" // Application version
+        name: "x7 aimlock",
+        ownerid: "IBz1XyIXTp",
+        secret: "bc10f3702f8d3295c9542895ea2ae21c053cc43cb219e2f46d212c3e258d8e7e",
+        version: "1.0"
     );
 
     public api(string name, string ownerid, string secret, string version)
@@ -31,51 +33,94 @@ public class api
         this.secret = secret;
         this.version = version;
         this.httpClient = new HttpClient();
+        this.initialized = false;
+        this.logged = false;
+    }
+
+    public bool Init()
+    {
+        try
+        {
+            Console.WriteLine("=== INICIALIZANDO APLICAÇÃO ===");
+            
+            var initData = new
+            {
+                type = "init",
+                ver = this.version,
+                hash = "",
+                enckey = "",
+                name = this.name,
+                ownerid = this.ownerid
+            };
+
+            string jsonData = JsonConvert.SerializeObject(initData);
+            var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
+
+            var response = httpClient.PostAsync("https://keyauth.win/api/1.2/", content).Result;
+            string responseContent = response.Content.ReadAsStringAsync().Result;
+
+            Console.WriteLine($"Resposta de inicialização: {responseContent}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonConvert.DeserializeObject<Dictionary<string, object>>(responseContent);
+                if (result != null && result.ContainsKey("success"))
+                {
+                    bool success = Convert.ToBoolean(result["success"]);
+                    if (success)
+                    {
+                        this.sessionid = result.ContainsKey("sessionid") ? result["sessionid"].ToString() : "";
+                        this.enckey = result.ContainsKey("enckey") ? result["enckey"].ToString() : "";
+                        this.initialized = true;
+                        Console.WriteLine("✅ Aplicação inicializada com sucesso!");
+                        return true;
+                    }
+                    else
+                    {
+                        Console.WriteLine($"❌ Erro na inicialização: {result.ContainsKey("message") ? result["message"] : "Erro desconhecido"}");
+                    }
+                }
+            }
+
+            Console.WriteLine("❌ Falha na inicialização da aplicação");
+            return false;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"❌ EXCEÇÃO na inicialização: {ex.Message}");
+            return false;
+        }
     }
 
     public bool Login(string userid)
     {
         try
         {
-            if (string.IsNullOrEmpty(userid))
+            if (!this.initialized)
             {
-                Console.WriteLine("ERRO: UserID está vazio");
+                Console.WriteLine("❌ Aplicação não foi inicializada. Execute Init() primeiro.");
                 return false;
             }
 
-            Console.WriteLine($"=== INICIANDO AUTENTICAÇÃO ===");
-            Console.WriteLine($"Usuário: {userid}");
-            Console.WriteLine($"OwnerID: {this.ownerid}");
-            Console.WriteLine($"Secret: {this.secret?.Substring(0, 8)}...");
-            Console.WriteLine($"App Name: {this.name}");
-
-            // Primeiro, inicializar a aplicação
-            Console.WriteLine("Passo 1: Inicializando aplicação...");
-            var initData = new
+            if (string.IsNullOrEmpty(userid))
             {
-                type = "init",
-                ownerid = this.ownerid,
-                name = this.name,
-                version = this.version
-            };
+                Console.WriteLine("❌ ERRO: UserID está vazio");
+                return false;
+            }
 
-            string initJson = JsonConvert.SerializeObject(initData);
-            var initContent = new StringContent(initJson, Encoding.UTF8, "application/json");
-            var initResponse = httpClient.PostAsync("https://keyauth.win/api/1.2/", initContent).Result;
-            string initResponseContent = initResponse.Content.ReadAsStringAsync().Result;
-            
-            Console.WriteLine($"Resposta de inicialização: {initResponseContent}");
-            Console.WriteLine($"Status inicialização: {initResponse.StatusCode}");
+            Console.WriteLine($"=== FAZENDO LOGIN ===");
+            Console.WriteLine($"Usuário: {userid}");
+            Console.WriteLine($"SessionID: {this.sessionid}");
+            Console.WriteLine($"Enckey: {this.enckey?.Substring(0, 8)}...");
 
-            // Agora fazer o login
-            Console.WriteLine("Passo 2: Fazendo login...");
             var loginData = new
             {
                 type = "login",
                 username = userid,
-                password = "",
-                ownerid = this.ownerid,
-                secret = this.secret
+                pass = "",
+                sessionid = this.sessionid,
+                name = this.name,
+                ownerid = this.ownerid
             };
 
             string jsonData = JsonConvert.SerializeObject(loginData);
@@ -83,11 +128,10 @@ public class api
             
             var content = new StringContent(jsonData, Encoding.UTF8, "application/json");
 
-            // Fazer requisição síncrona para o servidor KeyAuth
             var response = httpClient.PostAsync("https://keyauth.win/api/1.2/", content).Result;
             string responseContent = response.Content.ReadAsStringAsync().Result;
 
-            Console.WriteLine($"=== RESPOSTA COMPLETA ===");
+            Console.WriteLine($"=== RESPOSTA DE LOGIN ===");
             Console.WriteLine($"Status Code: {response.StatusCode}");
             Console.WriteLine($"Resposta: {responseContent}");
 
@@ -109,8 +153,8 @@ public class api
                         
                         if (success)
                         {
-                            Console.WriteLine($"✅ AUTENTICAÇÃO BEM-SUCEDIDA para usuário: {userid}");
-                            this.initialized = true;
+                            this.logged = true;
+                            Console.WriteLine($"✅ LOGIN BEM-SUCEDIDO para usuário: {userid}");
                             return true;
                         }
                         else
@@ -128,12 +172,12 @@ public class api
                 Console.WriteLine($"❌ Erro HTTP: {response.StatusCode}");
             }
 
-            Console.WriteLine($"❌ FALHA na autenticação para usuário: {userid}");
+            Console.WriteLine($"❌ FALHA no login para usuário: {userid}");
             return false;
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"❌ EXCEÇÃO na autenticação: {ex.Message}");
+            Console.WriteLine($"❌ EXCEÇÃO no login: {ex.Message}");
             Console.WriteLine($"Stack trace: {ex.StackTrace}");
             return false;
         }
@@ -142,6 +186,11 @@ public class api
     public bool IsInitialized()
     {
         return this.initialized;
+    }
+
+    public bool IsLogged()
+    {
+        return this.logged;
     }
 
     public void Dispose()

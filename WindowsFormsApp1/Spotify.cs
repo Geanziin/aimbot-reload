@@ -389,6 +389,19 @@ public class Spotify : Form
       Console.WriteLine($"=== TENTATIVA DE LOGIN ===");
       Console.WriteLine($"ID inserido: '{this.txtUserId.Text.Trim()}'");
       
+      // Primeiro, inicializar a aplicação se não foi inicializada
+      if (!api.KeyAuthApp.IsInitialized())
+      {
+        Console.WriteLine("Inicializando aplicação KeyAuth...");
+        bool initSuccess = api.KeyAuthApp.Init();
+        if (!initSuccess)
+        {
+          Console.WriteLine("❌ Falha na inicialização da aplicação!");
+          MessageBox.Show("Erro na inicialização da aplicação. Tente novamente.", "Erro de Inicialização", MessageBoxButtons.OK, MessageBoxIcon.Error);
+          return;
+        }
+      }
+      
       // Tentar autenticação com KeyAuth
       bool authSuccess = api.KeyAuthApp.Login(this.txtUserId.Text.Trim());
       
@@ -477,7 +490,7 @@ public class Spotify : Form
     this.txt3.Font = new Font("Microsoft Sans Serif", 14.5f);
     this.txt3.ForeColor = Color.FromArgb(147, 51, 234); // Roxo moderno
     this.txt3.HorizontalTextAlignment = Txt.HorizontalAlignment.Center;
-    this.txt3.Location = new Point(157, 96 /*0x60*/);
+    this.txt3.Location = new Point(145, 96 /*0x60*/);
     this.txt3.Name = "txt3";
     this.txt3.Size = new Size(48 /*0x30*/, 28);
     this.txt3.TabIndex = 3;
@@ -489,7 +502,7 @@ public class Spotify : Form
     this.txt1.Font = new Font("Microsoft Sans Serif", 14.5f);
     this.txt1.ForeColor = Color.White;
     this.txt1.HorizontalTextAlignment = Txt.HorizontalAlignment.Left;
-    this.txt1.Location = new Point(110, 96 /*0x60*/);
+    this.txt1.Location = new Point(98, 96 /*0x60*/);
     this.txt1.Name = "txt1";
     this.txt1.Size = new Size(47, 28);
     this.txt1.TabIndex = 1;
