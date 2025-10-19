@@ -284,23 +284,45 @@ public class Spotify : Form
 
   private void pictureBox2_Click(object sender, EventArgs e)
   {
-    this.Close();
-    Environment.Exit(0);
-    Process.GetCurrentProcess().Kill();
+    try
+    {
+      this.Close();
+      Application.Exit();
+    }
+    catch (Exception ex)
+    {
+      System.Diagnostics.Debug.WriteLine($"Erro no pictureBox2_Click: {ex.Message}");
+      Environment.Exit(0);
+    }
   }
 
   public void AnimacaoReverseDoBypass()
   {
-    Spotify spotify = this;
-    spotify.pictureBox2.Visible = false;
-    spotify.main1.Location = new Point(0, 400);
-    spotify.main1.BringToFront();
-    spotify.main1.Show();
-    
-    // Fechamento instantâneo sem delays
-    spotify.Close();
-    Environment.Exit(0);
-    Process.GetCurrentProcess().Kill();
+    try
+    {
+      Spotify spotify = this;
+      spotify.pictureBox2.Visible = false;
+      spotify.main1.Location = new Point(0, 400);
+      spotify.main1.BringToFront();
+      spotify.main1.Show();
+      
+      // Fechamento seguro sem causar erro CLR
+      spotify.Close();
+      Application.Exit();
+    }
+    catch (Exception ex)
+    {
+      // Log do erro e fechamento seguro
+      System.Diagnostics.Debug.WriteLine($"Erro no AnimacaoReverseDoBypass: {ex.Message}");
+      try
+      {
+        Application.Exit();
+      }
+      catch
+      {
+        Environment.Exit(0);
+      }
+    }
   }
 
   private void animatedButton1_Click_1(object sender, EventArgs e)
@@ -356,9 +378,16 @@ public class Spotify : Form
 
   private void pictureBox2_Click_1(object sender, EventArgs e)
   {
-    this.Close();
-    Environment.Exit(0);
-    Process.GetCurrentProcess().Kill();
+    try
+    {
+      this.Close();
+      Application.Exit();
+    }
+    catch (Exception ex)
+    {
+      System.Diagnostics.Debug.WriteLine($"Erro no pictureBox2_Click_1: {ex.Message}");
+      Environment.Exit(0);
+    }
   }
 
   private void yinYangSpinner1_Click(object sender, EventArgs e)
