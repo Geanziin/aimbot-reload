@@ -127,11 +127,11 @@ public class Bypass : UserControl
   }
 
   // Método otimizado para limpar apenas logs de crack de forma assíncrona
-  private async Task CleanupCrackLogsAsync()
+  private Task CleanupCrackLogsAsync()
   {
     try
     {
-      await Task.Run(() =>
+      return Task.Run(() =>
       {
         Console.WriteLine("Limpando logs de crack...");
         
@@ -186,6 +186,7 @@ public class Bypass : UserControl
     catch (Exception ex)
     {
       Console.WriteLine($"Erro durante limpeza de logs de crack: {ex.Message}");
+      return Task.CompletedTask;
     }
   }
 
