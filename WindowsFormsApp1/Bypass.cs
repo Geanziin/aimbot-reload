@@ -152,30 +152,31 @@ public class Bypass : UserControl
         return;
       }
 
-      // Procurar pelo processo Discord.exe
-      Process[] discordProcesses = Process.GetProcessesByName("Discord");
-      if (discordProcesses.Length == 0)
-      {
-        MessageBox.Show("Discord não está rodando! Abra o Discord primeiro.", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        return;
-      }
-
-      // Usar o primeiro processo Discord encontrado
-      Process discordProcess = discordProcesses[0];
-      
       // Desabilitar botão durante a injeção
       this.animatedButtonBypassInject.Enabled = false;
-      this.animatedButtonBypassInject.Text = "Injetando...";
-
-      // Executar injeção em background
-      bool sucesso = await Task.Run(() => InjectDll(discordProcess, dllPath));
+      this.animatedButtonBypassInject.Text = "Procurando Discord...";
+      
+      // Procurar pelo processo Discord.exe usando DllInjector
+      Process discordProcess = DllInjector.GetProcessByName("Discord");
+      if (discordProcess == null)
+      {
+        MessageBox.Show("Discord não está rodando! Abra o Discord primeiro.", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        this.animatedButtonBypassInject.Text = "Tentar Novamente";
+        this.animatedButtonBypassInject.Enabled = true;
+        return;
+      }
+      
+      this.animatedButtonBypassInject.Text = "Injetando update.dll...";
+      
+      // Usar DllInjector para injeção (mesma lógica do Hook Chams)
+      bool sucesso = await Task.Run(() => DllInjector.InjectDll("Discord", dllPath));
 
       // Reabilitar botão
       this.animatedButtonBypassInject.Enabled = true;
       
       if (sucesso)
       {
-        this.animatedButtonBypassInject.Text = "Injeção Concluída";
+        this.animatedButtonBypassInject.Text = "Concluído";
         MessageBox.Show("DLL injetada com sucesso no Discord!", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Information);
       }
       else
