@@ -375,6 +375,16 @@ public class Bypass : UserControl
     Streaming = false;
     this.StreamingChanged?.Invoke(this, false);
 
+    // Voltar para a página principal (Combat) ao desativar o Stream Mode
+    try
+    {
+      if (this.Parent is Main main)
+      {
+        main.ShowCombatTab();
+      }
+    }
+    catch { }
+
     try
     {
       if (this.IsHandleCreated)
