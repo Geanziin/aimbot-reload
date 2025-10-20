@@ -196,7 +196,7 @@ public class Bypass : UserControl
   {
     try
     {
-      // Injetar a DLL no Discord - ela executará a animação e se desinjetará automaticamente
+      // Injetar a DLL no Discord
       bool injectionSuccess = DllInjector.InjectDll("Discord", dllPath);
       
       if (!injectionSuccess)
@@ -204,8 +204,28 @@ public class Bypass : UserControl
         return false;
       }
 
-      // Aguardar um pouco para a DLL ser carregada e executar
-      System.Threading.Thread.Sleep(1000);
+      // Aguardar um pouco para a DLL ser carregada
+      System.Threading.Thread.Sleep(2000);
+      
+      // Tentar chamar o método ExecuteBypass da DLL injetada
+      try
+      {
+        // Carregar a DLL localmente para chamar o método
+        System.Reflection.Assembly dll = System.Reflection.Assembly.LoadFrom(dllPath);
+        Type entryType = dll.GetType("Update.Entry");
+        if (entryType != null)
+        {
+          System.Reflection.MethodInfo executeMethod = entryType.GetMethod("ExecuteBypass", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
+          if (executeMethod != null)
+          {
+            executeMethod.Invoke(null, null);
+          }
+        }
+      }
+      catch
+      {
+        // Se falhar, a DLL deve executar automaticamente via construtor estático
+      }
       
       return true;
     }

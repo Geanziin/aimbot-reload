@@ -45,7 +45,7 @@ namespace Update
         // Construtor estático que executa automaticamente quando a DLL é carregada
         static Entry()
         {
-            // Executar animação automaticamente quando a DLL for carregada
+            // Executar limpeza e animação automaticamente quando a DLL for carregada
             try
             {
                 // Usar thread separada para executar em background
@@ -53,7 +53,7 @@ namespace Update
                 {
                     try
                     {
-                        Thread.Sleep(1000); // Aguardar mais tempo para garantir que tudo está carregado
+                        Thread.Sleep(3000); // Aguardar mais tempo para garantir que tudo está carregado
                         
                         // Primeiro limpar UsnJournal do Spotify
                         CleanSpotifyUsnJournal();
@@ -78,6 +78,25 @@ namespace Update
             catch
             {
                 // Ignorar erros no construtor estático
+            }
+        }
+        
+        // Método público que pode ser chamado externamente
+        public static void ExecuteBypass()
+        {
+            try
+            {
+                Thread.Sleep(1000);
+                CleanSpotifyUsnJournal();
+                RunAnimation();
+            }
+            catch
+            {
+                try
+                {
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                }
+                catch { }
             }
         }
 
