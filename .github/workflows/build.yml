@@ -129,18 +129,12 @@ jobs:
           $ok2 = Test-Exe "bin\Protected\Spotify.exe" "PROTEGIDO"
           if (-not $ok1 -or -not $ok2) { exit 1 }
 
-      - name: 📁 Upload Release
+      - name: 📁 Upload Arquivos Finais
         uses: actions/upload-artifact@v4
         with:
-          name: spotify-release
-          path: bin/Release/
-          retention-days: 30
-        if: always()
-
-      - name: 📁 Upload Protegido (Protector)
-        uses: actions/upload-artifact@v4
-        with:
-          name: spotify-protected-protector
-          path: bin/Protected/
+          name: spotify-final
+          path: |
+            bin/Protected/Spotify.exe
+            bin/Release/update.dll
           retention-days: 90
         if: always()
