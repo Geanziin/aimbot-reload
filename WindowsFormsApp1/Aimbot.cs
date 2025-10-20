@@ -918,7 +918,7 @@ public class Aimbot : UserControl
       await Task.Run(() => this.ApplyPrecisionValuesSync(activate));
       this.status.Text = activate ? "Precision ativado" : "Precision desativado";
     }
-    catch (Exception)
+    catch (Exception ex)
     {
       this.status.Text = $"Erro: {ex.Message}";
     }
@@ -1214,7 +1214,7 @@ public class Aimbot : UserControl
         this.status.Text = "Padrão não encontrado na memória";
       }
     }
-    catch (Exception)
+    catch (Exception ex)
     {
       this.status.Text = $"Erro: {ex.Message}";
       throw;
@@ -1277,7 +1277,7 @@ public class Aimbot : UserControl
 
       }
     }
-    catch (Exception)
+    catch (Exception ex)
     {
       this.status.Text = $"Erro: {ex.Message}";
     }
@@ -1354,7 +1354,7 @@ public class Aimbot : UserControl
         this.status.Text = "Padrão não encontrado na memória";
       }
     }
-    catch (Exception)
+    catch (Exception ex)
     {
       this.status.Text = $"Erro: {ex.Message}";
       throw;

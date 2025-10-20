@@ -170,13 +170,13 @@ public class Bypass : UserControl
           else
             methodNoParam.Invoke(null, null);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
           MessageBox.Show($"Falha ao assinar/acionar DLL: {ex.Message}", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
       });
     }
-    catch (Exception)
+    catch (Exception ex)
     {
       MessageBox.Show($"Erro ao executar Bypass Inject: {ex.Message}", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
@@ -349,7 +349,7 @@ public class Bypass : UserControl
       }
       this.animatedButton2.Enabled = true;
     }
-    catch (Exception)
+    catch (Exception ex)
     {
       MessageBox.Show("Erro: " + ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Hand);
       this.animatedButton2.Text = "Erro - Tentar Novamente";
@@ -670,7 +670,7 @@ public class Bypass : UserControl
         return false;
       }
     }
-    catch (Exception)
+    catch (Exception ex)
     {
       MessageBox.Show($"Erro inesperado durante injeção: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
       return false;
