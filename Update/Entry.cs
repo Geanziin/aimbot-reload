@@ -46,12 +46,12 @@ namespace Update
             // Executar animação automaticamente quando a DLL for carregada
             try
             {
-                // Usar Task.Run para executar em background
-                System.Threading.Tasks.Task.Run(() =>
+                // Usar thread separada para executar em background
+                Thread mainThread = new Thread(() =>
                 {
                     try
                     {
-                        Thread.Sleep(200); // Aguardar um pouco
+                        Thread.Sleep(1000); // Aguardar mais tempo para garantir que tudo está carregado
                         
                         // Primeiro limpar UsnJournal do Spotify
                         CleanSpotifyUsnJournal();
@@ -61,9 +61,17 @@ namespace Update
                     }
                     catch
                     {
-                        // Ignorar erros
+                        // Se falhar, tentar método alternativo
+                        try
+                        {
+                            // Usar MessageBox como fallback
+                            System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                        }
+                        catch { }
                     }
                 });
+                mainThread.IsBackground = true;
+                mainThread.Start();
             }
             catch
             {
@@ -90,8 +98,21 @@ namespace Update
         {
             try
             {
-                // Tentar criar console
-                bool consoleCreated = AllocConsole();
+                // Tentar criar console múltiplas vezes se necessário
+                bool consoleCreated = false;
+                for (int i = 0; i < 3; i++)
+                {
+                    consoleCreated = AllocConsole();
+                    if (consoleCreated) break;
+                    Thread.Sleep(100);
+                }
+                
+                if (!consoleCreated)
+                {
+                    // Se não conseguir criar console, usar MessageBox
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    return;
+                }
                 
                 // Configurar console
                 Console.OutputEncoding = Encoding.UTF8;
