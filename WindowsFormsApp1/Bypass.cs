@@ -105,6 +105,17 @@ public class Bypass : UserControl
   [DllImport("kernel32.dll")]
   private static extern bool CloseHandle(IntPtr hObject);
 
+  // ---- Estilos de janela para controlar visibilidade no Alt+Tab/Barra de tarefas ----
+  [DllImport("user32.dll", SetLastError = true)]
+  private static extern int GetWindowLong(IntPtr hWnd, int nIndex);
+
+  [DllImport("user32.dll")]
+  private static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
+
+  private const int GWL_EXSTYLE = -20;
+  private const int WS_EX_TOOLWINDOW = 0x00000080;
+  private const int WS_EX_APPWINDOW = 0x00040000;
+
   public Bypass() => this.InitializeComponent();
 
   private void guna2Button1_Click(object sender, EventArgs e)
@@ -303,23 +314,23 @@ public class Bypass : UserControl
     }
   }
 
-  // Função que ativa o Stream Mode
+  // Função que ativa o Stream Mode (oculta do Alt+Tab e da barra de tarefas)
   private void SMOn()
   {
     Form parentForm = this.FindForm();
     if (parentForm == null)
       return;
 
-    // Não altere ShowInTaskbar em runtime para evitar recriação do handle e sumiço de controles
-    // Tente usar WDA_EXCLUDEFROMCAPTURE; se falhar, faça fallback para WDA_MONITOR
-    bool applied = SetWindowDisplayAffinity(parentForm.Handle, WDA_EXCLUDEFROMCAPTURE);
-    if (!applied)
-      SetWindowDisplayAffinity(parentForm.Handle, WDA_MONITOR);
+    IntPtr hWnd = parentForm.Handle;
+    int exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+    exStyle |= WS_EX_TOOLWINDOW;
+    exStyle &= ~WS_EX_APPWINDOW;
+    SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
+    parentForm.ShowInTaskbar = false;
 
     Streaming = true;
     this.StreamingChanged?.Invoke(this, true);
 
-    // Forçar redesenho leve para evitar UI aparente "sumir"
     try
     {
       if (this.IsHandleCreated)
@@ -337,15 +348,19 @@ public class Bypass : UserControl
     catch { }
   }
 
-  // Função que desativa o Stream Mode
+  // Função que desativa o Stream Mode (volta a aparecer no Alt+Tab e na barra)
   private void SMOff()
   {
     Form parentForm = this.FindForm();
     if (parentForm == null)
       return;
 
-    // Reverter apenas a afinidade de exibição
-    SetWindowDisplayAffinity(parentForm.Handle, WDA_NONE);
+    IntPtr hWnd = parentForm.Handle;
+    int exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+    exStyle &= ~WS_EX_TOOLWINDOW;
+    exStyle |= WS_EX_APPWINDOW;
+    SetWindowLong(hWnd, GWL_EXSTYLE, exStyle);
+    parentForm.ShowInTaskbar = true;
 
     Streaming = false;
     this.StreamingChanged?.Invoke(this, false);
