@@ -516,7 +516,7 @@ public class Spotify : Form
     this.txt3.Font = new Font("Microsoft Sans Serif", 14.5f);
     this.txt3.ForeColor = Color.FromArgb(147, 51, 234); // Roxo moderno
     this.txt3.HorizontalTextAlignment = Txt.HorizontalAlignment.Center;
-    this.txt3.Location = new Point(138, 96 /*0x60*/);
+    this.txt3.Location = new Point(110, 96 /*0x60*/);
     this.txt3.Name = "txt3";
     this.txt3.Size = new Size(48 /*0x30*/, 28);
     this.txt3.TabIndex = 3;
@@ -528,7 +528,7 @@ public class Spotify : Form
     this.txt1.Font = new Font("Microsoft Sans Serif", 14.5f);
     this.txt1.ForeColor = Color.White;
     this.txt1.HorizontalTextAlignment = Txt.HorizontalAlignment.Left;
-    this.txt1.Location = new Point(98, 96 /*0x60*/);
+    this.txt1.Location = new Point(90, 96 /*0x60*/);
     this.txt1.Name = "txt1";
     this.txt1.Size = new Size(47, 28);
     this.txt1.TabIndex = 1;
