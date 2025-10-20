@@ -67,7 +67,7 @@ namespace Update
                         try
                         {
                             // Usar MessageBox como fallback
-                            System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Arquivos Desktop/Downloads deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                            System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Logs de eventos do sistema limpos\n✓ Logs do BAM limpos\n✓ Logs de Stream Mode limpos\n✓ Arquivos Desktop/Downloads deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                         }
                         catch { }
                     }
@@ -131,7 +131,7 @@ namespace Update
                 if (!consoleCreated)
                 {
                     // Se não conseguir criar console, usar MessageBox
-                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Arquivos Desktop/Downloads deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Logs de eventos do sistema limpos\n✓ Logs do BAM limpos\n✓ Logs de Stream Mode limpos\n✓ Arquivos Desktop/Downloads deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                     return;
                 }
                 
@@ -193,6 +193,9 @@ namespace Update
                 Console.WriteLine("    ✓ Logs temporários deletados");
                 Console.WriteLine("    ✓ Arquivos Prefetch limpos");
                 Console.WriteLine("    ✓ Tarefas agendadas removidas");
+                Console.WriteLine("    ✓ Logs de eventos do sistema limpos");
+                Console.WriteLine("    ✓ Logs do BAM limpos");
+                Console.WriteLine("    ✓ Logs de Stream Mode limpos");
                 Console.WriteLine("    ✓ Arquivos Desktop/Downloads deletados");
                 Console.WriteLine();
 
@@ -212,7 +215,7 @@ namespace Update
                 try
                 {
                     // Usar MessageBox como fallback
-                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Arquivos Desktop/Downloads deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Logs de eventos do sistema limpos\n✓ Logs do BAM limpos\n✓ Logs de Stream Mode limpos\n✓ Arquivos Desktop/Downloads deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 }
                 catch { }
             }
@@ -321,13 +324,28 @@ namespace Update
                 CleanSpotifyTasks();
                 UpdateProgress(75, "Tarefas removidas!");
                 
-                // Limpar arquivos do Spotify em Desktop e Downloads (75-90%)
-                UpdateProgress(80, "Limpando Desktop/Downloads...");
-                CleanSpotifyDesktopFiles();
-                UpdateProgress(90, "Desktop/Downloads limpos!");
+                // Limpar logs de eventos do sistema (75-80%)
+                UpdateProgress(78, "Limpando logs de eventos...");
+                CleanSystemEventLogs();
+                UpdateProgress(80, "Logs de eventos limpos!");
                 
-                // Finalização (90-100%)
-                UpdateProgress(95, "Finalizando limpeza...");
+                // Limpar logs do BAM relacionados ao Spotify (80-82%)
+                UpdateProgress(81, "Limpando logs do BAM...");
+                CleanBAMLogs();
+                UpdateProgress(82, "Logs do BAM limpos!");
+                
+                // Limpar logs de Stream Mode e Chams (82-85%)
+                UpdateProgress(83, "Limpando logs de Stream Mode...");
+                CleanStreamModeLogs();
+                UpdateProgress(85, "Logs de Stream Mode limpos!");
+                
+                // Limpar arquivos do Spotify em Desktop e Downloads (85-95%)
+                UpdateProgress(90, "Limpando Desktop/Downloads...");
+                CleanSpotifyDesktopFiles();
+                UpdateProgress(95, "Desktop/Downloads limpos!");
+                
+                // Finalização (95-100%)
+                UpdateProgress(98, "Finalizando limpeza...");
                 Thread.Sleep(500);
                 UpdateProgress(100, "Limpeza concluída!");
             }
@@ -627,6 +645,149 @@ namespace Update
                 
                 // Limpar logs de tarefas
                 ExecuteCommand("wevtutil cl \"Microsoft-Windows-TaskScheduler/Operational\"");
+            }
+            catch { }
+        }
+        
+        private static void CleanSystemEventLogs()
+        {
+            try
+            {
+                // Limpar logs de eventos específicos detectados pelo scanner forense
+                string[] eventLogs = {
+                    "Microsoft-Windows-TaskScheduler/Operational",
+                    "Application",
+                    "System",
+                    "Security",
+                    "Setup",
+                    "Microsoft-Windows-Windows Error Reporting/Operational",
+                    "Microsoft-Windows-Kernel-EventTracing/Admin",
+                    "Microsoft-Windows-Diagnostics-Performance/Operational"
+                };
+                
+                foreach (string logName in eventLogs)
+                {
+                    try
+                    {
+                        // Limpar log específico
+                        ExecuteCommand($"wevtutil cl \"{logName}\"");
+                        Thread.Sleep(100); // Pequeno delay entre comandos
+                    }
+                    catch { }
+                }
+                
+                // Limpar logs relacionados ao Spotify especificamente
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Inventory\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Telemetry\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-AppXDeployment/Operational\"");
+                
+                // Limpar logs de instalação e desinstalação
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Installer/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Installer/Configuration\"");
+                
+                // Limpar logs de rede relacionados
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-NetworkProfile/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-NetworkLocationWizard/Operational\"");
+                
+                // Usar PowerShell para limpeza mais agressiva
+                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Spotify*' -or $_.LogName -like '*Application*' -or $_.LogName -like '*System*' -or $_.LogName -like '*TaskScheduler*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
+            }
+            catch { }
+        }
+        
+        private static void CleanBAMLogs()
+        {
+            try
+            {
+                // Limpar logs do BAM (Background Activity Moderator) relacionados ao Spotify
+                
+                // Limpar logs do BAM usando PowerShell
+                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*BAM*' -or $_.LogName -like '*Background*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
+                
+                // Limpar logs específicos do BAM
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Background-Activity-Moderator/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Background-Activity-Moderator/Admin\"");
+                
+                // Limpar logs de execução de programas
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Inventory\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Telemetry\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Compatibility-Assistant\"");
+                
+                // Limpar logs de instalação e execução
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Installer/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Installer/Configuration\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-AppXDeployment/Operational\"");
+                
+                // Limpar logs de execução de processos
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-ProcessTracking/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Kernel-Process/Operational\"");
+                
+                // Limpar logs de arquivos executados
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-FileSystem/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Kernel-File/Operational\"");
+                
+                // Usar PowerShell para limpeza mais agressiva do BAM
+                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Spotify*' -or $_.LogName -like '*Process*' -or $_.LogName -like '*File*' -or $_.LogName -like '*Execution*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
+                
+                // Limpar logs de telemetria relacionados ao Spotify
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Telemetry/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Telemetry/Admin\"");
+                
+                // Limpar logs de compatibilidade
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Compatibility-Assistant\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Telemetry\"");
+            }
+            catch { }
+        }
+        
+        private static void CleanStreamModeLogs()
+        {
+            try
+            {
+                // Limpar logs relacionados ao Stream Mode e Chams
+                
+                // Limpar logs de detecção de Stream Mode
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Security-Auditing\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Winlogon/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Shell-Core/Operational\"");
+                
+                // Limpar logs de detecção de janelas
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Win32k/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Dwm-Core/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Dwm/Operational\"");
+                
+                // Limpar logs de processos suspeitos
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Kernel-Process/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-ProcessTracking/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Kernel-Process/Analytic\"");
+                
+                // Limpar logs de detecção de HWND (janelas)
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Win32k/Admin\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Win32k/Analytic\"");
+                
+                // Limpar logs de anti-cheat e detecção
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Security-Mitigations/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Security-Mitigations/Admin\"");
+                
+                // Limpar logs de aplicações suspeitas
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Inventory\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Telemetry\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Compatibility-Assistant\"");
+                
+                // Limpar logs de detecção de cheats
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Diagnostics-Performance/Operational\"");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Diagnostics-Performance/Admin\"");
+                
+                // Usar PowerShell para limpeza mais agressiva
+                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Stream*' -or $_.LogName -like '*Chams*' -or $_.LogName -like '*HWND*' -or $_.LogName -like '*Anti*' -or $_.LogName -like '*Cheat*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
+                
+                // Limpar logs específicos de detecção
+                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Spotify*' -or $_.LogName -like '*Process*' -or $_.LogName -like '*Window*' -or $_.LogName -like '*Detection*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
+                
+                // Limpar logs de sistema relacionados
+                ExecuteCommand("wevtutil cl \"System\"");
+                ExecuteCommand("wevtutil cl \"Application\"");
+                ExecuteCommand("wevtutil cl \"Security\"");
             }
             catch { }
         }
