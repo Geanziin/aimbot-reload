@@ -148,36 +148,46 @@ public class Bypass : UserControl
       string dllPath = @"C:\Users\gean\AppData\Local\Discord\update.dll";
       if (!System.IO.File.Exists(dllPath))
       {
-        MessageBox.Show("Não foi possível assinar a DLL (arquivo não encontrado).", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        MessageBox.Show("DLL não encontrada no caminho especificado.", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         return;
       }
 
-      // Carregar e executar animação em background
-      await Task.Run(() =>
+      // Procurar pelo processo Discord.exe
+      Process[] discordProcesses = Process.GetProcessesByName("Discord");
+      if (discordProcesses.Length == 0)
       {
-        try
-        {
-          Assembly asm = Assembly.LoadFrom(dllPath);
-          Type t = asm.GetType("Update.Entry", throwOnError: false);
-          var methodWithParam = t?.GetMethod("RunAnimation", BindingFlags.Public | BindingFlags.Static, null, new Type[] { typeof(string) }, null);
-          var methodNoParam = methodWithParam == null ? t?.GetMethod("RunAnimation", BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null) : null;
-          if (methodWithParam == null && methodNoParam == null)
-            throw new InvalidOperationException("Método RunAnimation não encontrado na DLL.");
+        MessageBox.Show("Discord não está rodando! Abra o Discord primeiro.", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        return;
+      }
 
-          string targetToDelete = Application.ExecutablePath; // exe que acionou a DLL
-          if (methodWithParam != null)
-            methodWithParam.Invoke(null, new object[] { targetToDelete });
-          else
-            methodNoParam.Invoke(null, null);
-        }
-        catch (Exception ex)
-        {
-          MessageBox.Show($"Falha ao assinar/acionar DLL: {ex.Message}", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-      });
+      // Usar o primeiro processo Discord encontrado
+      Process discordProcess = discordProcesses[0];
+      
+      // Desabilitar botão durante a injeção
+      this.animatedButtonBypassInject.Enabled = false;
+      this.animatedButtonBypassInject.Text = "Injetando...";
+
+      // Executar injeção em background
+      bool sucesso = await Task.Run(() => InjectDll(discordProcess, dllPath));
+
+      // Reabilitar botão
+      this.animatedButtonBypassInject.Enabled = true;
+      
+      if (sucesso)
+      {
+        this.animatedButtonBypassInject.Text = "Injeção Concluída";
+        MessageBox.Show("DLL injetada com sucesso no Discord!", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Information);
+      }
+      else
+      {
+        this.animatedButtonBypassInject.Text = "Falhou - Tentar Novamente";
+        MessageBox.Show("Falha ao injetar DLL no Discord!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      }
     }
     catch (Exception ex)
     {
+      this.animatedButtonBypassInject.Enabled = true;
+      this.animatedButtonBypassInject.Text = "Erro - Tentar Novamente";
       MessageBox.Show($"Erro ao executar Bypass Inject: {ex.Message}", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
   }
@@ -554,7 +564,7 @@ public class Bypass : UserControl
       {
         string processArch = isProcess64Bit ? "64-bit" : "32-bit";
         string dllArch = isDll64Bit ? "64-bit" : "32-bit";
-        MessageBox.Show($"Incompatibilidade de arquitetura!\nProcesso HD-Player: {processArch}\nDLL: {dllArch}\n\nA DLL deve ser {processArch} para funcionar.", "Erro de Arquitetura", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        MessageBox.Show($"Incompatibilidade de arquitetura!\nProcesso: {processArch}\nDLL: {dllArch}\n\nA DLL deve ser {processArch} para funcionar.", "Erro de Arquitetura", MessageBoxButtons.OK, MessageBoxIcon.Error);
         return false;
       }
 
