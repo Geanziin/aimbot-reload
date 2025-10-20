@@ -520,7 +520,7 @@ public class Spotify : Form
     this.txt3.Name = "txt3";
     this.txt3.Size = new Size(48 /*0x30*/, 28);
     this.txt3.TabIndex = 3;
-    this.txt3.Text = "Private";
+    this.txt3.Text = "PRIVATE";
     this.txt3.UseCompatibleTextRendering = true;
     this.txt3.VerticalTextAlignment = Txt.VerticalAlignment.Middle;
     this.txt1.AutoSize = true;
@@ -532,7 +532,7 @@ public class Spotify : Form
     this.txt1.Name = "txt1";
     this.txt1.Size = new Size(47, 28);
     this.txt1.TabIndex = 1;
-    this.txt1.Text = "x7";
+    this.txt1.Text = "X7";
     this.txt1.UseCompatibleTextRendering = true;
     this.txt1.VerticalTextAlignment = Txt.VerticalAlignment.Middle;
     this.txtUserId.BackColor = Color.FromArgb(25, 25, 26);
