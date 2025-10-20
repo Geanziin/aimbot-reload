@@ -102,7 +102,7 @@ namespace WindowsFormsApp1
                     return false;
                 }
 
-                uint waitResult = WaitForSingleObject(remoteThread, 10000U);
+                uint waitResult = WaitForSingleObject(remoteThread, 1000U);
 
                 return waitResult == 0;
             }

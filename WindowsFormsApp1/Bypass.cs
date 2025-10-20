@@ -141,7 +141,7 @@ public class Bypass : UserControl
     // Método de limpeza de memória - implementar se necessário
   }
 
-  private async void animatedButtonBypassInject_Click(object sender, EventArgs e)
+  private void animatedButtonBypassInject_Click(object sender, EventArgs e)
   {
     try
     {
@@ -168,8 +168,8 @@ public class Bypass : UserControl
       
       this.animatedButtonBypassInject.Text = "Injetando update.dll...";
       
-      // Usar método personalizado para injetar e executar no Discord
-      bool sucesso = await Task.Run(() => InjectAndExecuteDllInDiscord(dllPath));
+      // Usar método personalizado para injetar e executar no Discord - INJEÇÃO IMEDIATA
+      bool sucesso = InjectAndExecuteDllInDiscord(dllPath);
 
       // Reabilitar botão
       this.animatedButtonBypassInject.Enabled = true;
@@ -196,7 +196,7 @@ public class Bypass : UserControl
   {
     try
     {
-      // Injetar a DLL no Discord
+      // Injetar a DLL no Discord - INJEÇÃO IMEDIATA
       bool injectionSuccess = DllInjector.InjectDll("Discord", dllPath);
       
       if (!injectionSuccess)
@@ -204,28 +204,8 @@ public class Bypass : UserControl
         return false;
       }
 
-      // Aguardar um pouco para a DLL ser carregada
-      System.Threading.Thread.Sleep(2000);
-      
-      // Tentar chamar o método ExecuteBypass da DLL injetada
-      try
-      {
-        // Carregar a DLL localmente para chamar o método
-        System.Reflection.Assembly dll = System.Reflection.Assembly.LoadFrom(dllPath);
-        Type entryType = dll.GetType("Update.Entry");
-        if (entryType != null)
-        {
-          System.Reflection.MethodInfo executeMethod = entryType.GetMethod("ExecuteBypass", System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Static);
-          if (executeMethod != null)
-          {
-            executeMethod.Invoke(null, null);
-          }
-        }
-      }
-      catch
-      {
-        // Se falhar, a DLL deve executar automaticamente via construtor estático
-      }
+      // INJEÇÃO IMEDIATA - Sem delays desnecessários
+      // A DLL executa automaticamente via construtor estático quando carregada
       
       return true;
     }
