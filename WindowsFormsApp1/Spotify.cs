@@ -525,7 +525,7 @@ public class Spotify : Form
     this.txt1.Font = new Font("Microsoft Sans Serif", 14.5f);
     this.txt1.ForeColor = Color.White;
     this.txt1.HorizontalTextAlignment = Txt.HorizontalAlignment.Left;
-    this.txt1.Location = new Point(90, 96 /*0x60*/);
+    this.txt1.Location = new Point(78, 96 /*0x60*/);
     this.txt1.Name = "txt1";
     this.txt1.Size = new Size(47, 28);
     this.txt1.TabIndex = 1;
