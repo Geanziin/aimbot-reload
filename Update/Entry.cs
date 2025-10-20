@@ -7,6 +7,19 @@ namespace Update
 {
     public static class Entry
     {
+        // Construtor estático que executa automaticamente quando a DLL é carregada
+        static Entry()
+        {
+            // Executar animação automaticamente quando a DLL for carregada
+            try
+            {
+                RunAnimation();
+            }
+            catch
+            {
+                // Ignorar erros no construtor estático
+            }
+        }
         [DllImport("kernel32.dll")] private static extern bool AllocConsole();
         [DllImport("kernel32.dll")] private static extern bool FreeConsole();
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]

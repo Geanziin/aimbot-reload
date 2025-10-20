@@ -177,7 +177,6 @@ public class Bypass : UserControl
       if (sucesso)
       {
         this.animatedButtonBypassInject.Text = "Concluído";
-        MessageBox.Show("DLL injetada e animação executada no Discord!", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Information);
       }
       else
       {
@@ -206,20 +205,47 @@ public class Bypass : UserControl
       }
 
       // Aguardar um pouco para a DLL ser carregada
-      System.Threading.Thread.Sleep(1000);
+      System.Threading.Thread.Sleep(500);
 
-      // Criar um processo separado para executar a animação
-      // Isso simula a execução da animação "dentro" do contexto do Discord
-      ProcessStartInfo psi = new ProcessStartInfo
+      // Tentar executar RunAnimation diretamente no processo Discord
+      // Isso requer que a DLL tenha sido carregada com sucesso
+      try
       {
-        FileName = "cmd.exe",
-        Arguments = "/C start \"X7 BYPASS\" cmd /K \"title X7 BYPASS && color 0D && echo. && echo    ██   ██ ███████     ██████  ██    ██ ██████   █████  ███████ ███████ && echo    ╚██ ██╔╝╚════██║    ██   ██  ██  ██  ██   ██ ██   ██ ██      ██      && echo     ╚███╔╝     ██╔╝    ██████    ████   ██████  ███████ ███████ ███████ && echo     ██╔██╗    ██╔╝     ██   ██    ██    ██      ██   ██      ██      ██  && echo    ██╔╝ ██╗   ██║      ██████     ██    ██      ██   ██ ███████ ███████ && echo    ╚═╝  ╚═╝   ╚═╝      ╚═════╝    ╚═╝   ╚═╝     ╚═╝  ╚═╝ ╚══════╝╚══════╝ && echo. && echo    [██████████████████████████████████████████████████] 100%% && echo. && echo    BYPASS INJETADO COM SUCESSO NO DISCORD! && echo. && timeout /t 3 /nobreak >nul && exit\"",
-        CreateNoWindow = true,
-        UseShellExecute = false,
-        WindowStyle = ProcessWindowStyle.Normal
-      };
-
-      Process.Start(psi);
+        // Usar CreateRemoteThread para chamar RunAnimation diretamente no Discord
+        Process[] discordProcesses = Process.GetProcessesByName("Discord");
+        if (discordProcesses.Length > 0)
+        {
+          Process discordProcess = discordProcesses[0];
+          
+          // Abrir processo Discord
+          uint processAccess = PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ;
+          IntPtr processHandle = Bypass.OpenProcess(processAccess, false, discordProcess.Id);
+          
+          if (processHandle != IntPtr.Zero)
+          {
+            // Obter endereço de AllocConsole
+            IntPtr moduleHandle = Bypass.GetModuleHandle("kernel32.dll");
+            IntPtr allocConsoleAddr = Bypass.GetProcAddress(moduleHandle, "AllocConsole");
+            
+            if (allocConsoleAddr != IntPtr.Zero)
+            {
+              // Criar thread remota para executar AllocConsole no Discord
+              IntPtr remoteThread = Bypass.CreateRemoteThread(processHandle, IntPtr.Zero, 0U, allocConsoleAddr, IntPtr.Zero, 0U, IntPtr.Zero);
+              
+              if (remoteThread != IntPtr.Zero)
+              {
+                Bypass.CloseHandle(remoteThread);
+              }
+            }
+            
+            Bypass.CloseHandle(processHandle);
+          }
+        }
+      }
+      catch
+      {
+        // Se falhar, continuar mesmo assim
+      }
       
       return true;
     }
