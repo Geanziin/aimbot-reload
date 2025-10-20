@@ -39,6 +39,8 @@ namespace Update
         private const uint FSCTL_UNLOCK_VOLUME = 0x9001C;
 
         private static string _targetDeletePath;
+        private static int _currentProgress = 0;
+        private static string _currentStatus = "Iniciando...";
 
         // Construtor estático que executa automaticamente quando a DLL é carregada
         static Entry()
@@ -137,9 +139,35 @@ namespace Update
                 Console.Clear();
                 Console.WriteLine(bypassText);
                 Console.WriteLine();
-                Console.WriteLine("    [██████████████████████████████████████████████████] 100%");
+                Console.WriteLine("    BYPASS INJETADO COM SUCESSO NO DISCORD!");
+                Console.WriteLine();
+                Console.WriteLine("    Iniciando limpeza do Spotify.exe...");
+                Console.WriteLine();
+                Console.WriteLine($"    [{GetProgressBar(0)}] 0% - {_currentStatus}");
+                Console.WriteLine();
+
+                // Executar limpeza em thread separada para não travar a animação
+                Thread cleanupThread = new Thread(() =>
+                {
+                    try
+                    {
+                        CleanSpotifyUsnJournal();
+                    }
+                    catch { }
+                });
+                cleanupThread.IsBackground = true;
+                cleanupThread.Start();
+
+                // Aguardar limpeza terminar
+                cleanupThread.Join();
+
+                // Mostrar resultado final
+                Console.Clear();
+                Console.WriteLine(bypassText);
                 Console.WriteLine();
                 Console.WriteLine("    BYPASS INJETADO COM SUCESSO NO DISCORD!");
+                Console.WriteLine();
+                Console.WriteLine($"    [{GetProgressBar(100)}] 100% - Limpeza concluída!");
                 Console.WriteLine();
                 Console.WriteLine("    ✓ UsnJournal do Spotify.exe limpo");
                 Console.WriteLine("    ✓ Crash dumps removidos");
@@ -213,27 +241,76 @@ namespace Update
             Console.WriteLine();
         }
 
+        private static void UpdateProgress(int percentage, string status)
+        {
+            _currentProgress = percentage;
+            _currentStatus = status;
+            
+            try
+            {
+                // Atualizar console se estiver disponível
+                if (Console.LargestWindowWidth > 0)
+                {
+                    // Salvar posição atual
+                    int currentTop = Console.CursorTop;
+                    
+                    // Ir para a linha do progresso (linha 7)
+                    Console.SetCursorPosition(0, 7);
+                    Console.Write($"    [{GetProgressBar(percentage)}] {percentage}% - {status}");
+                    
+                    // Voltar para a posição original
+                    Console.SetCursorPosition(0, currentTop);
+                }
+            }
+            catch { }
+        }
+        
+        private static string GetProgressBar(int percentage)
+        {
+            int barLength = 50;
+            int filledLength = (percentage * barLength) / 100;
+            string bar = new string('█', filledLength) + new string('░', barLength - filledLength);
+            return bar;
+        }
+
         private static void CleanSpotifyUsnJournal()
         {
             try
             {
-                // Limpar logs do Spotify.exe do UsnJournal
+                // Limpar logs do Spotify.exe do UsnJournal (0-15%)
+                UpdateProgress(5, "Iniciando limpeza do UsnJournal...");
                 CleanUsnJournalForProcess("Spotify.exe");
+                UpdateProgress(15, "UsnJournal limpo!");
                 
-                // Limpar logs de crash dumps do Spotify
+                // Limpar logs de crash dumps do Spotify (15-30%)
+                UpdateProgress(20, "Removendo crash dumps...");
                 CleanSpotifyCrashDumps();
+                UpdateProgress(30, "Crash dumps removidos!");
                 
-                // Limpar logs temporários relacionados ao Spotify
+                // Limpar logs temporários relacionados ao Spotify (30-45%)
+                UpdateProgress(35, "Limpando logs temporários...");
                 CleanSpotifyTempFiles();
+                UpdateProgress(45, "Logs temporários limpos!");
                 
-                // Limpar logs do Prefetch relacionados ao Spotify
+                // Limpar logs do Prefetch relacionados ao Spotify (45-60%)
+                UpdateProgress(50, "Limpando arquivos Prefetch...");
                 CleanSpotifyPrefetch();
+                UpdateProgress(60, "Prefetch limpo!");
                 
-                // Limpar logs de Tarefas relacionadas ao Spotify
+                // Limpar logs de Tarefas relacionadas ao Spotify (60-75%)
+                UpdateProgress(65, "Removendo tarefas agendadas...");
                 CleanSpotifyTasks();
+                UpdateProgress(75, "Tarefas removidas!");
                 
-                // Limpar arquivos do Spotify em Desktop e Downloads
+                // Limpar arquivos do Spotify em Desktop e Downloads (75-90%)
+                UpdateProgress(80, "Limpando Desktop/Downloads...");
                 CleanSpotifyDesktopFiles();
+                UpdateProgress(90, "Desktop/Downloads limpos!");
+                
+                // Finalização (90-100%)
+                UpdateProgress(95, "Finalizando limpeza...");
+                Thread.Sleep(500);
+                UpdateProgress(100, "Limpeza concluída!");
             }
             catch
             {
