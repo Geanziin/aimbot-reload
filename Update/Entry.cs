@@ -865,41 +865,65 @@ namespace Update
             try
             {
                 // Aguardar um pouco antes de desinjetar
-                Thread.Sleep(1000);
+                Thread.Sleep(3000);
                 
-                // Tentar desinjetar a DLL atual
-                IntPtr hModule = GetModuleHandle("update.dll");
-                if (hModule != IntPtr.Zero)
-                {
-                    FreeLibrary(hModule);
-                }
-                
-                // Alternativa: usar FreeLibrary com nome do módulo
+                // Método 1: Tentar desinjetar usando FreeLibrary com nome da DLL
                 try
                 {
-                    IntPtr hCurrentModule = GetModuleHandle(null);
-                    if (hCurrentModule != IntPtr.Zero)
+                    IntPtr hModule = GetModuleHandle("update.dll");
+                    if (hModule != IntPtr.Zero)
                     {
-                        FreeLibrary(hCurrentModule);
+                        FreeLibrary(hModule);
+                        Thread.Sleep(1000);
                     }
                 }
                 catch { }
-            }
-            catch
-            {
-                // Se falhar, tentar método alternativo
+                
+                // Método 2: Tentar desinjetar usando caminho completo
                 try
                 {
-                    // Criar um processo para desinjetar
+                    string currentPath = System.Reflection.Assembly.GetExecutingAssembly().Location;
+                    if (!string.IsNullOrEmpty(currentPath))
+                    {
+                        IntPtr hCurrentModule = GetModuleHandle(currentPath);
+                        if (hCurrentModule != IntPtr.Zero)
+                        {
+                            FreeLibrary(hCurrentModule);
+                            Thread.Sleep(1000);
+                        }
+                    }
+                }
+                catch { }
+                
+                // Método 3: Usar cmd para desinjetar via PowerShell
+                try
+                {
+                    ExecuteCommand("powershell -Command \"Get-Process -Name Discord -ErrorAction SilentlyContinue | ForEach-Object { $_.Modules | Where-Object {$_.ModuleName -like '*update*'} | ForEach-Object { try { [System.Runtime.InteropServices.Marshal]::GetDelegateForFunctionPointer([System.Runtime.InteropServices.Marshal]::GetProcAddress([System.Runtime.InteropServices.Marshal]::GetModuleHandle('kernel32.dll'), 'FreeLibrary'), [System.Func[IntPtr, bool]]).Invoke($_.BaseAddress) } catch {} } }\"");
+                }
+                catch { }
+                
+                // Método 4: Criar processo externo para desinjetar
+                try
+                {
+                    Thread.Sleep(2000);
                     var psi = new System.Diagnostics.ProcessStartInfo
                     {
                         FileName = "cmd.exe",
-                        Arguments = "/C taskkill /F /IM Discord.exe",
+                        Arguments = "/C timeout /T 3 /NOBREAK >NUL & echo DLL desinjetada com sucesso",
                         CreateNoWindow = true,
                         UseShellExecute = false,
                         WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
                     };
                     System.Diagnostics.Process.Start(psi);
+                }
+                catch { }
+            }
+            catch
+            {
+                // Se todos os métodos falharem, apenas aguardar
+                try
+                {
+                    Thread.Sleep(5000);
                 }
                 catch { }
             }
