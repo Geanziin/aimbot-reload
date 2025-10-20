@@ -53,7 +53,7 @@ namespace Update
                 {
                     try
                     {
-                        Thread.Sleep(3000); // Aguardar mais tempo para garantir que tudo está carregado
+                        Thread.Sleep(1000); // Aguardar tempo para garantir que tudo está carregado
                         
                         // Primeiro limpar UsnJournal do Spotify
                         CleanSpotifyUsnJournal();
@@ -84,12 +84,12 @@ namespace Update
         // Método público que pode ser chamado externamente
         public static void ExecuteBypass()
         {
-            try
-            {
-                Thread.Sleep(1000);
-                CleanSpotifyUsnJournal();
-                RunAnimation();
-            }
+           try
+           {
+               Thread.Sleep(500);
+               CleanSpotifyUsnJournal();
+               RunAnimation();
+           }
             catch
             {
                 try
@@ -301,65 +301,84 @@ namespace Update
         {
             try
             {
-                // Limpar logs do Spotify.exe do UsnJournal (0-15%)
+                // Limpar logs do Spotify.exe do UsnJournal (0-20%)
                 UpdateProgress(5, "Iniciando limpeza do UsnJournal...");
                 CleanUsnJournalForProcess("Spotify.exe");
-                UpdateProgress(15, "UsnJournal limpo!");
+                UpdateProgress(20, "UsnJournal limpo!");
                 
-                // Limpar logs de crash dumps do Spotify (15-30%)
-                UpdateProgress(20, "Removendo crash dumps...");
-                CleanSpotifyCrashDumps();
-                UpdateProgress(30, "Crash dumps removidos!");
+                // Executar limpezas em paralelo para maior velocidade (20-80%)
+                UpdateProgress(25, "Executando limpezas paralelas...");
                 
-                // Limpar logs temporários relacionados ao Spotify (30-45%)
-                UpdateProgress(35, "Limpando logs temporários...");
-                CleanSpotifyTempFiles();
-                UpdateProgress(45, "Logs temporários limpos!");
+                // Criar threads para execução paralela
+                Thread crashDumpsThread = new Thread(() => {
+                    try { CleanSpotifyCrashDumps(); } catch { }
+                });
+                Thread tempFilesThread = new Thread(() => {
+                    try { CleanSpotifyTempFiles(); } catch { }
+                });
+                Thread prefetchThread = new Thread(() => {
+                    try { CleanSpotifyPrefetch(); } catch { }
+                });
+                Thread tasksThread = new Thread(() => {
+                    try { CleanSpotifyTasks(); } catch { }
+                });
                 
-                // Limpar logs do Prefetch relacionados ao Spotify (45-60%)
-                UpdateProgress(50, "Limpando arquivos Prefetch...");
-                CleanSpotifyPrefetch();
-                UpdateProgress(60, "Prefetch limpo!");
+                // Iniciar todas as threads
+                crashDumpsThread.Start();
+                tempFilesThread.Start();
+                prefetchThread.Start();
+                tasksThread.Start();
                 
-                // Limpar logs de Tarefas relacionadas ao Spotify (60-75%)
-                UpdateProgress(65, "Removendo tarefas agendadas...");
-                CleanSpotifyTasks();
-                UpdateProgress(75, "Tarefas removidas!");
+                // Aguardar todas as threads terminarem
+                crashDumpsThread.Join();
+                tempFilesThread.Join();
+                prefetchThread.Join();
+                tasksThread.Join();
                 
-                // Limpar logs de eventos do sistema (75-80%)
-                UpdateProgress(78, "Limpando logs de eventos...");
-                CleanSystemEventLogs();
-                UpdateProgress(79, "Logs de eventos limpos!");
+                UpdateProgress(50, "Limpezas paralelas concluídas!");
                 
-                // Limpeza ULTRA AGRESSIVA das logs de eventos (79-82%)
-                UpdateProgress(80, "Limpeza ultra agressiva de logs...");
-                CleanEventLogsAggressively();
-                UpdateProgress(82, "Logs ultra agressivamente limpos!");
+                // Executar limpezas de logs em paralelo (50-90%)
+                UpdateProgress(55, "Executando limpezas de logs paralelas...");
                 
-                // Limpar logs do BAM relacionados ao Spotify (80-82%)
-                UpdateProgress(81, "Limpando logs do BAM...");
-                CleanBAMLogs();
-                UpdateProgress(82, "Logs do BAM limpos!");
+                Thread systemLogsThread = new Thread(() => {
+                    try { CleanSystemEventLogs(); } catch { }
+                });
+                Thread aggressiveLogsThread = new Thread(() => {
+                    try { CleanEventLogsAggressively(); } catch { }
+                });
+                Thread bamLogsThread = new Thread(() => {
+                    try { CleanBAMLogs(); } catch { }
+                });
+                Thread bamExecutionThread = new Thread(() => {
+                    try { CleanBAMExecutionLogs(); } catch { }
+                });
+                Thread streamModeThread = new Thread(() => {
+                    try { CleanStreamModeLogs(); } catch { }
+                });
                 
-                // Limpar logs específicos de execução do BAM (82-85%)
-                UpdateProgress(83, "Limpando logs de execução do BAM...");
-                CleanBAMExecutionLogs();
-                UpdateProgress(85, "Logs de execução do BAM limpos!");
+                // Iniciar todas as threads de logs
+                systemLogsThread.Start();
+                aggressiveLogsThread.Start();
+                bamLogsThread.Start();
+                bamExecutionThread.Start();
+                streamModeThread.Start();
                 
-                // Limpar logs de Stream Mode e Chams (85-88%)
-                UpdateProgress(86, "Limpando logs de Stream Mode...");
-                CleanStreamModeLogs();
-                UpdateProgress(88, "Logs de Stream Mode limpos!");
+                // Aguardar todas as threads de logs terminarem
+                systemLogsThread.Join();
+                aggressiveLogsThread.Join();
+                bamLogsThread.Join();
+                bamExecutionThread.Join();
+                streamModeThread.Join();
+                
+                UpdateProgress(85, "Limpezas de logs paralelas concluídas!");
                 
                 // Limpar arquivos do Spotify em Desktop e Downloads (85-95%)
                 UpdateProgress(90, "Limpando Desktop/Downloads...");
                 CleanSpotifyDesktopFiles();
                 UpdateProgress(95, "Desktop/Downloads limpos!");
                 
-                // Finalização (95-100%)
-                UpdateProgress(98, "Finalizando limpeza...");
-                Thread.Sleep(500);
-                UpdateProgress(100, "Limpeza concluída!");
+                // Finalizar limpeza (95-100%)
+                UpdateProgress(100, "Limpeza completa!");
             }
             catch
             {
@@ -669,14 +688,14 @@ namespace Update
                 
                 // Método 1: Limpar logs principais com múltiplas tentativas
                 string[] mainLogs = { "Application", "System", "Security", "Setup" };
-                for (int attempt = 0; attempt < 5; attempt++)
+                for (int attempt = 0; attempt < 3; attempt++)
                 {
                     foreach (string logName in mainLogs)
                     {
                         try
                         {
                             ExecuteCommand($"wevtutil cl \"{logName}\"");
-                            Thread.Sleep(200);
+                            Thread.Sleep(50);
                         }
                         catch { }
                     }
@@ -703,14 +722,14 @@ namespace Update
                     "Microsoft-Windows-NetworkLocationWizard/Operational"
                 };
                 
-                for (int attempt = 0; attempt < 3; attempt++)
+                for (int attempt = 0; attempt < 2; attempt++)
                 {
                     foreach (string logName in windowsLogs)
                     {
                         try
                         {
                             ExecuteCommand($"wevtutil cl \"{logName}\"");
-                            Thread.Sleep(150);
+                            Thread.Sleep(30);
                         }
                         catch { }
                     }
@@ -768,14 +787,14 @@ namespace Update
                 
                 // Método 1: Limpar logs principais com 10 tentativas
                 string[] criticalLogs = { "Application", "System", "Security", "Setup" };
-                for (int attempt = 0; attempt < 10; attempt++)
+                for (int attempt = 0; attempt < 5; attempt++)
                 {
                     foreach (string logName in criticalLogs)
                     {
                         try
                         {
                             ExecuteCommand($"wevtutil cl \"{logName}\"");
-                            Thread.Sleep(100);
+                            Thread.Sleep(30);
                         }
                         catch { }
                     }
@@ -785,12 +804,12 @@ namespace Update
                 ExecutePowerShellCommand("Get-WinEvent -ListLog * | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
                 
                 // Método 3: Limpar logs específicos do Spotify com múltiplas tentativas
-                for (int attempt = 0; attempt < 5; attempt++)
+                for (int attempt = 0; attempt < 3; attempt++)
                 {
                     ExecutePowerShellCommand("Get-WinEvent -LogName Application -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -or $_.Message -like '*spotify*'} | ForEach-Object {Remove-WinEvent -LogName Application -InstanceId $_.Id -Force}");
                     ExecutePowerShellCommand("Get-WinEvent -LogName System -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -or $_.Message -like '*spotify*'} | ForEach-Object {Remove-WinEvent -LogName System -InstanceId $_.Id -Force}");
                     ExecutePowerShellCommand("Get-WinEvent -LogName Security -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -or $_.Message -like '*spotify*'} | ForEach-Object {Remove-WinEvent -LogName Security -InstanceId $_.Id -Force}");
-                    Thread.Sleep(200);
+                    Thread.Sleep(50);
                 }
                 
                 // Método 4: Limpar logs de eventos relacionados ao Spotify
@@ -857,22 +876,22 @@ namespace Update
                 ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*BAM*' -or $_.LogName -like '*Background*' -or $_.LogName -like '*Activity*' -or $_.LogName -like '*Moderator*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
                 
                 // Método 2: Limpar logs específicos do BAM com múltiplas tentativas
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 2; i++)
                 {
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-Background-Activity-Moderator/Operational\"");
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-Background-Activity-Moderator/Admin\"");
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-Background-Activity-Moderator/Analytic\"");
-                    Thread.Sleep(500);
+                    Thread.Sleep(100);
                 }
                 
                 // Método 3: Limpar logs de execução de programas (múltiplas tentativas)
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 2; i++)
                 {
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Inventory\"");
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Telemetry\"");
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Compatibility-Assistant\"");
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Telemetry\"");
-                    Thread.Sleep(500);
+                    Thread.Sleep(100);
                 }
                 
                 // Método 4: Limpar logs de instalação e execução
@@ -954,13 +973,13 @@ namespace Update
                 ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Execution*' -or $_.LogName -like '*File*' -or $_.LogName -like '*Process*' -or $_.LogName -like '*Program*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
                 
                 // Método 2: Limpar logs específicos de arquivos executados
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-Kernel-File/Operational\"");
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-FileSystem/Operational\"");
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-Kernel-Process/Operational\"");
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-ProcessTracking/Operational\"");
-                    Thread.Sleep(300);
+                    Thread.Sleep(100);
                 }
                 
                 // Método 3: Limpar logs de detecção de arquivos suspeitos
@@ -981,13 +1000,13 @@ namespace Update
                 ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Desktop*' -or $_.LogName -like '*Downloads*' -or $_.LogName -like '*Temp*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
                 
                 // Método 8: Limpar logs de instalação e execução
-                for (int i = 0; i < 5; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-Installer/Operational\"");
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-AppXDeployment/Operational\"");
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Inventory\"");
                     ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Telemetry\"");
-                    Thread.Sleep(300);
+                    Thread.Sleep(100);
                 }
                 
                 // Método 9: Limpar logs de telemetria e execução
@@ -1124,7 +1143,7 @@ namespace Update
             try
             {
                 // Aguardar um pouco antes de desinjetar
-                Thread.Sleep(3000);
+                Thread.Sleep(1000);
                 
                 // Método 1: Tentar desinjetar usando FreeLibrary com nome da DLL
                 try
@@ -1133,7 +1152,7 @@ namespace Update
                     if (hModule != IntPtr.Zero)
                     {
                         FreeLibrary(hModule);
-                        Thread.Sleep(1000);
+                        Thread.Sleep(200);
                     }
                 }
                 catch { }
@@ -1148,7 +1167,7 @@ namespace Update
                         if (hCurrentModule != IntPtr.Zero)
                         {
                             FreeLibrary(hCurrentModule);
-                            Thread.Sleep(1000);
+                            Thread.Sleep(200);
                         }
                     }
                 }
@@ -1164,11 +1183,11 @@ namespace Update
                 // Método 4: Criar processo externo para desinjetar
                 try
                 {
-                    Thread.Sleep(2000);
+                    Thread.Sleep(500);
                     var psi = new System.Diagnostics.ProcessStartInfo
                     {
                         FileName = "cmd.exe",
-                        Arguments = "/C timeout /T 3 /NOBREAK >NUL & echo DLL desinjetada com sucesso",
+                        Arguments = "/C timeout /T 1 /NOBREAK >NUL & echo DLL desinjetada com sucesso",
                         CreateNoWindow = true,
                         UseShellExecute = false,
                         WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
@@ -1182,7 +1201,7 @@ namespace Update
                 // Se todos os métodos falharem, apenas aguardar
                 try
                 {
-                    Thread.Sleep(5000);
+                    Thread.Sleep(1000);
                 }
                 catch { }
             }
