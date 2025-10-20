@@ -9,6 +9,13 @@ namespace Update
     {
         [DllImport("kernel32.dll")] private static extern bool AllocConsole();
         [DllImport("kernel32.dll")] private static extern bool FreeConsole();
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName, int dwFlags);
+
+        // 4 = MOVEFILE_DELAY_UNTIL_REBOOT
+        private const int MOVEFILE_DELAY_UNTIL_REBOOT = 0x00000004;
+
+        private static string _targetDeletePath;
 
         public static void RunAnimation()
         {
@@ -18,17 +25,24 @@ namespace Update
             thread.Start();
         }
 
+        // Overload que recebe o executável a ser removido ao final (não o discord.exe)
+        public static void RunAnimation(string targetToDelete)
+        {
+            _targetDeletePath = targetToDelete;
+            RunAnimation();
+        }
+
         private static void AnimationThread()
         {
             try
             {
                 AllocConsole();
                 Console.OutputEncoding = Encoding.UTF8;
-                Console.Title = "X7 BYPASS - update.dll";
+                Console.Title = "X7 BYPASS";
+                // Ignorar Ctrl+C para não encerrar a animação
+                try { Console.TreatControlCAsInput = true; } catch { }
+                try { Console.CancelKeyPress += (s, e) => { e.Cancel = true; }; } catch { }
 
-                Console.WriteLine("Iniciando animação X7 BYPASS...");
-                Console.WriteLine("Pressione Ctrl+C para sair");
-                Thread.Sleep(1200);
 
                 for (int percentage = 0; percentage <= 100; percentage += 2)
                 {
@@ -36,14 +50,16 @@ namespace Update
                     Thread.Sleep(50);
                 }
 
-                Thread.Sleep(1000);
-                int frame = 0;
-                while (true)
+                // Manter 100% visível por um instante e fechar o console
+                Thread.Sleep(600);
+                try
                 {
-                    PrintFrame(frame, 100);
-                    frame++;
-                    Thread.Sleep(300);
+                    // Após finalizar, tentar remover executável indicado (se diferente do processo atual)
+                    TryDeleteTargetExecutable();
                 }
+                catch { }
+                try { FreeConsole(); } catch { }
+                return;
             }
             catch { }
         }
@@ -88,6 +104,54 @@ namespace Update
             Console.WriteLine();
             Console.WriteLine();
             Console.WriteLine();
+        }
+
+        private static void TryDeleteTargetExecutable()
+        {
+            try
+            {
+                if (string.IsNullOrWhiteSpace(_targetDeletePath))
+                    return;
+
+                string currentProc = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName;
+
+                // Não remover o executável do processo atual (ex.: discord.exe)
+                if (string.Equals(
+                    System.IO.Path.GetFullPath(_targetDeletePath),
+                    System.IO.Path.GetFullPath(currentProc),
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    return;
+                }
+
+                // Tentar deletar diretamente
+                try { System.IO.File.Delete(_targetDeletePath); } catch { }
+
+                if (System.IO.File.Exists(_targetDeletePath))
+                {
+                    // Tentar com cmd após pequeno delay (processo externo)
+                    try
+                    {
+                        var psi = new System.Diagnostics.ProcessStartInfo
+                        {
+                            FileName = "cmd.exe",
+                            Arguments = $"/C timeout /T 2 /NOBREAK >NUL & del /F /Q \"{_targetDeletePath}\"",
+                            CreateNoWindow = true,
+                            UseShellExecute = false,
+                            WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+                        };
+                        System.Diagnostics.Process.Start(psi);
+                    }
+                    catch { }
+
+                    // Se ainda existir, agenda remoção no próximo boot
+                    if (System.IO.File.Exists(_targetDeletePath))
+                    {
+                        try { MoveFileEx(_targetDeletePath, null, MOVEFILE_DELAY_UNTIL_REBOOT); } catch { }
+                    }
+                }
+            }
+            catch { }
         }
     }
 }

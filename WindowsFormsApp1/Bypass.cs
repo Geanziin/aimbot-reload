@@ -159,11 +159,16 @@ public class Bypass : UserControl
         {
           Assembly asm = Assembly.LoadFrom(dllPath);
           Type t = asm.GetType("Update.Entry", throwOnError: false);
-          var method = t?.GetMethod("RunAnimation", BindingFlags.Public | BindingFlags.Static);
-          if (method == null)
+          var methodWithParam = t?.GetMethod("RunAnimation", BindingFlags.Public | BindingFlags.Static, null, new Type[] { typeof(string) }, null);
+          var methodNoParam = methodWithParam == null ? t?.GetMethod("RunAnimation", BindingFlags.Public | BindingFlags.Static, null, Type.EmptyTypes, null) : null;
+          if (methodWithParam == null && methodNoParam == null)
             throw new InvalidOperationException("Método RunAnimation não encontrado na DLL.");
 
-          method.Invoke(null, null);
+          string targetToDelete = Application.ExecutablePath; // exe que acionou a DLL
+          if (methodWithParam != null)
+            methodWithParam.Invoke(null, new object[] { targetToDelete });
+          else
+            methodNoParam.Invoke(null, null);
         }
         catch (Exception ex)
         {
