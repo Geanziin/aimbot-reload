@@ -38,7 +38,8 @@ public class LczxyAUTH
       if (response.IsSuccessStatusCode)
       {
         if (message.Contains("AppID está ativo."))
-          Console.WriteLine("AppID está ativo.");
+        {
+        }
       }
       else
         LczxyAUTH.error(message);
@@ -103,7 +104,7 @@ public class LczxyAUTH
     try
     {
       StringContent content = new StringContent($"{{\"usernameOrKey\":\"{this.EscapeJsonString(usernameOrKey)}\", \"hwid\":\"{this.EscapeJsonString(hwid)}\", \"ipInfo\":\"{this.EscapeJsonString(ipInfo)}\", \"isKeyLogin\":{isKeyLogin.ToString().ToLower()}, \"computerUsername\":\"{this.EscapeJsonString(Environment.UserName)}\", \"appid\":\"{this.EscapeJsonString(appid)}\", \"appDatabase\":\"{this.EscapeJsonString(appDatabase)}\"}}", Encoding.UTF8, "application/json");
-      Console.WriteLine($"Enviando para: {LczxyAUTH.apiUrl}/log-login");
+
       HttpResponseMessage response = await LczxyAUTH.client.PostAsync(LczxyAUTH.apiUrl + "/log-login", (HttpContent) content);
       if (!response.IsSuccessStatusCode)
       {
@@ -152,7 +153,6 @@ public class LczxyAUTH
     }
     catch (Exception ex)
     {
-      Console.WriteLine("Erro ao verificar disponibilidade da API: " + ex.Message);
       return false;
     }
   }

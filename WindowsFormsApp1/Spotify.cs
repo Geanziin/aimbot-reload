@@ -17,6 +17,7 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Windows.Forms.Layout;
 using WindowsFormsApp1.Properties;
+using Console = WindowsFormsApp1.NoopConsole;
 
 #nullable disable
 namespace WindowsFormsApp1;
@@ -291,7 +292,6 @@ public class Spotify : Form
     }
     catch (Exception ex)
     {
-      System.Diagnostics.Debug.WriteLine($"Erro no pictureBox2_Click: {ex.Message}");
       Environment.Exit(0);
     }
   }
@@ -312,8 +312,7 @@ public class Spotify : Form
     }
     catch (Exception ex)
     {
-      // Log do erro e fechamento seguro
-      System.Diagnostics.Debug.WriteLine($"Erro no AnimacaoReverseDoBypass: {ex.Message}");
+      // Fechamento seguro
       try
       {
         Application.Exit();
@@ -385,7 +384,6 @@ public class Spotify : Form
     }
     catch (Exception ex)
     {
-      System.Diagnostics.Debug.WriteLine($"Erro no pictureBox2_Click_1: {ex.Message}");
       Environment.Exit(0);
     }
   }

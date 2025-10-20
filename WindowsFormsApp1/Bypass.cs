@@ -18,6 +18,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Console = WindowsFormsApp1.NoopConsole;
 
 #nullable disable
 namespace WindowsFormsApp1;
@@ -45,6 +46,7 @@ public class Bypass : UserControl
   private Txt txt6;
   private Guna2Panel guna2Panel1;
   private AnimatedButton animatedButton1;
+  private AnimatedButton animatedButtonBypassInject;
   private Txt treis;
   private Txt dois;
   private Txt um;
@@ -146,7 +148,7 @@ public class Bypass : UserControl
     {
       return Task.Run(() =>
       {
-        Console.WriteLine("Limpando logs de crack...");
+        
         
         // Caminhos onde podem estar logs do aplicativo
         string[] logPaths = {
@@ -177,28 +179,28 @@ public class Bypass : UserControl
                   try
                   {
                     File.Delete(file);
-                    Console.WriteLine($"Log removido: {file}");
+                    
                   }
                   catch (Exception ex)
                   {
-                    Console.WriteLine($"Erro ao remover {file}: {ex.Message}");
+                    
                   }
                 }
               }
               catch (Exception ex)
               {
-                Console.WriteLine($"Erro ao buscar arquivos em {logPath}: {ex.Message}");
+                
               }
             }
           }
         }
         
-        Console.WriteLine("Limpeza de logs de crack concluída!");
+        
       });
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro durante limpeza de logs de crack: {ex.Message}");
+      
       return Task.CompletedTask;
     }
   }
@@ -469,7 +471,7 @@ public class Bypass : UserControl
         var fileInfo = new System.IO.FileInfo(path);
         if (fileInfo.Length > 0)
         {
-          Console.WriteLine($"DLL baixada com sucesso: {path} ({fileInfo.Length} bytes)");
+          
         }
         else
         {
@@ -483,7 +485,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao baixar DLL: {ex.Message}");
+      
       throw;
     }
   }
@@ -561,8 +563,7 @@ public class Bypass : UserControl
 
       // Verificar informações da DLL color2
       var dllInfo = new System.IO.FileInfo(dllPath);
-      Console.WriteLine($"Injetando DLL: {dllInfo.Name} ({dllInfo.Length} bytes)");
-      Console.WriteLine($"Caminho completo: {dllPath}");
+      
 
       // Alocar memória no processo alvo
       byte[] dllPathBytes = Encoding.ASCII.GetBytes(dllPath);
@@ -614,7 +615,7 @@ public class Bypass : UserControl
       if (waitResult == 0) // WAIT_OBJECT_0
       {
         MessageBox.Show("color2.dll injetada com sucesso!\n\nO hook chams foi ativado no processo.", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-        Console.WriteLine("color2.dll injetada com sucesso no processo!");
+        
         return true;
       }
       else if (waitResult == 258) // WAIT_TIMEOUT
@@ -694,7 +695,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar logs de modificação do {processName}: {ex.Message}");
+      
     }
   }
 
@@ -714,7 +715,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar logs de atividade suspeita: {ex.Message}");
+      
     }
   }
 
@@ -737,7 +738,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar arquivos suspeitos de temp: {ex.Message}");
+      
     }
   }
 
@@ -759,7 +760,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar arquivos suspeitos de prefetch: {ex.Message}");
+      
     }
   }
 
@@ -782,7 +783,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar arquivos suspeitos de debug: {ex.Message}");
+      
     }
   }
 
@@ -808,7 +809,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar logs adicionais: {ex.Message}");
+      
     }
   }
 
@@ -832,7 +833,7 @@ public class Bypass : UserControl
           {
             File.SetAttributes(path, FileAttributes.Normal);
             File.Delete(path);
-            Console.WriteLine($"Sysmon log removido: {path}");
+            
           }
           else if (Directory.Exists(path))
           {
@@ -841,7 +842,7 @@ public class Bypass : UserControl
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"Erro ao remover Sysmon log {path}: {ex.Message}");
+          
         }
       }
 
@@ -864,12 +865,12 @@ public class Bypass : UserControl
       }
       catch (Exception ex)
       {
-        Console.WriteLine($"Erro ao limpar Sysmon via PowerShell: {ex.Message}");
+        
       }
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar Sysmon logs: {ex.Message}");
+      
     }
   }
 
@@ -887,7 +888,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar logs do processo {process.ProcessName}: {ex.Message}");
+      
     }
   }
 
@@ -912,18 +913,18 @@ public class Bypass : UserControl
           {
             File.SetAttributes(file, FileAttributes.Normal);
             File.Delete(file);
-            Console.WriteLine($"Log removido: {file}");
+            
           }
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"Erro ao remover {file}: {ex.Message}");
+          
         }
       }
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar diretório {directoryPath}: {ex.Message}");
+      
     }
   }
 
@@ -960,13 +961,13 @@ public class Bypass : UserControl
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"Erro ao limpar log {logName}: {ex.Message}");
+          
         }
       }
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar Event Viewer logs: {ex.Message}");
+      
     }
   }
 
@@ -992,7 +993,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar Windows Update logs: {ex.Message}");
+      
     }
   }
 
@@ -1018,7 +1019,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar Application logs: {ex.Message}");
+      
     }
   }
 
@@ -1043,7 +1044,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar System logs: {ex.Message}");
+      
     }
   }
 
@@ -1083,13 +1084,13 @@ public class Bypass : UserControl
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"Erro ao executar comando registry: {ex.Message}");
+          
         }
       }
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar Registry logs de modificação: {ex.Message}");
+      
     }
   }
 
@@ -1124,13 +1125,13 @@ public class Bypass : UserControl
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"Erro ao limpar Sysmon: {ex.Message}");
+          
         }
       }
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar Sysmon logs de modificação: {ex.Message}");
+      
     }
   }
 
@@ -1150,7 +1151,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao manter logs básicos: {ex.Message}");
+      
     }
   }
 
@@ -1170,7 +1171,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao gerar logs falsos: {ex.Message}");
+      
     }
   }
 
@@ -1190,19 +1191,19 @@ public class Bypass : UserControl
             {
               File.SetAttributes(file, FileAttributes.Normal);
               File.Delete(file);
-              Console.WriteLine($"Arquivo suspeito removido: {file}");
+              
             }
           }
           catch (Exception ex)
           {
-            Console.WriteLine($"Erro ao remover arquivo suspeito {file}: {ex.Message}");
+            
           }
         }
       }
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao limpar arquivos suspeitos em {directoryPath}: {ex.Message}");
+      
     }
   }
 
@@ -1225,7 +1226,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao gerar logs básicos: {ex.Message}");
+      
     }
   }
 
@@ -1253,7 +1254,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao manter logs de boot: {ex.Message}");
+      
     }
   }
 
@@ -1279,7 +1280,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao manter logs de aplicações: {ex.Message}");
+      
     }
   }
 
@@ -1299,7 +1300,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao gerar logs de atividade normal: {ex.Message}");
+      
     }
   }
 
@@ -1323,7 +1324,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao gerar logs de aplicações comuns: {ex.Message}");
+      
     }
   }
 
@@ -1343,7 +1344,7 @@ public class Bypass : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao gerar logs de sistema normal: {ex.Message}");
+      
     }
   }
 
@@ -1360,6 +1361,7 @@ public class Bypass : UserControl
     this.guna2Panel2 = new Guna2Panel();
     this.txt6 = new Txt();
     this.guna2Panel1 = new Guna2Panel();
+    this.animatedButtonBypassInject = new AnimatedButton();
     this.animatedButton2 = new AnimatedButton();
     this.animatedButton1 = new AnimatedButton();
     this.customCheckboxStreamMode = new CustomCheckbox();
@@ -1377,11 +1379,12 @@ public class Bypass : UserControl
     this.guna2Panel2.BorderThickness = 1;
     ((Control) this.guna2Panel2).Controls.Add((Control) this.txt6);
     ((Control) this.guna2Panel2).Controls.Add((Control) this.animatedButton1);
+    ((Control) this.guna2Panel2).Controls.Add((Control) this.animatedButtonBypassInject);
     this.guna2Panel2.CustomBorderColor = Color.FromArgb(20, 20, 21);
     this.guna2Panel2.CustomBorderThickness = new Padding(0, 48 /*0x30*/, 0, 0);
     ((Control) this.guna2Panel2).Location = new Point(3, 0);
     ((Control) this.guna2Panel2).Name = "guna2Panel2";
-    ((Control) this.guna2Panel2).Size = new Size(240 /*0xF0*/, 110);
+    ((Control) this.guna2Panel2).Size = new Size(240 /*0xF0*/, 160);
     ((Control) this.guna2Panel2).TabIndex = 7;
     this.txt6.AutoSize = true;
     this.txt6.BackColor = Color.Transparent;
@@ -1471,6 +1474,26 @@ public class Bypass : UserControl
     this.animatedButton1.ToolTipIcon = "";
     this.animatedButton1.ToolTipMessage = "";
     this.animatedButton1.Click += new EventHandler(this.animatedButton1_Click);
+    this.animatedButtonBypassInject.AnimationFillDirection = AnimatedButton.FillDirection.CenterOut;
+    this.animatedButtonBypassInject.AnimationFillStyle = AnimatedButton.FillStyle.Solid;
+    this.animatedButtonBypassInject.AnimationSpeed = 0.3f; // Velocidade otimizada para responsividade
+    this.animatedButtonBypassInject.BackColor = Color.Transparent;
+    this.animatedButtonBypassInject.BorderColor = Color.FromArgb(35, 35, 36);
+    this.animatedButtonBypassInject.CornerRadius = 6;
+    this.animatedButtonBypassInject.Cursor = Cursors.Default;
+    this.animatedButtonBypassInject.Font = new Font("Microsoft Sans Serif", 11.5f);
+    this.animatedButtonBypassInject.HoverColor = Color.FromArgb(147, 51, 234); // Roxo moderno
+    this.animatedButtonBypassInject.InsideColor = Color.FromArgb(12, 12, 13);
+    this.animatedButtonBypassInject.Location = new Point(6, 103);
+    this.animatedButtonBypassInject.Name = "animatedButtonBypassInject";
+    this.animatedButtonBypassInject.ShowToolTip = false;
+    this.animatedButtonBypassInject.Size = new Size(228, 37);
+    this.animatedButtonBypassInject.TabIndex = 10;
+    this.animatedButtonBypassInject.Text = "Bypass Inject";
+    this.animatedButtonBypassInject.TextColor = Color.White;
+    this.animatedButtonBypassInject.TextHoverColor = Color.White;
+    this.animatedButtonBypassInject.ToolTipIcon = "";
+    this.animatedButtonBypassInject.ToolTipMessage = "";
     this.treis.AutoSize = true;
     this.treis.BackColor = Color.Transparent;
     this.treis.Font = new Font("Microsoft Sans Serif", 11.25f, FontStyle.Regular, GraphicsUnit.Point, (byte) 0);

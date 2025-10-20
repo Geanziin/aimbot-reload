@@ -11,6 +11,7 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using WindowsFormsApp1.Properties;
+using Console = WindowsFormsApp1.NoopConsole;
 
 #nullable disable
 namespace WindowsFormsApp1;
@@ -71,7 +72,7 @@ public class Main : UserControl
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao navegar para Combat: {ex.Message}");
+
     }
   }
 
@@ -137,7 +138,7 @@ public class Main : UserControl
     catch (Exception ex)
     {
       // Log do erro se necessário
-      Console.WriteLine($"Erro ao trocar aba: {ex.Message}");
+
     }
   }
 

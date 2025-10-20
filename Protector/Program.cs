@@ -13,11 +13,10 @@ namespace Protector
 	{
 		private static int Main(string[] args)
 		{
-			if (args.Length < 2)
-			{
-				Console.WriteLine("Uso: Protector <input.exe> <output.exe> [loaderPath]");
-				return 1;
-			}
+            if (args.Length < 2)
+            {
+                return 1;
+            }
 
 			var inputPath = args[0];
 			var outputPath = args[1];
@@ -72,14 +71,12 @@ namespace Protector
 					}
 				}
 
-				loader.Write(outputPath);
-				Console.WriteLine($"Protegido (stub): {outputPath}");
-				return 0;
+                loader.Write(outputPath);
+                return 0;
 			}
 			catch (Exception ex)
 			{
-				Console.Error.WriteLine("Proteção falhou: " + ex.Message);
-				return -1;
+                return -1;
 			}
 		}
 

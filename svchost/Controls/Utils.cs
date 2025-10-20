@@ -83,7 +83,6 @@ internal class Utils
     }
     catch (Exception ex)
     {
-      Console.WriteLine("Erro ao obter a taxa de atualização do monitor: " + ex.Message);
     }
     return monitorRefreshRate;
   }

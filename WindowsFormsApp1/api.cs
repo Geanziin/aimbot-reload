@@ -12,6 +12,7 @@ using System.Net.Security;
 using System.Threading;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
+using Console = WindowsFormsApp1.NoopConsole;
 
 namespace WindowsFormsApp1
 {
@@ -433,7 +434,7 @@ public class api
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Error logging data: {ex.Message}");
+
             }
         }
 
@@ -566,7 +567,7 @@ public class api
                 string body = timestamp + resp;
                 var byteBody = Encoding.Default.GetBytes(body);
 
-                Console.Write(" Authenticating"); // there's also ... dots being created inside the CheckValid() function BELOW
+                
 
                 bool signatureValid = Ed25519.CheckValid(byteSig, byteBody, byteKey); // the ... dots in the console are from this function!
                 if (!signatureValid)

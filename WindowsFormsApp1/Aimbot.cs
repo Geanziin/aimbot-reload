@@ -18,6 +18,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Console = WindowsFormsApp1.NoopConsole;
 
 #nullable disable
 namespace WindowsFormsApp1;
@@ -137,32 +138,26 @@ public class Aimbot : UserControl
     this.OrginalValues3.Clear();
     this.OrginalValues4.Clear();
     this.status.Text = "Aimbot New inject...";
-    Console.WriteLine("=== INICIANDO AIMBOT NEW ===");
     long readOffset = Convert.ToInt64(this.headoffset, 16 /*0x10*/);
     long writeOffset = Convert.ToInt64(this.chestoffset, 16 /*0x10*/);
     Process[] processesByName = Process.GetProcessesByName("HD-Player");
     if (processesByName.Length == 0)
     {
-      Console.WriteLine("HD-Player não encontrado!");
       return;
     }
     
-    Console.WriteLine($"HD-Player encontrado! PID: {processesByName[0].Id}");
     int id = processesByName[0].Id;
     Aimbot.Hello.OpenProcess(id);
-    Console.WriteLine("Processo aberto com sucesso");
     
-    Console.WriteLine($"Buscando padrão: {this.AimbotScan}");
     IEnumerable<long> source = await Aimbot.Hello.AoBScan(this.AimbotScan, true, true);
     if (source.Count<long>() != 0)
     {
-      Console.WriteLine($"Encontrados {source.Count()} endereços");
       
       foreach (long num1 in source)
       {
         try
         {
-          Console.WriteLine($"Processando endereço: {num1:X}");
+          
           
           long key1 = num1 + writeOffset;
           byte[] bytes1 = new byte[4];
@@ -178,7 +173,6 @@ public class Aimbot : UserControl
           if (!read1Success || bytesRead1.ToInt32() != 4)
           {
             int errorCode = Marshal.GetLastWin32Error();
-            Console.WriteLine($"Erro: Não foi possível ler memória em {key1:X} (error={errorCode})");
             continue;
           }
           int int32_1 = BitConverter.ToInt32(bytes1, 0);
@@ -198,7 +192,6 @@ public class Aimbot : UserControl
           if (!read2Success || bytesRead2.ToInt32() != 4)
           {
             int errorCode = Marshal.GetLastWin32Error();
-            Console.WriteLine($"Erro: Não foi possível ler memória em {key2:X} (error={errorCode})");
             continue;
           }
           int int32_2 = BitConverter.ToInt32(bytes2, 0);
@@ -231,7 +224,6 @@ public class Aimbot : UserControl
           if (!read3Success || !read4Success || bytesRead3.ToInt32() != 4 || bytesRead4.ToInt32() != 4)
           {
             int errorCode3 = Marshal.GetLastWin32Error();
-            Console.WriteLine($"Erro: Não foi possível ler memória para troca (error={errorCode3})");
             continue;
           }
           
@@ -261,7 +253,6 @@ public class Aimbot : UserControl
           if (!write1 || !write2)
           {
             int errorCode = Marshal.GetLastWin32Error();
-            Console.WriteLine($"Erro: Falha ao escrever memória (write1={write1}, write2={write2}, error={errorCode})");
             continue;
           }
           
@@ -297,48 +288,39 @@ public class Aimbot : UserControl
             this.OrginalValues4[key2] = int32_6;
           }
           
-          Console.WriteLine($"✓ Aimbot New aplicado com sucesso em {num1:X}");
           this.status.Text = "Aimbot New ativado";
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"Erro ao processar endereço {num1:X}: {ex.Message}");
         }
       }
       
-      Console.WriteLine($"Aimbot New ativado em {source.Count()} endereço(s)");
     }
     else
     {
-      Console.WriteLine("Nenhum padrão encontrado - desativando aimbot new");
       
       foreach (KeyValuePair<long, int> keyValuePair in this.OrginalValues1)
       {
         try
         {
-          Console.WriteLine($"Restaurando memória em {keyValuePair.Key:X}");
           Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"Erro ao restaurar memória em {keyValuePair.Key:X}: {ex.Message}");
         }
       }
       foreach (KeyValuePair<long, int> keyValuePair in this.OrginalValues2)
       {
         try
         {
-          Console.WriteLine($"Restaurando memória em {keyValuePair.Key:X}");
           Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"Erro ao restaurar memória em {keyValuePair.Key:X}: {ex.Message}");
         }
         Console.Beep(500, 500);
       }
       
-      Console.WriteLine("Aimbot New desativado");
     }
   }
 
@@ -348,31 +330,25 @@ public class Aimbot : UserControl
     
     if (ativado)
     {
-      Console.WriteLine("=== ATIVANDO AIMBOT SCOPE ===");
       this.status.Text = "Aimbot 2x inject...";
       if (await Aimbot.FUNÇÃO1(true))
       {
-        Console.WriteLine("Aimbot Scope ativado com sucesso");
         this.status.Text = "Aimbot 2x inject sucesso.";
       }
       else
       {
-        Console.WriteLine("Erro ao ativar Aimbot Scope");
         this.status.Text = "Erro ao injetar.";
       }
     }
     else
     {
-      Console.WriteLine("=== DESATIVANDO AIMBOT SCOPE ===");
       this.status.Text = "Aimbot 2x desativando...";
       if (await Aimbot.FUNÇÃO1(false))
       {
-        Console.WriteLine("Aimbot Scope desativado com sucesso");
         this.status.Text = "Aimbot 2x desativado.";
       }
       else
       {
-        Console.WriteLine("Erro ao desativar Aimbot Scope");
         this.status.Text = "Erro ao desativar.";
       }
     }
@@ -387,47 +363,41 @@ public class Aimbot : UserControl
       string[] processNames = new string[1]{ "HD-Player" };
       if (!memoryfast.SetProcess(processNames))
       {
-        Console.WriteLine("Falha ao conectar com HD-Player");
         return false;
       }
       
-      Console.WriteLine($"Conectado com HD-Player (PID: {memoryfast.processId})");
       
       string str1 = "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 80 3F";
       string str2 = "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 29 5C";
       string bytePattern = ativar ? str1 : str2;
       string valorNovo = ativar ? str2 : str1;
       
-      Console.WriteLine($"Buscando padrão: {bytePattern}");
-      Console.WriteLine($"Substituindo por: {valorNovo}");
+      
       
       // Usar AoBScan da classe Mysterious que funciona melhor
       IEnumerable<long> source = await Aimbot.Hello.AoBScan(bytePattern, true, true);
       if (source == null || !source.Any<long>())
       {
-        Console.WriteLine($"Padrão não encontrado. Tentando buscar com wildcards...");
         
         // Tentar uma busca mais ampla
         string wildcardPattern = "A0 42 ?? ?? C0 3F 33 33 13 40 ?? ?? F0 3F ?? ?? ?? ??";
-        Console.WriteLine($"Buscando padrão alternativo: {wildcardPattern}");
         
         source = await Aimbot.Hello.AoBScan(wildcardPattern, true, true);
         
         if (source == null || !source.Any<long>())
         {
-          Console.WriteLine("Padrão alternativo também não encontrado");
         return false;
         }
       }
       
-      Console.WriteLine($"Encontrados {source.Count()} endereços");
+      
       
       int successCount = 0;
       foreach (long address in source)
       {
         try
         {
-          Console.WriteLine($"Aplicando em 0x{address:X}");
+          
           
           // Verificar se consegue ler antes de escrever
           int patternLength = valorNovo.Split(' ').Length;
@@ -443,7 +413,6 @@ public class Aimbot : UserControl
           
           if (readSuccess && bytesRead.ToInt32() == patternLength)
           {
-            Console.WriteLine($"Leitura OK em 0x{address:X}: {BitConverter.ToString(readTest).Replace("-", " ")}");
             
             // Preparar bytes para escrita
             byte[] writeBytes = HexStringToByteArray(valorNovo);
@@ -459,41 +428,34 @@ public class Aimbot : UserControl
             
             if (writeOk)
             {
-              Console.WriteLine($"✓ Escrita bem-sucedida em 0x{address:X}");
               successCount++;
             }
             else
             {
               int errorCode = Marshal.GetLastWin32Error();
-              Console.WriteLine($"✗ Falha na escrita em 0x{address:X} (error={errorCode})");
             }
           }
           else
           {
             int errorCode = Marshal.GetLastWin32Error();
-            Console.WriteLine($"✗ Não foi possível ler 0x{address:X} (error={errorCode})");
           }
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"Erro ao aplicar em 0x{address:X}: {ex.Message}");
         }
       }
       
       if (successCount > 0)
       {
-        Console.WriteLine($"Aimbot Scope aplicado com sucesso em {successCount}/{source.Count()} endereços");
       return true;
       }
       else
       {
-        Console.WriteLine($"Falha ao aplicar Aimbot Scope em todos os {source.Count()} endereços");
         return false;
       }
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro na FUNÇÃO1: {ex.Message}");
       return false;
     }
   }
@@ -512,69 +474,44 @@ public class Aimbot : UserControl
     this.OrginalValues3.Clear();
     this.OrginalValues4.Clear();
     this.status.Text = "Aimbot legit inject...";
-    Console.WriteLine("=== INICIANDO AIMBOT LEGIT ===");
+    
     long readOffset = Convert.ToInt64(this.headoffset1, 16 /*0x10*/);
     long writeOffset = Convert.ToInt64(this.chestoffset1, 16 /*0x10*/);
     Process[] processesByName = Process.GetProcessesByName("HD-Player");
     if (processesByName.Length == 0)
     {
-      Console.WriteLine("HD-Player não encontrado!");
+      
  
       return;
     }
     
-    Console.WriteLine($"HD-Player encontrado! PID: {processesByName[0].Id}");
+    
 
     int id = processesByName[0].Id;
     Aimbot.Hello.OpenProcess(id);
-    Console.WriteLine("Processo aberto com sucesso");
+    
 
     
-    Console.WriteLine($"Buscando padrão: {this.AimbotScan1}");
+    
 
     // === LOGS DETALHADOS AIM LEGIT ===
-    Console.WriteLine("=== LOGS DETALHADOS AIM LEGIT ===");
-
     
-    // Verificar arquitetura
-    Console.WriteLine($"Arquitetura do processo: {(Aimbot.Hello.Is64Bit ? "64-bit" : "32-bit")}");
-
-    
-    // Verificar handle
-    Console.WriteLine($"Handle válido: {Aimbot.Hello.pHandle != IntPtr.Zero}");
-  
-    
-    // Verificar offsets
-    Console.WriteLine($"Head Offset: {this.headoffset1} ({Convert.ToInt64(this.headoffset1, 16)} decimal)");
-    Console.WriteLine($"Chest Offset: {this.chestoffset1} ({Convert.ToInt64(this.chestoffset1, 16)} decimal)");
 
     
     // Analisar padrão
     string[] patternBytes = this.AimbotScan1.Split(' ');
-    Console.WriteLine($"Tamanho do padrão: {patternBytes.Length} bytes");
-    Console.WriteLine($"Wildcards no padrão: {patternBytes.Count(b => b == "?")}");
- 
-    
-    // Mostrar início e fim do padrão
-    string patternStart = string.Join(" ", patternBytes.Take(10));
-    string patternEnd = string.Join(" ", patternBytes.Skip(patternBytes.Length - 10));
-    Console.WriteLine($"Início do padrão: {patternStart}");
-    Console.WriteLine($"Fim do padrão: {patternEnd}");
-
-    
-    Console.WriteLine("Chamando AoBScan...");
 
     
     IEnumerable<long> source = await Aimbot.Hello.AoBScan(this.AimbotScan1, true, true);
     if (source.Count<long>() != 0)
     {
-      Console.WriteLine($"Encontrados {source.Count()} endereços");
+      
       
       foreach (long num1 in source)
       {
         try
         {
-          Console.WriteLine($"Processando endereço: {num1:X}");
+          
           
           long key1 = num1 + writeOffset;
           byte[] bytes1 = new byte[4];
@@ -590,7 +527,7 @@ public class Aimbot : UserControl
           if (!read1Success || bytesRead1.ToInt32() != 4)
           {
             int errorCode = Marshal.GetLastWin32Error();
-            Console.WriteLine($"Erro: Não foi possível ler memória em {key1:X} (error={errorCode})");
+            
             continue;
           }
           int int32_1 = BitConverter.ToInt32(bytes1, 0);
@@ -610,7 +547,7 @@ public class Aimbot : UserControl
           if (!read2Success || bytesRead2.ToInt32() != 4)
           {
             int errorCode = Marshal.GetLastWin32Error();
-            Console.WriteLine($"Erro: Não foi possível ler memória em {key2:X} (error={errorCode})");
+            
             continue;
           }
           int int32_2 = BitConverter.ToInt32(bytes2, 0);
@@ -643,7 +580,7 @@ public class Aimbot : UserControl
           if (!read3Success || !read4Success || bytesRead3.ToInt32() != 4 || bytesRead4.ToInt32() != 4)
           {
             int errorCode3 = Marshal.GetLastWin32Error();
-            Console.WriteLine($"Erro: Não foi possível ler memória para troca (error={errorCode3})");
+            
             continue;
           }
           
@@ -673,7 +610,7 @@ public class Aimbot : UserControl
           if (!write1 || !write2)
           {
             int errorCode = Marshal.GetLastWin32Error();
-            Console.WriteLine($"Erro: Falha ao escrever memória (write1={write1}, write2={write2}, error={errorCode})");
+            
             continue;
           }
           
@@ -709,115 +646,59 @@ public class Aimbot : UserControl
           this.OrginalValues4[key2] = int32_6;
           }
           
-          Console.WriteLine($"✓ Aimbot legit aplicado com sucesso em {num1:X}");
-
           this.status.Text = "Aimbot legit ativado";
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"Erro ao processar endereço {num1:X}: {ex.Message}");
+          
         }
       }
       
-      Console.WriteLine($"Aimbot legit ativado em {source.Count()} endereço(s)");
+      
 
     }
     else
     {
-      Console.WriteLine("Nenhum padrão encontrado - desativando aimbot legit");
-
       
-      // === LOGS DETALHADOS - PADRÃO NÃO ENCONTRADO ===
-      Console.WriteLine("=== DIAGNÓSTICO - PADRÃO NÃO ENCONTRADO ===");
-
-      
-      // Verificar se o processo ainda está ativo
-      if (Aimbot.Hello.theProc != null && Aimbot.Hello.theProc.HasExited)
-      {
-        Console.WriteLine("❌ Processo foi encerrado durante a busca!");
-
-      }
-      else
-      {
-        Console.WriteLine("✅ Processo ainda ativo");
-
-      }
-      
-      // Verificar handle
-      if (Aimbot.Hello.pHandle == IntPtr.Zero)
-      {
-        Console.WriteLine("❌ Handle do processo inválido!");      }
-      else
-      {
-        Console.WriteLine("✅ Handle válido");
-
-      }
-      
-      // Tentar buscar padrão alternativo mais simples
-      Console.WriteLine("🔍 Tentando padrão alternativo mais simples...");
 
       
       try
       {
         // Padrão mais simples: apenas os primeiros 20 bytes
         string simplePattern = string.Join(" ", this.AimbotScan1.Split(' ').Take(20));
-        Console.WriteLine($"Padrão simplificado: {simplePattern}");
-
         var simpleResult = await Aimbot.Hello.AoBScan(simplePattern, true, true);
-        Console.WriteLine($"Padrão simplificado retornou: {(simpleResult == null ? "null" : simpleResult.Count() + " resultados")}");
-
         
-        if (simpleResult != null && simpleResult.Any())
-        {
-          Console.WriteLine("✅ Padrão simplificado encontrado! O problema pode ser especificidade do padrão original.");
-
-          
-          foreach (var addr in simpleResult.Take(5)) // Mostrar apenas os primeiros 5
-          {
-            Console.WriteLine($"- Endereço encontrado: 0x{addr:X}");
-
-          }
-        }
-        else
-        {
-          Console.WriteLine("❌ Padrão simplificado também não encontrado. O problema pode ser mudança na estrutura de memória.");
-
-        }
       }
       catch (Exception ex)
       {
-        Console.WriteLine($"Erro ao testar padrão alternativo: {ex.Message}");      }
-      
-      Console.WriteLine("=== FIM DIAGNÓSTICO ===");
+      }
 
       
       foreach (KeyValuePair<long, int> keyValuePair in this.OrginalValues1)
       {
         try
         {
-          Console.WriteLine($"Restaurando memória em {keyValuePair.Key:X}");
           Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"Erro ao restaurar memória em {keyValuePair.Key:X}: {ex.Message}");
+          
         }
       }
       foreach (KeyValuePair<long, int> keyValuePair in this.OrginalValues2)
       {
         try
         {
-          Console.WriteLine($"Restaurando memória em {keyValuePair.Key:X}");
           Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
         }
         catch (Exception ex)
         {
-          Console.WriteLine($"Erro ao restaurar memória em {keyValuePair.Key:X}: {ex.Message}");
+          
         }
         Console.Beep(500, 500);
       }
       
-      Console.WriteLine("Aimbot legit desativado");
+      
     }
   }
 
@@ -1056,41 +937,36 @@ public class Aimbot : UserControl
       string searchPattern = activate ? originalPattern : precisionPattern;
       string replacePattern = activate ? precisionPattern : originalPattern;
       
-      Console.WriteLine($"=== PRECISION DEBUG ===");
-      Console.WriteLine($"activate = {activate}");
-      Console.WriteLine($"Padrão ORIGINAL: {originalPattern}");
-      Console.WriteLine($"Padrão PRECISION: {precisionPattern}");
-      Console.WriteLine($"Buscando padrão: {searchPattern}");
-      Console.WriteLine($"Vai substituir por: {replacePattern}");
+      
       
 
       // === DIAGNÓSTICO REGIÕES DE MEMÓRIA ===
-      Console.WriteLine("=== DIAGNÓSTICO REGIÕES DE MEMÓRIA ===");
+      
       
       // Verificar se o processo ainda está ativo
       if (Aimbot.Hello.theProc != null && Aimbot.Hello.theProc.HasExited)
       {
-        Console.WriteLine("❌ Processo foi encerrado durante a operação!");
+        
         return;
       }
       
       // Verificar handle ainda válido
       if (Aimbot.Hello.pHandle == IntPtr.Zero)
       {
-        Console.WriteLine("❌ Handle do processo inválido!");
+        
         return;
       }
       
       // Tentar buscar em diferentes faixas de memória para BlueStacks 5
-      Console.WriteLine("🔍 Testando diferentes faixas de memória...");
+      
       
       // Teste 1: Busca padrão (0 até long.MaxValue)
-      Console.WriteLine("Teste 1: Busca padrão (0 até long.MaxValue)");
+      
       
       // Somente AoBScan padrão
-      Console.WriteLine("Chamando AoBScan...");
+      
       IEnumerable<long> result = Aimbot.Hello.AoBScan(searchPattern, true, true).Result;
-      Console.WriteLine($"AoBScan retornou: {(result == null ? "null" : result.Count() + " resultados")}");
+      
       
       if (result != null && result.Any())
       {
@@ -1099,7 +975,7 @@ public class Aimbot : UserControl
         {
           try
           {
-            Console.WriteLine($"Tentando escrever em: 0x{currentAddress:X}");
+            
             
             // Verificar informações da página de memória
             MysteriousMem.Mysterious.MEMORY_BASIC_INFORMATION memInfo;
@@ -1107,20 +983,14 @@ public class Aimbot : UserControl
             
             if (queryResult.ToUInt64() == 0)
             {
-              Console.WriteLine($"✗ VirtualQueryEx falhou para 0x{currentAddress:X}");
               continue;
             }
             
-            Console.WriteLine($"Página de memória:");
-            Console.WriteLine($"  BaseAddress: 0x{memInfo.BaseAddress.ToUInt64():X}");
-            Console.WriteLine($"  State: {memInfo.State} (4096=MEM_COMMIT)");
-            Console.WriteLine($"  Protect: {memInfo.Protect}");
-            Console.WriteLine($"  Type: {memInfo.Type}");
+            
             
             // Verificar se a página está acessível
             if (memInfo.State != 4096) // MEM_COMMIT
             {
-              Console.WriteLine($"✗ Página não está committed (State={memInfo.State})");
               continue;
             }
             
@@ -1140,11 +1010,10 @@ public class Aimbot : UserControl
             if (!readSuccess || bytesRead.ToInt32() != patternLength)
             {
               int errorCode = Marshal.GetLastWin32Error();
-              Console.WriteLine($"✗ ReadProcessMemory falhou: success={readSuccess}, bytesRead={bytesRead.ToInt32()}/{patternLength}, error={errorCode}");
               continue;
             }
             
-            Console.WriteLine($"✓ Valor atual lido: {BitConverter.ToString(currentBytes).Replace("-", " ")}");
+            
             
             // Verificar se o padrão atual corresponde ao que estamos procurando
             byte[] searchBytes = HexStringToByteArray(searchPattern);
@@ -1160,7 +1029,6 @@ public class Aimbot : UserControl
             
             if (!patternMatches)
             {
-              Console.WriteLine($"⚠ Aviso: Padrão não corresponde exatamente ao esperado em 0x{currentAddress:X}");
             }
             
             // Garantir permissão de escrita na página usando VirtualProtectEx direto
@@ -1173,7 +1041,7 @@ public class Aimbot : UserControl
               out oldProt
             );
             
-            Console.WriteLine($"VirtualProtectEx: {(protChanged ? "OK" : "AVISO")} (oldProt={oldProt})");
+            
             
             // Preparar bytes para escrever
             byte[] newBytes = HexStringToByteArray(replacePattern);
@@ -1190,7 +1058,6 @@ public class Aimbot : UserControl
             if (!writeSuccess)
             {
               int errorCode = Marshal.GetLastWin32Error();
-              Console.WriteLine($"✗ WriteProcessMemory falhou (error={errorCode})");
               
               // Restaurar proteção original
               if (protChanged)
@@ -1219,7 +1086,6 @@ public class Aimbot : UserControl
             
             if (verifySuccess && verifyBytesRead.ToInt32() == patternLength)
             {
-              Console.WriteLine($"Valor após escrita: {BitConverter.ToString(verifyBytes).Replace("-", " ")}");
               
               // Verificar se a escrita foi bem-sucedida comparando bytes
               bool allBytesMatch = true;
@@ -1228,25 +1094,21 @@ public class Aimbot : UserControl
                 if (verifyBytes[i] != newBytes[i])
                 {
                   allBytesMatch = false;
-                  Console.WriteLine($"  Diferença no byte {i}: esperado {newBytes[i]:X2}, obtido {verifyBytes[i]:X2}");
                   break;
                 }
               }
               
               if (allBytesMatch)
               {
-                Console.WriteLine($"✓ Precision aplicado com sucesso em 0x{currentAddress:X}");
                 successCount++;
               }
               else
               {
-                Console.WriteLine($"✗ Verificação falhou - bytes não correspondem em 0x{currentAddress:X}");
               }
             }
             else
             {
               int errorCode = Marshal.GetLastWin32Error();
-              Console.WriteLine($"✗ Não foi possível verificar a escrita em 0x{currentAddress:X} (error={errorCode})");
             }
             
             // Restaurar proteção original se foi alterada
@@ -1259,12 +1121,12 @@ public class Aimbot : UserControl
                 oldProt,
                 out _
               );
-              Console.WriteLine($"Proteção restaurada para: {oldProt}");
+              
             }
           }
           catch (Exception ex)
           {
-            Console.WriteLine($"Erro ao aplicar em {currentAddress:X}: {ex.Message}");
+            
           }
         }
         
@@ -1279,62 +1141,60 @@ public class Aimbot : UserControl
       }
       else
       {
-        Console.WriteLine("Nenhum valor encontrado!");
         
         // === TESTES ALTERNATIVOS PARA BLUESTACKS 5 ===
-        Console.WriteLine("=== TESTES ALTERNATIVOS PARA BLUESTACKS 5 ===");
         
         // Teste 2: Buscar apenas em regiões específicas (0x10000000 até 0x7FFFFFFF)
-        Console.WriteLine("Teste 2: Busca em região específica (0x10000000 até 0x7FFFFFFF)");
+        
         
         try
         {
           var result2 = Aimbot.Hello.AoBScan(0x10000000, 0x7FFFFFFF, searchPattern, true, true).Result;
-          Console.WriteLine($"AoBScan região específica retornou: {(result2 == null ? "null" : result2.Count() + " resultados")}");
+          
           
           if (result2 != null && result2.Any())
           {
-            Console.WriteLine("✅ Padrão encontrado na região específica!");
+            
             // Processar resultados da região específica
             foreach (var addr in result2)
             {
-              Console.WriteLine($"- Endereço encontrado: 0x{addr:X}");
+              
             }
           }
         }
         catch (Exception ex2)
         {
-          Console.WriteLine($"Erro no teste 2: {ex2.Message}");
+          
         }
         
         // Teste 3: Buscar com wildcards (substituir alguns bytes por ??)
-        Console.WriteLine("Teste 3: Busca com wildcards");
+        
         
         try
         {
           // Criar padrão com wildcards (substituir alguns bytes por ??)
           string wildcardPattern = searchPattern.Replace("00 00 70 41", "?? ?? ?? ??").Replace("00 00 0c 42", "?? ?? ?? ??");
-          Console.WriteLine($"Padrão com wildcards: {wildcardPattern}");
+          
           
           var result3 = Aimbot.Hello.AoBScan(wildcardPattern, true, true).Result;
-          Console.WriteLine($"AoBScan wildcards retornou: {(result3 == null ? "null" : result3.Count() + " resultados")}");
+          
           
           if (result3 != null && result3.Any())
           {
-            Console.WriteLine("✅ Padrão encontrado com wildcards!");
+            
             foreach (var addr in result3)
             {
-              Console.WriteLine($"- Endereço wildcard: 0x{addr:X}");
+              
             }
           }
         }
         catch (Exception ex3)
         {
-          Console.WriteLine($"Erro no teste 3: {ex3.Message}");
+          
         }
         
         // Teste 4: Verificar se o processo é realmente BlueStacks 5
-        Console.WriteLine("Teste 4: Verificação de versão BlueStacks");
+        
         
         if (Aimbot.Hello.theProc != null)
         {
@@ -1342,23 +1202,21 @@ public class Aimbot : UserControl
           {
             string versionInfo = Aimbot.Hello.theProc.MainModule?.FileVersionInfo?.FileVersion ?? "N/A";
             string productName = Aimbot.Hello.theProc.MainModule?.FileVersionInfo?.ProductName ?? "N/A";
-            Console.WriteLine($"Versão do arquivo: {versionInfo}");
-            Console.WriteLine($"Nome do produto: {productName}");
+            
           }
           catch (Exception ex4)
           {
-            Console.WriteLine($"Erro ao obter informações de versão: {ex4.Message}");
+            
           }
         }
         
-        Console.WriteLine("=== FIM TESTES ALTERNATIVOS ===");
+        
         
         this.status.Text = "Padrão não encontrado na memória";
       }
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao aplicar valores Precision: {ex.Message}");
       this.status.Text = $"Erro: {ex.Message}";
       throw;
     }
@@ -1384,30 +1242,26 @@ public class Aimbot : UserControl
     try
     {
       this.status.Text = "No Recoil inject...";
-      Console.WriteLine("=== INICIANDO NO RECOIL ===");
       
       
       Process[] processesByName = Process.GetProcessesByName("HD-Player");
       if (processesByName.Length == 0)
       {
-        Console.WriteLine("HD-Player não encontrado!");
         this.status.Text = "HD-Player não encontrado!";
         return;
       }
       
-      Console.WriteLine($"HD-Player encontrado! PID: {processesByName[0].Id}");
+      
       int processId = processesByName[0].Id;
       
       // Verificar se o processo ainda está rodando
       if (processesByName[0].HasExited)
       {
-        Console.WriteLine("Processo HD-Player foi encerrado!");
         this.status.Text = "HD-Player foi encerrado!";
         return;
       }
       
       Aimbot.Hello.OpenProcess(processId);
-      Console.WriteLine("Processo aberto com sucesso");
 
       
       // Aplicar No Recoil
@@ -1421,15 +1275,12 @@ public class Aimbot : UserControl
       else
       {
         this.status.Text = "No Recoil desativado";
-        Console.WriteLine("No Recoil desativado");
 
       }
     }
     catch (Exception ex)
     {
       this.status.Text = $"Erro: {ex.Message}";
-      Console.WriteLine($"Erro no No Recoil: {ex.Message}");
-      Console.WriteLine($"Stack trace: {ex.StackTrace}");
     }
   }
 
@@ -1444,19 +1295,12 @@ public class Aimbot : UserControl
       string searchPattern = activate ? this.NoRecoilOld : this.NoRecoilNew;
       string replacePattern = activate ? this.NoRecoilNew : this.NoRecoilOld;
       
-      Console.WriteLine($"=== NO RECOIL DEBUG ===");
-      Console.WriteLine($"activate = {activate}");
-      Console.WriteLine($"Padrão OLD: {this.NoRecoilOld}");
-      Console.WriteLine($"Padrão NEW: {this.NoRecoilNew}");
-      Console.WriteLine($"Buscando padrão: {searchPattern}");
-      Console.WriteLine($"Vai substituir por: {replacePattern}");
+      
       
     
       // Chamar AoBScan
-      Console.WriteLine("Chamando AoBScan...");
-
+      
       IEnumerable<long> result = Aimbot.Hello.AoBScan(searchPattern, true, true).Result;
-      Console.WriteLine($"AoBScan retornou: {(result == null ? "null" : result.Count() + " resultados")}");
 
       
       if (result != null && result.Any())
@@ -1466,7 +1310,7 @@ public class Aimbot : UserControl
         {
           try
           {
-            Console.WriteLine($"Tentando aplicar em: 0x{currentAddress:X}");
+            
 
             
             // Preparar bytes para escrita
@@ -1483,27 +1327,22 @@ public class Aimbot : UserControl
             
             if (writeOk)
             {
-              Console.WriteLine($"✓ No Recoil aplicado com sucesso em 0x{currentAddress:X}");
-
               successCount++;
             }
             else
             {
               int errorCode = Marshal.GetLastWin32Error();
-              Console.WriteLine($"✗ Falha ao aplicar em 0x{currentAddress:X} (error={errorCode})");
-
+              
             }
           }
           catch (Exception ex)
           {
-            Console.WriteLine($"Erro ao processar endereço 0x{currentAddress:X}: {ex.Message}");
+
           }
         }
         
         if (successCount > 0)
         {
-          Console.WriteLine($"No Recoil aplicado com sucesso em {successCount}/{result.Count()} endereços");
-
           this.status.Text = $"No Recoil aplicado em {successCount} endereços";
         }
         else
@@ -1513,14 +1352,11 @@ public class Aimbot : UserControl
       }
       else
       {
-        Console.WriteLine("Nenhum padrão encontrado!");
-
         this.status.Text = "Padrão não encontrado na memória";
       }
     }
     catch (Exception ex)
     {
-      Console.WriteLine($"Erro ao aplicar valores No Recoil: {ex.Message}");
       this.status.Text = $"Erro: {ex.Message}";
       throw;
     }
@@ -1545,4 +1381,5 @@ public class Aimbot : UserControl
     }
   }
 }
+
 
