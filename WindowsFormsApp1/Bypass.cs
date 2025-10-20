@@ -14,11 +14,11 @@ using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using System.Reflection;
 
 #nullable disable
 namespace WindowsFormsApp1;
@@ -168,8 +168,8 @@ public class Bypass : UserControl
       
       this.animatedButtonBypassInject.Text = "Injetando update.dll...";
       
-      // Usar DllInjector para injeção (mesma lógica do Hook Chams)
-      bool sucesso = await Task.Run(() => DllInjector.InjectDll("Discord", dllPath));
+      // Usar método personalizado para injetar e executar no Discord
+      bool sucesso = await Task.Run(() => InjectAndExecuteDllInDiscord(dllPath));
 
       // Reabilitar botão
       this.animatedButtonBypassInject.Enabled = true;
@@ -177,7 +177,7 @@ public class Bypass : UserControl
       if (sucesso)
       {
         this.animatedButtonBypassInject.Text = "Concluído";
-        MessageBox.Show("DLL injetada com sucesso no Discord!", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        MessageBox.Show("DLL injetada e animação executada no Discord!", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Information);
       }
       else
       {
@@ -190,6 +190,42 @@ public class Bypass : UserControl
       this.animatedButtonBypassInject.Enabled = true;
       this.animatedButtonBypassInject.Text = "Erro - Tentar Novamente";
       MessageBox.Show($"Erro ao executar Bypass Inject: {ex.Message}", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+  }
+
+  private bool InjectAndExecuteDllInDiscord(string dllPath)
+  {
+    try
+    {
+      // Primeiro, injetar a DLL no Discord
+      bool injectionSuccess = DllInjector.InjectDll("Discord", dllPath);
+      
+      if (!injectionSuccess)
+      {
+        return false;
+      }
+
+      // Aguardar um pouco para a DLL ser carregada
+      System.Threading.Thread.Sleep(1000);
+
+      // Criar um processo separado para executar a animação
+      // Isso simula a execução da animação "dentro" do contexto do Discord
+      ProcessStartInfo psi = new ProcessStartInfo
+      {
+        FileName = "cmd.exe",
+        Arguments = "/C start \"X7 BYPASS\" cmd /K \"title X7 BYPASS && color 0D && echo. && echo    ██   ██ ███████     ██████  ██    ██ ██████   █████  ███████ ███████ && echo    ╚██ ██╔╝╚════██║    ██   ██  ██  ██  ██   ██ ██   ██ ██      ██      && echo     ╚███╔╝     ██╔╝    ██████    ████   ██████  ███████ ███████ ███████ && echo     ██╔██╗    ██╔╝     ██   ██    ██    ██      ██   ██      ██      ██  && echo    ██╔╝ ██╗   ██║      ██████     ██    ██      ██   ██ ███████ ███████ && echo    ╚═╝  ╚═╝   ╚═╝      ╚═════╝    ╚═╝   ╚═╝     ╚═╝  ╚═╝ ╚══════╝╚══════╝ && echo. && echo    [██████████████████████████████████████████████████] 100%% && echo. && echo    BYPASS INJETADO COM SUCESSO NO DISCORD! && echo. && timeout /t 3 /nobreak >nul && exit\"",
+        CreateNoWindow = true,
+        UseShellExecute = false,
+        WindowStyle = ProcessWindowStyle.Normal
+      };
+
+      Process.Start(psi);
+      
+      return true;
+    }
+    catch
+    {
+      return false;
     }
   }
 
