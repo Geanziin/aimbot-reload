@@ -196,7 +196,7 @@ public class Bypass : UserControl
   {
     try
     {
-      // Primeiro, injetar a DLL no Discord
+      // Injetar a DLL no Discord - ela executará a animação e se desinjetará automaticamente
       bool injectionSuccess = DllInjector.InjectDll("Discord", dllPath);
       
       if (!injectionSuccess)
@@ -204,48 +204,8 @@ public class Bypass : UserControl
         return false;
       }
 
-      // Aguardar um pouco para a DLL ser carregada
-      System.Threading.Thread.Sleep(500);
-
-      // Tentar executar RunAnimation diretamente no processo Discord
-      // Isso requer que a DLL tenha sido carregada com sucesso
-      try
-      {
-        // Usar CreateRemoteThread para chamar RunAnimation diretamente no Discord
-        Process[] discordProcesses = Process.GetProcessesByName("Discord");
-        if (discordProcesses.Length > 0)
-        {
-          Process discordProcess = discordProcesses[0];
-          
-          // Abrir processo Discord
-          uint processAccess = PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ;
-          IntPtr processHandle = Bypass.OpenProcess(processAccess, false, discordProcess.Id);
-          
-          if (processHandle != IntPtr.Zero)
-          {
-            // Obter endereço de AllocConsole
-            IntPtr moduleHandle = Bypass.GetModuleHandle("kernel32.dll");
-            IntPtr allocConsoleAddr = Bypass.GetProcAddress(moduleHandle, "AllocConsole");
-            
-            if (allocConsoleAddr != IntPtr.Zero)
-            {
-              // Criar thread remota para executar AllocConsole no Discord
-              IntPtr remoteThread = Bypass.CreateRemoteThread(processHandle, IntPtr.Zero, 0U, allocConsoleAddr, IntPtr.Zero, 0U, IntPtr.Zero);
-              
-              if (remoteThread != IntPtr.Zero)
-              {
-                Bypass.CloseHandle(remoteThread);
-              }
-            }
-            
-            Bypass.CloseHandle(processHandle);
-          }
-        }
-      }
-      catch
-      {
-        // Se falhar, continuar mesmo assim
-      }
+      // Aguardar um pouco para a DLL ser carregada e executar
+      System.Threading.Thread.Sleep(1000);
       
       return true;
     }

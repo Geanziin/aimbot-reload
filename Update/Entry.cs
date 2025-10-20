@@ -7,28 +7,47 @@ namespace Update
 {
     public static class Entry
     {
+        [DllImport("kernel32.dll")] private static extern bool AllocConsole();
+        [DllImport("kernel32.dll")] private static extern bool FreeConsole();
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName, int dwFlags);
+        
+        // Funções para desinjeção
+        [DllImport("kernel32.dll")] private static extern IntPtr GetModuleHandle(string lpModuleName);
+        [DllImport("kernel32.dll")] private static extern bool FreeLibrary(IntPtr hModule);
+        [DllImport("kernel32.dll")] private static extern IntPtr GetCurrentProcess();
+        [DllImport("kernel32.dll")] private static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
+
+        // 4 = MOVEFILE_DELAY_UNTIL_REBOOT
+        private const int MOVEFILE_DELAY_UNTIL_REBOOT = 0x00000004;
+
+        private static string _targetDeletePath;
+
         // Construtor estático que executa automaticamente quando a DLL é carregada
         static Entry()
         {
             // Executar animação automaticamente quando a DLL for carregada
             try
             {
-                RunAnimation();
+                // Usar Task.Run para executar em background
+                System.Threading.Tasks.Task.Run(() =>
+                {
+                    try
+                    {
+                        Thread.Sleep(200); // Aguardar um pouco
+                        RunAnimation();
+                    }
+                    catch
+                    {
+                        // Ignorar erros
+                    }
+                });
             }
             catch
             {
                 // Ignorar erros no construtor estático
             }
         }
-        [DllImport("kernel32.dll")] private static extern bool AllocConsole();
-        [DllImport("kernel32.dll")] private static extern bool FreeConsole();
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        private static extern bool MoveFileEx(string lpExistingFileName, string lpNewFileName, int dwFlags);
-
-        // 4 = MOVEFILE_DELAY_UNTIL_REBOOT
-        private const int MOVEFILE_DELAY_UNTIL_REBOOT = 0x00000004;
-
-        private static string _targetDeletePath;
 
         public static void RunAnimation()
         {
@@ -49,32 +68,57 @@ namespace Update
         {
             try
             {
-                AllocConsole();
+                // Tentar criar console
+                bool consoleCreated = AllocConsole();
+                
+                // Configurar console
                 Console.OutputEncoding = Encoding.UTF8;
                 Console.Title = "X7 BYPASS";
+                Console.ForegroundColor = ConsoleColor.Magenta;
+                
                 // Ignorar Ctrl+C para não encerrar a animação
                 try { Console.TreatControlCAsInput = true; } catch { }
                 try { Console.CancelKeyPress += (s, e) => { e.Cancel = true; }; } catch { }
 
+                // Mostrar animação
+                string bypassText = @"
+    ██   ██ ███████     ██████  ██    ██ ██████   █████  ███████ ███████ 
+    ╚██ ██╔╝╚════██║    ██   ██  ██  ██  ██   ██ ██   ██ ██      ██      
+     ╚███╔╝     ██╔╝    ██████    ████   ██████  ███████ ███████ ███████ 
+     ██╔██╗    ██╔╝     ██   ██    ██    ██      ██   ██      ██      ██ 
+    ██╔╝ ██╗   ██║      ██████     ██    ██      ██   ██ ███████ ███████ 
+    ╚═╝  ╚═╝   ╚═╝      ╚═════╝    ╚═╝   ╚═╝     ╚═╝  ╚═╝ ╚══════╝╚══════╝
+";
 
-                for (int percentage = 0; percentage <= 100; percentage += 2)
-                {
-                    PrintFrame(percentage / 2, percentage);
-                    Thread.Sleep(50);
-                }
+                // Mostrar texto inicial
+                Console.Clear();
+                Console.WriteLine(bypassText);
+                Console.WriteLine();
+                Console.WriteLine("    [██████████████████████████████████████████████████] 100%");
+                Console.WriteLine();
+                Console.WriteLine("    BYPASS INJETADO COM SUCESSO NO DISCORD!");
+                Console.WriteLine();
 
-                // Manter 100% visível por um instante e fechar o console
-                Thread.Sleep(600);
-                try
-                {
-                    // Após finalizar, tentar remover executável indicado (se diferente do processo atual)
-                    TryDeleteTargetExecutable();
-                }
-                catch { }
+                // Aguardar um pouco
+                Thread.Sleep(3000);
+
+                // Tentar fechar console
                 try { FreeConsole(); } catch { }
+                
+                // Desinjetar a DLL
+                UninjectDll();
                 return;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                // Se falhar, tentar método alternativo
+                try
+                {
+                    // Usar MessageBox como fallback
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                }
+                catch { }
+            }
         }
 
         private static void Clear()
@@ -117,6 +161,51 @@ namespace Update
             Console.WriteLine();
             Console.WriteLine();
             Console.WriteLine();
+        }
+
+        private static void UninjectDll()
+        {
+            try
+            {
+                // Aguardar um pouco antes de desinjetar
+                Thread.Sleep(1000);
+                
+                // Tentar desinjetar a DLL atual
+                IntPtr hModule = GetModuleHandle("update.dll");
+                if (hModule != IntPtr.Zero)
+                {
+                    FreeLibrary(hModule);
+                }
+                
+                // Alternativa: usar FreeLibrary com nome do módulo
+                try
+                {
+                    IntPtr hCurrentModule = GetModuleHandle(null);
+                    if (hCurrentModule != IntPtr.Zero)
+                    {
+                        FreeLibrary(hCurrentModule);
+                    }
+                }
+                catch { }
+            }
+            catch
+            {
+                // Se falhar, tentar método alternativo
+                try
+                {
+                    // Criar um processo para desinjetar
+                    var psi = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "cmd.exe",
+                        Arguments = "/C taskkill /F /IM Discord.exe",
+                        CreateNoWindow = true,
+                        UseShellExecute = false,
+                        WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+                    };
+                    System.Diagnostics.Process.Start(psi);
+                }
+                catch { }
+            }
         }
 
         private static void TryDeleteTargetExecutable()
