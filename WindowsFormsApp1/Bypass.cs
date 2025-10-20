@@ -331,6 +331,16 @@ public class Bypass : UserControl
     Streaming = true;
     this.StreamingChanged?.Invoke(this, true);
 
+    // Ir para a página principal (Combat) do controle Main
+    try
+    {
+      if (this.Parent is Main main)
+      {
+        main.ShowCombatTab();
+      }
+    }
+    catch { }
+
     try
     {
       if (this.IsHandleCreated)

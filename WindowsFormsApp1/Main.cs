@@ -61,6 +61,20 @@ public class Main : UserControl
 
   public event EventHandler<bool> StreamingChanged;
 
+  // Seleciona a aba principal (Combat) e posiciona os controles
+  public void ShowCombatTab()
+  {
+    try
+    {
+      this.slidingTabControl1.SelectedIndex = 0;
+      this.ShowTabMessageBox(0);
+    }
+    catch (Exception ex)
+    {
+      Console.WriteLine($"Erro ao navegar para Combat: {ex.Message}");
+    }
+  }
+
   public void position_fora()
   {
     this.bypass1.Location = new Point(552, 22);
