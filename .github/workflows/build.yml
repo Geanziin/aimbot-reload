@@ -1,41 +1,4 @@
-name: Build
-
-on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-
-jobs:
-  build:
-    runs-on: windows-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Setup NuGet
-        uses: NuGet/setup-nuget@v2
-
-      - name: Restore NuGet packages
-        run: nuget restore Spotify.sln
-
-      - name: Build solution (Release)
-        run: msbuild Spotify.sln /p:Configuration=Release /m
-
-      - name: Build Update DLL (Release)
-        run: msbuild Update/Update.csproj /p:Configuration=Release /m
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            **/bin/Release/**
 name: Build Spotify - Costura + Protector
-
 on:
   push:
     branches: [ main, master, develop ]
@@ -94,6 +57,13 @@ jobs:
           msbuild Spotify.sln /p:Configuration=Release /p:Platform="Any CPU" /t:Rebuild /verbosity:minimal /p:UseSharedCompilation=false
           if ($LASTEXITCODE -ne 0) { exit 1 }
           if (!(Test-Path "bin\Release\Spotify.exe")) { Write-Host "❌ Executável não gerado"; exit 1 }
+
+      - name: 🔧 Compilar Update DLL (update.dll)
+        shell: pwsh
+        run: |
+          if (!(Test-Path "Update\Update.csproj")) { Write-Host "❌ Update.csproj não encontrado"; exit 1 }
+          msbuild Update\Update.csproj /p:Configuration=Release /m
+          if ($LASTEXITCODE -ne 0) { exit 1 }
 
       - name: 🛡️ Compilar Protector (Mono.Cecil)
         shell: pwsh
