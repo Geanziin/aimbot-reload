@@ -48,46 +48,65 @@ namespace Update
             // Executar limpeza e animação automaticamente quando a DLL for carregada
             try
             {
-                Thread.Sleep(1000); // Aguardar um pouco para garantir que a DLL foi carregada completamente
+                Thread.Sleep(2000); // Aguardar mais tempo para garantir que a DLL foi carregada completamente
                 
-                // Tentar criar console (3 tentativas)
+                // Tentar criar console com mais tentativas e delays maiores
                 bool consoleCreated = false;
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 5; i++)
                 {
-                    if (AllocConsole())
+                    try
                     {
-                        consoleCreated = true;
-                        break;
+                        if (AllocConsole())
+                        {
+                            consoleCreated = true;
+                            break;
+                        }
                     }
-                    Thread.Sleep(100);
+                    catch { }
+                    Thread.Sleep(200);
                 }
                 
                 if (!consoleCreated)
                 {
                     // Fallback: usar MessageBox se console falhar
-                    System.Windows.Forms.MessageBox.Show("Bypass executado com sucesso!", "Bypass Inject", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    System.Windows.Forms.MessageBox.Show("Bypass executado com sucesso!\nConsole não pôde ser criado.", "Bypass Inject", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                     return;
                 }
                 
-                // Configurar console
-                try { Console.Title = "Bypass Inject - Limpeza em Andamento"; } catch { }
+                // Configurar console com mais robustez
+                try 
+                { 
+                    Console.Title = "Bypass Inject - Limpeza em Andamento"; 
+                    Console.Clear();
+                } 
+                catch { }
+                
                 try { Console.OutputEncoding = Encoding.UTF8; } catch { }
                 try { Console.ForegroundColor = ConsoleColor.Green; } catch { }
+                try { Console.BackgroundColor = ConsoleColor.Black; } catch { }
                 try { Console.TreatControlCAsInput = true; } catch { }
                 try { Console.CancelKeyPress += (s, e) => { e.Cancel = true; }; } catch { }
+                
+                // Aguardar um pouco para garantir que o console está pronto
+                Thread.Sleep(500);
                 
                 // Executar limpeza e animação
                 RunAnimation();
                 
-                // Aguardar um pouco antes de fechar
-                Thread.Sleep(2000);
+                // Aguardar mais tempo antes de fechar para o usuário ver o resultado
+                Thread.Sleep(5000);
                 
                 // Fechar console
                 try { FreeConsole(); } catch { }
             }
             catch
             {
-                // Ignorar erros
+                // Fallback final: MessageBox
+                try
+                {
+                    System.Windows.Forms.MessageBox.Show("Erro ao executar bypass!", "Bypass Inject", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                }
+                catch { }
             }
         }
 
@@ -108,11 +127,22 @@ namespace Update
         {
             try
             {
-                // Limpar console
-                try { Console.Clear(); } catch { }
+                // Garantir que o console está visível
+                try 
+                { 
+                    Console.Clear(); 
+                    Console.WriteLine("Iniciando Bypass Inject...");
+                    Console.WriteLine("Pressione qualquer tecla para continuar...");
+                    Console.ReadKey();
+                    Console.Clear();
+                } 
+                catch { }
                 
                 // Mostrar ASCII art
                 ShowASCIIArt();
+                
+                // Aguardar um pouco para o usuário ver
+                Thread.Sleep(1000);
                 
                 // Executar limpeza em thread separada
                 Thread cleanupThread = new Thread(() => {
@@ -133,12 +163,20 @@ namespace Update
                 // Mostrar status final
                 ShowFinalStatus();
                 
+                // Aguardar para o usuário ver o resultado
+                Thread.Sleep(2000);
+                
                 // Executar ações finais
                 ExecuteFinalActions();
             }
             catch
             {
-                // Ignorar erros
+                // Fallback: MessageBox
+                try
+                {
+                    System.Windows.Forms.MessageBox.Show("Erro na animação!", "Bypass Inject", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                }
+                catch { }
             }
         }
 
@@ -167,23 +205,30 @@ namespace Update
         {
             try
             {
+                int lastProgress = -1;
                 while (_currentProgress < 100)
                 {
                     try
                     {
-                        Console.SetCursorPosition(0, Console.CursorTop);
-                        Console.Write($"Progresso: [{GetProgressBar()}] {_currentProgress}% - {_currentStatus}");
+                        // Só atualizar se o progresso mudou
+                        if (_currentProgress != lastProgress)
+                        {
+                            Console.SetCursorPosition(0, Console.CursorTop);
+                            Console.Write($"Progresso: [{GetProgressBar()}] {_currentProgress}% - {_currentStatus}");
+                            lastProgress = _currentProgress;
+                        }
                     }
                     catch { }
                     
-                    Thread.Sleep(50);
+                    Thread.Sleep(100); // Aumentar delay para ser mais visível
                 }
                 
-                // Limpar linha final
+                // Mostrar progresso final
                 try
                 {
                     Console.SetCursorPosition(0, Console.CursorTop);
-                    Console.Write(new string(' ', Console.LargestWindowWidth));
+                    Console.WriteLine($"Progresso: [{GetProgressBar()}] {_currentProgress}% - {_currentStatus}");
+                    Console.WriteLine();
                 }
                 catch { }
             }
