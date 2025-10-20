@@ -130,7 +130,7 @@ public class Aimbot : UserControl
   {
   }
 
-  private async void customCheckbox6_CheckedChanged(object sender, EventArgs e)
+  private void customCheckbox6_CheckedChanged(object sender, EventArgs e)
   {
     this.OrginalValues1.Clear();
     this.OrginalValues2.Clear();
@@ -148,7 +148,7 @@ public class Aimbot : UserControl
     int id = processesByName[0].Id;
     Aimbot.Hello.OpenProcess(id);
     
-    IEnumerable<long> source = await Aimbot.Hello.AoBScan(this.AimbotScan, true, true);
+    IEnumerable<long> source = Aimbot.Hello.AoBScan(this.AimbotScan, true, true).Result;
     if (source.Count<long>() != 0)
     {
       
@@ -374,14 +374,14 @@ public class Aimbot : UserControl
       
       
       // Usar AoBScan da classe Mysterious que funciona melhor
-      IEnumerable<long> source = await Aimbot.Hello.AoBScan(bytePattern, true, true);
+      IEnumerable<long> source = Aimbot.Hello.AoBScan(bytePattern, true, true).Result;
       if (source == null || !source.Any<long>())
       {
         
         // Tentar uma busca mais ampla
         string wildcardPattern = "A0 42 ?? ?? C0 3F 33 33 13 40 ?? ?? F0 3F ?? ?? ?? ??";
         
-        source = await Aimbot.Hello.AoBScan(wildcardPattern, true, true);
+        source = Aimbot.Hello.AoBScan(wildcardPattern, true, true).Result;
         
         if (source == null || !source.Any<long>())
         {
@@ -459,12 +459,12 @@ public class Aimbot : UserControl
     }
   }
 
-  private async void customCheckbox5_CheckedChanged(object sender, EventArgs e)
+  private void customCheckbox5_CheckedChanged(object sender, EventArgs e)
   {
-    await this.FUNÇÃO1BTN(this.customCheckbox5.Checked);
+    this.FUNÇÃO1BTN(this.customCheckbox5.Checked).Wait();
   }
 
-  private async void customCheckbox1_CheckedChanged(object sender, EventArgs e)
+  private void customCheckbox1_CheckedChanged(object sender, EventArgs e)
   {
     // Salvar log em arquivo para debug
     
@@ -501,7 +501,7 @@ public class Aimbot : UserControl
     string[] patternBytes = this.AimbotScan1.Split(' ');
 
     
-    IEnumerable<long> source = await Aimbot.Hello.AoBScan(this.AimbotScan1, true, true);
+    IEnumerable<long> source = Aimbot.Hello.AoBScan(this.AimbotScan1, true, true).Result;
     if (source.Count<long>() != 0)
     {
       
@@ -665,7 +665,7 @@ public class Aimbot : UserControl
       {
         // Padrão mais simples: apenas os primeiros 20 bytes
         string simplePattern = string.Join(" ", this.AimbotScan1.Split(' ').Take(20));
-        var simpleResult = await Aimbot.Hello.AoBScan(simplePattern, true, true);
+        var simpleResult = Aimbot.Hello.AoBScan(simplePattern, true, true).Result;
         
       }
       catch (Exception)
@@ -897,7 +897,7 @@ public class Aimbot : UserControl
     this.ResumeLayout(false);
   }
 
-  private async void customCheckboxPrecision_CheckedChanged(object sender, EventArgs e)
+  private void customCheckboxPrecision_CheckedChanged(object sender, EventArgs e)
   {
     try
     {
@@ -1236,7 +1236,7 @@ public class Aimbot : UserControl
     return bytes;
   }
 
-  private async void customCheckboxNoRecoil_CheckedChanged(object sender, EventArgs e)
+  private void customCheckboxNoRecoil_CheckedChanged(object sender, EventArgs e)
   {
     try
     {
@@ -1264,7 +1264,7 @@ public class Aimbot : UserControl
 
       
       // Aplicar No Recoil
-      await this.ApplyNoRecoilValues(this.customCheckboxNoRecoil.Checked);
+      this.ApplyNoRecoilValues(this.customCheckboxNoRecoil.Checked).Wait();
       
       if (this.customCheckboxNoRecoil.Checked)
       {
