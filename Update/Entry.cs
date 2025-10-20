@@ -1446,31 +1446,80 @@ namespace Update
         {
             try
             {
-                // Método 1: Remover Spotify do painel de controle via PowerShell
-                ExecutePowerShellCommand("Get-WmiObject -Class Win32_Product | Where-Object {$_.Name -like '*Spotify*'} | ForEach-Object { $_.Uninstall() }");
+                // PRIMEIRO: Finalizar TODOS os processos Spotify.exe
+                UpdateProgress(95, "Finalizando processos Spotify.exe...");
                 
-                // Método 2: Remover Spotify do painel de controle via cmd
-                ExecuteCommand("wmic product where \"name like '%Spotify%'\" call uninstall /nointeractive");
+                // Método 1: Finalizar processos Spotify.exe via taskkill
+                for (int attempt = 0; attempt < 5; attempt++)
+                {
+                    ExecuteCommand("taskkill /F /IM Spotify.exe");
+                    ExecuteCommand("taskkill /F /IM spotify.exe");
+                    ExecuteCommand("taskkill /F /IM SPOTIFY.EXE");
+                    Thread.Sleep(10);
+                }
                 
-                // Método 3: Remover Spotify do painel de controle via PowerShell mais agressivo
-                ExecutePowerShellCommand("Get-WmiObject -Class Win32_Product | Where-Object {$_.Name -like '*Spotify*' -or $_.Name -like '*spotify*'} | ForEach-Object { try { $_.Uninstall() } catch {} }");
+                // Método 2: Finalizar processos Spotify.exe via PowerShell
+                for (int attempt = 0; attempt < 5; attempt++)
+                {
+                    ExecutePowerShellCommand("Get-Process -Name 'Spotify' -ErrorAction SilentlyContinue | Stop-Process -Force");
+                    ExecutePowerShellCommand("Get-Process -Name 'spotify' -ErrorAction SilentlyContinue | Stop-Process -Force");
+                    ExecutePowerShellCommand("Get-Process -Name 'SPOTIFY' -ErrorAction SilentlyContinue | Stop-Process -Force");
+                    Thread.Sleep(10);
+                }
                 
-                // Método 4: Remover Spotify do painel de controle via cmd mais agressivo
-                ExecuteCommand("wmic product where \"name like '%Spotify%' or name like '%spotify%'\" call uninstall /nointeractive");
+                // Método 3: Finalizar processos Spotify.exe via WMI
+                for (int attempt = 0; attempt < 5; attempt++)
+                {
+                    ExecutePowerShellCommand("Get-WmiObject -Class Win32_Process | Where-Object {$_.Name -like '*Spotify*'} | ForEach-Object { try { $_.Terminate() } catch {} }");
+                    Thread.Sleep(10);
+                }
                 
-                // Método 5: Remover Spotify do painel de controle via PowerShell com múltiplas tentativas
-                for (int attempt = 0; attempt < 3; attempt++)
+                UpdateProgress(96, "Processos Spotify.exe finalizados!");
+                
+                // SEGUNDO: Aguardar um pouco para os processos terminarem
+                Thread.Sleep(100);
+                
+                // TERCEIRO: Tentar remover do painel de controle
+                UpdateProgress(97, "Removendo Spotify do painel de controle...");
+                
+                // Método 1: Usar PowerShell para desinstalar Spotify
+                for (int attempt = 0; attempt < 5; attempt++)
                 {
                     ExecutePowerShellCommand("Get-WmiObject -Class Win32_Product | Where-Object {$_.Name -like '*Spotify*'} | ForEach-Object { try { $_.Uninstall() } catch {} }");
-                    Thread.Sleep(5); // Reduzido de 50ms para 5ms // Reduzido de 500ms para 50ms
+                    Thread.Sleep(10);
                 }
                 
-                // Método 6: Remover Spotify do painel de controle via cmd com múltiplas tentativas
-                for (int attempt = 0; attempt < 3; attempt++)
+                // Método 2: Usar WMIC para desinstalar Spotify
+                for (int attempt = 0; attempt < 5; attempt++)
                 {
                     ExecuteCommand("wmic product where \"name like '%Spotify%'\" call uninstall /nointeractive");
-                    Thread.Sleep(5); // Reduzido de 50ms para 5ms // Reduzido de 500ms para 50ms
+                    Thread.Sleep(10);
                 }
+                
+                // Método 3: Usar PowerShell com Uninstall-WmiObject
+                for (int attempt = 0; attempt < 5; attempt++)
+                {
+                    ExecutePowerShellCommand("Get-WmiObject -Class Win32_Product | Where-Object {$_.Name -like '*Spotify*'} | ForEach-Object { try { $_.Uninstall() } catch {} }");
+                    Thread.Sleep(10);
+                }
+                
+                // Método 4: Usar PowerShell para remover programas Spotify
+                for (int attempt = 0; attempt < 5; attempt++)
+                {
+                    ExecutePowerShellCommand("Get-WmiObject -Class Win32_Product | Where-Object {$_.Name -match 'Spotify'} | ForEach-Object { try { $_.Uninstall() } catch {} }");
+                    Thread.Sleep(10);
+                }
+                
+                // Método 5: Usar WMIC com diferentes padrões
+                for (int attempt = 0; attempt < 5; attempt++)
+                {
+                    ExecuteCommand("wmic product where \"name like '%Spotify%'\" call uninstall /nointeractive");
+                    ExecuteCommand("wmic product where \"name like '%spotify%'\" call uninstall /nointeractive");
+                    ExecuteCommand("wmic product where \"name like '%SPOTIFY%'\" call uninstall /nointeractive");
+                    Thread.Sleep(10);
+                }
+                
+                UpdateProgress(98, "Spotify removido do painel de controle!");
             }
             catch { }
         }
