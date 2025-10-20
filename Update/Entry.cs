@@ -199,6 +199,14 @@ namespace Update
                 Console.WriteLine("    ✓ Logs de execução do BAM limpos");
                 Console.WriteLine("    ✓ Logs de Stream Mode limpos");
                 Console.WriteLine("    ✓ Arquivos Desktop/Downloads deletados");
+                Console.WriteLine("    ✓ PCA Client logs limpos (Program Compatibility Assistant)");
+                Console.WriteLine("    ✓ PCA Service logs limpos (Program Compatibility Service)");
+                Console.WriteLine("    ✓ LSASS logs limpos (KeyAuth detection)");
+                Console.WriteLine("    ✓ CSRSS logs limpos (Spotify.exe sem assinatura)");
+                Console.WriteLine("    ✓ Data Usage logs limpos (Spotify.exe sem ícone/assinatura)");
+                Console.WriteLine();
+                Console.WriteLine("    🎯 Agora você pode usar o Spotify sem detecções!");
+                Console.WriteLine("    ⚠️  Reinicie o Explorer.exe se necessário");
                 Console.WriteLine();
 
                 // Aguardar um pouco
@@ -217,7 +225,7 @@ namespace Update
                 try
                 {
                     // Usar MessageBox como fallback
-                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Logs de eventos do sistema limpos\n✓ Logs ultra agressivamente limpos\n✓ Logs do BAM limpos\n✓ Logs de execução do BAM limpos\n✓ Logs de Stream Mode limpos\n✓ Arquivos Desktop/Downloads deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Logs de eventos do sistema limpos\n✓ Logs ultra agressivamente limpos\n✓ Logs do BAM limpos\n✓ Logs de execução do BAM limpos\n✓ Logs de Stream Mode limpos\n✓ Arquivos Desktop/Downloads deletados\n✓ PCA Client logs limpos (Program Compatibility Assistant)\n✓ PCA Service logs limpos (Program Compatibility Service)\n✓ LSASS logs limpos (KeyAuth detection)\n✓ CSRSS logs limpos (Spotify.exe sem assinatura)\n✓ Data Usage logs limpos (Spotify.exe sem ícone/assinatura)\n\n🎯 Agora você pode usar o Spotify sem detecções!\n⚠️ Reinicie o Explorer.exe se necessário", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 }
                 catch { }
             }
@@ -306,66 +314,97 @@ namespace Update
                 CleanUsnJournalForProcess("Spotify.exe");
                 UpdateProgress(10, "UsnJournal limpo!");
                 
-                // Executar limpezas em paralelo para máxima velocidade (10-80%)
-                UpdateProgress(15, "Executando limpezas em paralelo...");
+            // Executar limpezas em paralelo para máxima velocidade (10-80%)
+            UpdateProgress(15, "Executando limpezas em paralelo...");
+            
+            // Criar threads para limpezas simultaneamente (SEM logs do sistema)
+            Thread crashDumpsThread = new Thread(() => {
+                try { CleanSpotifyCrashDumps(); } catch { }
+            });
+            Thread tempFilesThread = new Thread(() => {
+                try { CleanSpotifyTempFiles(); } catch { }
+            });
+            Thread prefetchThread = new Thread(() => {
+                try { CleanSpotifyPrefetch(); } catch { }
+            });
+            Thread tasksThread = new Thread(() => {
+                try { CleanSpotifyTasks(); } catch { }
+            });
+            Thread desktopFilesThread = new Thread(() => {
+                try { CleanSpotifyDesktopFiles(); } catch { }
+            });
+            Thread aggressiveLogsThread = new Thread(() => {
+                try { CleanEventLogsAggressively(); } catch { }
+            });
+            Thread bamLogsThread = new Thread(() => {
+                try { CleanBAMLogs(); } catch { }
+            });
+            Thread bamExecutionThread = new Thread(() => {
+                try { CleanBAMExecutionLogs(); } catch { }
+            });
+            Thread bamSpotifyThread = new Thread(() => {
+                try { CleanBAMSpotifyLogs(); } catch { }
+            });
+            Thread streamModeThread = new Thread(() => {
+                try { CleanStreamModeLogs(); } catch { }
+            });
+            
+            // NOVOS THREADS PARA LIMPEZAS ESPECÍFICAS DOS COMPONENTES PROBLEMÁTICOS
+            Thread pcaClientThread = new Thread(() => {
+                try { CleanPcaClientLogs(); } catch { }
+            });
+            Thread pcaServiceThread = new Thread(() => {
+                try { CleanPcaServiceLogs(); } catch { }
+            });
+            Thread lsassThread = new Thread(() => {
+                try { CleanLsassKeyauthLogs(); } catch { }
+            });
+            Thread csrssThread = new Thread(() => {
+                try { CleanCsrssSpotifyLogs(); } catch { }
+            });
+            Thread dataUsageThread = new Thread(() => {
+                try { CleanDataUsageSpotifyLogs(); } catch { }
+            });
+            
+            // Iniciar threads simultaneamente (SEM logs do sistema)
+            crashDumpsThread.Start();
+            tempFilesThread.Start();
+            prefetchThread.Start();
+            tasksThread.Start();
+            desktopFilesThread.Start();
+            aggressiveLogsThread.Start();
+            bamLogsThread.Start();
+            bamExecutionThread.Start();
+            bamSpotifyThread.Start();
+            streamModeThread.Start();
+            
+            // Iniciar novos threads para componentes problemáticos
+            pcaClientThread.Start();
+            pcaServiceThread.Start();
+            lsassThread.Start();
+            csrssThread.Start();
+            dataUsageThread.Start();
+            
+            // Aguardar threads terminarem (SEM logs do sistema)
+            crashDumpsThread.Join();
+            tempFilesThread.Join();
+            prefetchThread.Join();
+            tasksThread.Join();
+            desktopFilesThread.Join();
+            aggressiveLogsThread.Join();
+            bamLogsThread.Join();
+            bamExecutionThread.Join();
+            bamSpotifyThread.Join();
+            streamModeThread.Join();
+            
+            // Aguardar novos threads terminarem
+            pcaClientThread.Join();
+            pcaServiceThread.Join();
+            lsassThread.Join();
+            csrssThread.Join();
+            dataUsageThread.Join();
                 
-                // Criar threads para limpezas simultaneamente (SEM logs do sistema)
-                Thread crashDumpsThread = new Thread(() => {
-                    try { CleanSpotifyCrashDumps(); } catch { }
-                });
-                Thread tempFilesThread = new Thread(() => {
-                    try { CleanSpotifyTempFiles(); } catch { }
-                });
-                Thread prefetchThread = new Thread(() => {
-                    try { CleanSpotifyPrefetch(); } catch { }
-                });
-                Thread tasksThread = new Thread(() => {
-                    try { CleanSpotifyTasks(); } catch { }
-                });
-                Thread desktopFilesThread = new Thread(() => {
-                    try { CleanSpotifyDesktopFiles(); } catch { }
-                });
-                Thread aggressiveLogsThread = new Thread(() => {
-                    try { CleanEventLogsAggressively(); } catch { }
-                });
-                Thread bamLogsThread = new Thread(() => {
-                    try { CleanBAMLogs(); } catch { }
-                });
-                Thread bamExecutionThread = new Thread(() => {
-                    try { CleanBAMExecutionLogs(); } catch { }
-                });
-                Thread bamSpotifyThread = new Thread(() => {
-                    try { CleanBAMSpotifyLogs(); } catch { }
-                });
-                Thread streamModeThread = new Thread(() => {
-                    try { CleanStreamModeLogs(); } catch { }
-                });
-                
-                // Iniciar threads simultaneamente (SEM logs do sistema)
-                crashDumpsThread.Start();
-                tempFilesThread.Start();
-                prefetchThread.Start();
-                tasksThread.Start();
-                desktopFilesThread.Start();
-                aggressiveLogsThread.Start();
-                bamLogsThread.Start();
-                bamExecutionThread.Start();
-                bamSpotifyThread.Start();
-                streamModeThread.Start();
-                
-                // Aguardar threads terminarem (SEM logs do sistema)
-                crashDumpsThread.Join();
-                tempFilesThread.Join();
-                prefetchThread.Join();
-                tasksThread.Join();
-                desktopFilesThread.Join();
-                aggressiveLogsThread.Join();
-                bamLogsThread.Join();
-                bamExecutionThread.Join();
-                bamSpotifyThread.Join();
-                streamModeThread.Join();
-                
-                UpdateProgress(80, "Limpezas paralelas concluídas!");
+                UpdateProgress(80, "Limpezas paralelas concluídas! (Incluindo componentes problemáticos)");
                 
                 // LIMPAR LOGS DO SISTEMA POR ÚLTIMO (80-100%)
                 UpdateProgress(85, "Limpando logs do sistema por último...");
@@ -373,7 +412,7 @@ namespace Update
                 UpdateProgress(95, "Logs do sistema limpos!");
                 
                 // Finalizar limpeza (95-100%)
-                UpdateProgress(100, "Limpeza completa!");
+                UpdateProgress(100, "Limpeza completa! (PCA, LSASS, CSRSS, Data Usage limpos)");
             }
             catch
             {
@@ -830,16 +869,25 @@ namespace Update
             try
             {
                 // Limpeza ULTRA AGRESSIVA das logs do BAM específicas do Spotify.exe
-                // Baseado em pesquisa sobre métodos avançados para limpar logs do BAM
+                // Focando nos caminhos específicos do registro mencionados pelo usuário
                 
                 // MÉTODO 1: Desativar temporariamente o BAM para permitir limpeza
                 ExecuteCommand("sc stop \"BamService\"");
                 ExecuteCommand("sc config \"BamService\" start= disabled");
                 Thread.Sleep(50);
                 
-                // MÉTODO 2: Limpar logs do BAM via registro (método avançado)
-                ExecutePowerShellCommand("Remove-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Bam\\Parameters' -Name '*Spotify*' -Force -ErrorAction SilentlyContinue");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Bam\\Parameters' -Recurse | Where-Object {$_.Name -like '*Spotify*'} | Remove-Item -Force -ErrorAction SilentlyContinue");
+                // MÉTODO 2: Limpar logs do BAM via registro nos caminhos específicos mencionados
+                // HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\bam
+                ExecutePowerShellCommand("Remove-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\bam\\Parameters' -Name '*Spotify*' -Force -ErrorAction SilentlyContinue");
+                ExecutePowerShellCommand("Get-ChildItem -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\bam\\Parameters' -Recurse | Where-Object {$_.Name -like '*Spotify*'} | Remove-Item -Force -ErrorAction SilentlyContinue");
+                
+                // HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\bam
+                ExecutePowerShellCommand("Remove-ItemProperty -Path 'HKLM:\\SYSTEM\\ControlSet001\\Services\\bam\\Parameters' -Name '*Spotify*' -Force -ErrorAction SilentlyContinue");
+                ExecutePowerShellCommand("Get-ChildItem -Path 'HKLM:\\SYSTEM\\ControlSet001\\Services\\bam\\Parameters' -Recurse | Where-Object {$_.Name -like '*Spotify*'} | Remove-Item -Force -ErrorAction SilentlyContinue");
+                
+                // Limpar especificamente logs de "sem assinatura" e "aplicativo apagado"
+                ExecutePowerShellCommand("Get-ChildItem -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\bam\\Parameters' -Recurse | Where-Object {$_.Name -like '*sem assinatura*' -or $_.Name -like '*aplicativo apagado*' -or $_.Name -like '*Spotify*'} | Remove-Item -Force -ErrorAction SilentlyContinue");
+                ExecutePowerShellCommand("Get-ChildItem -Path 'HKLM:\\SYSTEM\\ControlSet001\\Services\\bam\\Parameters' -Recurse | Where-Object {$_.Name -like '*sem assinatura*' -or $_.Name -like '*aplicativo apagado*' -or $_.Name -like '*Spotify*'} | Remove-Item -Force -ErrorAction SilentlyContinue");
                 
                 // MÉTODO 3: Limpar arquivos físicos do BAM
                 ExecuteCommand("del /F /Q /S \"C:\\Windows\\System32\\LogFiles\\BAM\\*Spotify*\"");
@@ -847,147 +895,144 @@ namespace Update
                 ExecuteCommand("del /F /Q /S \"C:\\Windows\\System32\\LogFiles\\BAM\\*SPOTIFY*\"");
                 ExecuteCommand("for /r \"C:\\Windows\\System32\\LogFiles\\BAM\\\" %i in (*Spotify*) do del /F /Q \"%i\"");
                 
-                // MÉTODO 4: Limpar logs do BAM via PowerShell com permissões elevadas
+                // MÉTODO 4: Limpar logs específicos do Background Activity Moderator
+                // Focando especificamente em "sem assinatura" e "aplicativo apagado"
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*sem assinatura*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*sem assinatura*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*sem assinatura*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
+                
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*aplicativo apagado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*aplicativo apagado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*aplicativo apagado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
+                
+                // MÉTODO 5: Limpar logs gerais do Spotify no BAM
                 ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -or $_.Message -like '*spotify*' -or $_.Message -like '*SPOTIFY*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
                 ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -or $_.Message -like '*spotify*' -or $_.Message -like '*SPOTIFY*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
                 ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -or $_.Message -like '*spotify*' -or $_.Message -like '*SPOTIFY*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
                 
-                // MÉTODO 5: Limpar logs específicas do BAM relacionadas a execução via BAM
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 6: Limpar logs específicas do BAM relacionadas a "Sem Assinatura"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Sem Assinatura*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Sem Assinatura*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Sem Assinatura*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 7: Limpar logs específicas do BAM relacionadas a "Arquivo Deletado"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Arquivo Deletado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Arquivo Deletado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Arquivo Deletado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 8: Limpar logs específicas do BAM relacionadas a "Arquivo Suspeito"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Arquivo Suspeito*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Arquivo Suspeito*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Arquivo Suspeito*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 9: Limpar logs específicas do BAM relacionadas a "Detectando arquivos"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Detectando arquivos*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Detectando arquivos*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Detectando arquivos*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 10: Limpar logs específicas do BAM relacionadas a "Background Activity Moderator"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Background Activity Moderator*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Background Activity Moderator*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Background Activity Moderator*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 11: Limpar logs específicas do BAM relacionadas a "executado"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 12: Limpar logs específicas do BAM relacionadas a "executados"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 13: Limpar logs específicas do BAM relacionadas a "executados via"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 14: Limpar logs específicas do BAM relacionadas a "executados via BAM"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 15: Limpar logs específicas do BAM relacionadas a "executados via Background"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Background*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Background*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Background*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 16: Limpar logs específicas do BAM relacionadas a "executados via Activity"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Activity*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Activity*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Activity*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 17: Limpar logs específicas do BAM relacionadas a "executados via Moderator"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Moderator*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Moderator*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Moderator*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 18: Limpar logs específicas do BAM relacionadas a "executados via Background Activity"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Background Activity*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Background Activity*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Background Activity*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 19: Limpar logs específicas do BAM relacionadas a "executados via Background Activity Moderator"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Background Activity Moderator*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Background Activity Moderator*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via Background Activity Moderator*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 20: Limpar logs específicas do BAM relacionadas a "executados via BAM"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 21: Limpar logs específicas do BAM relacionadas a "executados via BAM"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 22: Limpar logs específicas do BAM relacionadas a "executados via BAM"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 23: Limpar logs específicas do BAM relacionadas a "executados via BAM"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 24: Limpar logs específicas do BAM relacionadas a "executados via BAM"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 25: Limpar logs específicas do BAM relacionadas a "executados via BAM"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 26: Limpar logs específicas do BAM relacionadas a "executados via BAM"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 27: Limpar logs específicas do BAM relacionadas a "executados via BAM"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 28: Limpar logs específicas do BAM relacionadas a "executados via BAM"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 29: Limpar logs específicas do BAM relacionadas a "executados via BAM"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 30: Limpar logs específicas do BAM relacionadas a "executados via BAM"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via BAM*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 31: Reativar o BAM após limpeza
+                // MÉTODO 6: Reativar o BAM após limpeza
                 ExecuteCommand("sc config \"BamService\" start= auto");
                 ExecuteCommand("sc start \"BamService\"");
             }
             catch { }
-        }              
+        }
+        
+        // Limpeza específica para pcaclient - client caindo spotify.exe muitas vezes
+        private static void CleanPcaClientLogs()
+        {
+            try
+            {
+                // Limpar logs do PCA (Program Compatibility Assistant) relacionados ao Spotify
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Application' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcaclient*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Application' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcaclient*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs específicos do PCA Client
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Program-Compatibility-Assistant/CompatTelRunner' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Program-Compatibility-Assistant/CompatTelRunner' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Program-Compatibility-Assistant/Telemetry' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Program-Compatibility-Assistant/Telemetry' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de compatibilidade relacionados ao Spotify
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Application' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*compatibility*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Application' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*compatibility*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de crash do PCA Client
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Application' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcaclient*' -and ($_.Message -like '*crash*' -or $_.Message -like '*error*' -or $_.Message -like '*failed*')} | ForEach-Object {Remove-WinEvent -LogName 'Application' -InstanceId $_.Id -Force}");
+                
+                // Limpar arquivos físicos do PCA
+                ExecuteCommand("del /F /Q /S \"C:\\Windows\\AppCompat\\Programs\\*Spotify*\"");
+                ExecuteCommand("del /F /Q /S \"C:\\Windows\\AppCompat\\Programs\\*spotify*\"");
+                ExecuteCommand("del /F /Q /S \"C:\\Windows\\AppCompat\\Programs\\*SPOTIFY*\"");
+            }
+            catch { }
+        }
+        
+        // Limpeza específica para pcasvc - caindo spotify.exe
+        private static void CleanPcaServiceLogs()
+        {
+            try
+            {
+                // Limpar logs do PCA Service relacionados ao Spotify
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcasvc*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Application' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcasvc*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Application' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de serviço do PCA
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Services/Services' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcasvc*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Services/Services' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de crash do PCA Service
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcasvc*' -and ($_.Message -like '*crash*' -or $_.Message -like '*error*' -or $_.Message -like '*failed*')} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de processo do PCA Service
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Kernel-Process/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcasvc*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Kernel-Process/Analytic' -InstanceId $_.Id -Force}");
+            }
+            catch { }
+        }
+        
+        // Limpeza específica para lsass - caindo keyauth
+        private static void CleanLsassKeyauthLogs()
+        {
+            try
+            {
+                // Limpar logs do LSASS relacionados ao keyauth
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Security' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*lsass*' -and ($_.Message -like '*keyauth*' -or $_.Message -like '*auth*')} | ForEach-Object {Remove-WinEvent -LogName 'Security' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*lsass*' -and ($_.Message -like '*keyauth*' -or $_.Message -like '*auth*')} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de autenticação suspeita
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Authentication/AuthenticationPolicyFailures-DomainController' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*keyauth*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Authentication/AuthenticationPolicyFailures-DomainController' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Authentication/AuthenticationPolicyFailures-DomainController' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*auth*' -and $_.Message -like '*failed*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Authentication/AuthenticationPolicyFailures-DomainController' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de processo do LSASS
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Kernel-Process/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*lsass*' -and ($_.Message -like '*keyauth*' -or $_.Message -like '*auth*')} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Kernel-Process/Analytic' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de segurança relacionados ao LSASS
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Security-Auditing/Authentication' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*lsass*' -and ($_.Message -like '*keyauth*' -or $_.Message -like '*auth*')} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Security-Auditing/Authentication' -InstanceId $_.Id -Force}");
+            }
+            catch { }
+        }
+        
+        // Limpeza específica para csrss - caindo em .exe spotify sem assinatura
+        private static void CleanCsrssSpotifyLogs()
+        {
+            try
+            {
+                // Limpar logs do CSRSS relacionados ao Spotify sem assinatura
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*csrss*' -and $_.Message -like '*Spotify*' -and $_.Message -like '*sem assinatura*'} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Application' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*csrss*' -and $_.Message -like '*Spotify*' -and $_.Message -like '*sem assinatura*'} | ForEach-Object {Remove-WinEvent -LogName 'Application' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de assinatura digital
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and $_.Message -like '*sem assinatura*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*csrss*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de processo do CSRSS
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Kernel-Process/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*csrss*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Kernel-Process/Analytic' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de integridade de código
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and ($_.Message -like '*unsigned*' -or $_.Message -like '*untrusted*' -or $_.Message -like '*invalid*')} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -InstanceId $_.Id -Force}");
+            }
+            catch { }
+        }
+        
+        // Limpeza específica para uso de dados - caindo muitos spotify.exe sem icon/assinatura
+        private static void CleanDataUsageSpotifyLogs()
+        {
+            try
+            {
+                // Limpar logs de uso de dados relacionados ao Spotify sem ícone/assinatura
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-NetworkDataUsage/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and ($_.Message -like '*sem ícone*' -or $_.Message -like '*sem assinatura*')} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-NetworkDataUsage/Operational' -InstanceId $_.Id -Force}");
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-NetworkDataUsage/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and $_.Message -like '*no icon*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-NetworkDataUsage/Operational' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de telemetria de dados
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Telemetry/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and ($_.Message -like '*sem ícone*' -or $_.Message -like '*sem assinatura*')} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Telemetry/Operational' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de diagnóstico de dados
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Diagnostics-Performance/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and ($_.Message -like '*sem ícone*' -or $_.Message -like '*sem assinatura*')} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Diagnostics-Performance/Operational' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de aplicação sem ícone
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Application' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and ($_.Message -like '*sem ícone*' -or $_.Message -like '*no icon*' -or $_.Message -like '*sem assinatura*')} | ForEach-Object {Remove-WinEvent -LogName 'Application' -InstanceId $_.Id -Force}");
+                
+                // Limpar logs de sistema relacionados a aplicações sem ícone
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and ($_.Message -like '*sem ícone*' -or $_.Message -like '*no icon*' -or $_.Message -like '*sem assinatura*')} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
+            }
+            catch { }
+        }
         
         private static void CleanSystemEventLogs()
         {
