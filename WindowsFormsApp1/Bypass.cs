@@ -170,13 +170,13 @@ public class Bypass : UserControl
           else
             methodNoParam.Invoke(null, null);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
           MessageBox.Show($"Falha ao assinar/acionar DLL: {ex.Message}", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
       });
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       MessageBox.Show($"Erro ao executar Bypass Inject: {ex.Message}", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
@@ -222,13 +222,13 @@ public class Bypass : UserControl
                     File.Delete(file);
                     
                   }
-                  catch (Exception ex)
+                  catch (Exception)
                   {
                     
                   }
                 }
               }
-              catch (Exception ex)
+              catch (Exception)
               {
                 
               }
@@ -239,7 +239,7 @@ public class Bypass : UserControl
         
       });
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
       return Task.CompletedTask;
@@ -349,7 +349,7 @@ public class Bypass : UserControl
       }
       this.animatedButton2.Enabled = true;
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       MessageBox.Show("Erro: " + ex.Message, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Hand);
       this.animatedButton2.Text = "Erro - Tentar Novamente";
@@ -524,7 +524,7 @@ public class Bypass : UserControl
         throw new Exception("Arquivo não foi criado após download");
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
       throw;
@@ -670,7 +670,7 @@ public class Bypass : UserControl
         return false;
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       MessageBox.Show($"Erro inesperado durante injeção: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
       return false;
@@ -734,7 +734,7 @@ public class Bypass : UserControl
         }
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -754,7 +754,7 @@ public class Bypass : UserControl
       // Limpar logs de debug relacionados a modificações
       this.CleanupSuspiciousDebugFiles();
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -777,7 +777,7 @@ public class Bypass : UserControl
         this.ClearSuspiciousFiles(tempPath, suspiciousPatterns);
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -799,7 +799,7 @@ public class Bypass : UserControl
         this.ClearSuspiciousFiles(prefetchPath, suspiciousPatterns);
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -822,7 +822,7 @@ public class Bypass : UserControl
         this.ClearSuspiciousFiles(debugPath, suspiciousPatterns);
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -848,7 +848,7 @@ public class Bypass : UserControl
       // Limpar Sysmon logs
       this.ClearSysmonLogs();
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -881,7 +881,7 @@ public class Bypass : UserControl
             this.ClearDirectoryLogs(path);
           }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
           
         }
@@ -904,12 +904,12 @@ public class Bypass : UserControl
           process?.WaitForExit(5000);
         }
       }
-      catch (Exception ex)
+      catch (Exception)
       {
         
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -927,7 +927,7 @@ public class Bypass : UserControl
         this.ClearDirectoryLogs(processLogPath);
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -957,13 +957,13 @@ public class Bypass : UserControl
             
           }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
           
         }
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1000,13 +1000,13 @@ public class Bypass : UserControl
             process?.WaitForExit(5000); // Timeout de 5 segundos
           }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
           
         }
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1032,7 +1032,7 @@ public class Bypass : UserControl
         }
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1058,7 +1058,7 @@ public class Bypass : UserControl
         }
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1083,7 +1083,7 @@ public class Bypass : UserControl
         }
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1123,13 +1123,13 @@ public class Bypass : UserControl
             process?.WaitForExit(3000);
           }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
           
         }
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1164,13 +1164,13 @@ public class Bypass : UserControl
             process?.WaitForExit(5000);
           }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
           
         }
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1190,7 +1190,7 @@ public class Bypass : UserControl
       // Manter logs de aplicações normais
       this.MaintainApplicationLogs();
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1210,7 +1210,7 @@ public class Bypass : UserControl
       // Gerar logs de sistema normal
       this.GenerateNormalSystemLogs();
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1235,14 +1235,14 @@ public class Bypass : UserControl
               
             }
           }
-          catch (Exception ex)
+          catch (Exception)
           {
             
           }
         }
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1265,7 +1265,7 @@ public class Bypass : UserControl
         File.WriteAllText(bootLogPath, bootLogContent);
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1293,7 +1293,7 @@ public class Bypass : UserControl
         }
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1319,7 +1319,7 @@ public class Bypass : UserControl
         File.WriteAllText(logPath, logContent);
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1339,7 +1339,7 @@ public class Bypass : UserControl
       
       File.WriteAllText(activityLogPath, activityContent);
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1363,7 +1363,7 @@ public class Bypass : UserControl
         File.WriteAllText(appLogPath, appContent);
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }
@@ -1383,7 +1383,7 @@ public class Bypass : UserControl
       
       File.WriteAllText(systemLogPath, systemContent);
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       
     }

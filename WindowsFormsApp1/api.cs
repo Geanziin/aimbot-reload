@@ -36,7 +36,7 @@ public class api
         [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
         private static extern ushort GlobalFindAtom(string lpString);
 
-        public string name, ownerid, version, path, seed;
+        public string name, ownerid, version, path = "", seed = "";
         /// <summary>
         /// Set up your application credentials in order to use keyauth
         /// </summary>
@@ -57,7 +57,7 @@ public class api
     this.name = name;
     this.ownerid = ownerid;
     this.version = version;
-            this.path = path;
+            this.path = path ?? "";
         }
 
         #region structures
@@ -70,82 +70,82 @@ public class api
             public bool newSession { get; set; }
 
             [JsonProperty("sessionid")]
-            public string sessionid { get; set; }
+            public string sessionid { get; set; } = "";
 
             [JsonProperty("contents")]
-            public string contents { get; set; }
+            public string contents { get; set; } = "";
 
             [JsonProperty("response")]
-            public string response { get; set; }
+            public string response { get; set; } = "";
 
             [JsonProperty("message")]
-            public string message { get; set; }
+            public string message { get; set; } = "";
 
             [JsonProperty("ownerid")]
-            public string ownerid { get; set; }
+            public string ownerid { get; set; } = "";
 
             [JsonProperty("download")]
-            public string download { get; set; }
+            public string download { get; set; } = "";
 
             [JsonProperty("info")]
-            public user_data_structure info { get; set; }
+            public user_data_structure info { get; set; } = new user_data_structure();
 
             [JsonProperty("appinfo")]
-            public app_data_structure appinfo { get; set; }
+            public app_data_structure appinfo { get; set; } = new app_data_structure();
 
             [JsonProperty("messages")]
-            public List<msg> messages { get; set; }
+            public List<msg> messages { get; set; } = new List<msg>();
 
             [JsonProperty("users")]
-            public List<users> users { get; set; }
+            public List<users> users { get; set; } = new List<users>();
         }
 
         public class msg
         {
-            public string message { get; set; }
-            public string author { get; set; }
-            public string timestamp { get; set; }
+            public string message { get; set; } = "";
+            public string author { get; set; } = "";
+            public string timestamp { get; set; } = "";
         }
 
         public class users
         {
-            public string credential { get; set; }
+            public string credential { get; set; } = "";
         }
 
         private class user_data_structure
         {
             [JsonProperty("username")]
-            public string username { get; set; }
+            public string username { get; set; } = "";
 
             [JsonProperty("ip")]
-            public string ip { get; set; }
+            public string ip { get; set; } = "";
             [JsonProperty("hwid")]
-            public string hwid { get; set; }
+            public string hwid { get; set; } = "";
             [JsonProperty("createdate")]
-            public string createdate { get; set; }
+            public string createdate { get; set; } = "";
             [JsonProperty("lastlogin")]
-            public string lastlogin { get; set; }
+            public string lastlogin { get; set; } = "";
             [JsonProperty("subscriptions")]
-            public List<Data> subscriptions { get; set; } // array of subscriptions (basically multiple user ranks for user with individual expiry dates
+            public List<Data> subscriptions { get; set; } = new List<Data>(); // array of subscriptions (basically multiple user ranks for user with individual expiry dates
         }
 
         private class app_data_structure
         {
             [JsonProperty("numUsers")]
-            public string numUsers { get; set; }
+            public string numUsers { get; set; } = "";
             [JsonProperty("numOnlineUsers")]
-            public string numOnlineUsers { get; set; }
+            public string numOnlineUsers { get; set; } = "";
             [JsonProperty("numKeys")]
-            public string numKeys { get; set; }
+            public string numKeys { get; set; } = "";
             [JsonProperty("version")]
-            public string version { get; set; }
+            public string version { get; set; } = "";
             [JsonProperty("customerPanelLink")]
-            public string customerPanelLink { get; set; }
+            public string customerPanelLink { get; set; } = "";
             [JsonProperty("downloadLink")]
-            public string downloadLink { get; set; }
+            public string downloadLink { get; set; } = "";
         }
         #endregion
-        private static string sessionid;
+        private static string sessionid = "";
         bool initialized;
         /// <summary>
         /// Initializes the connection with keyauth in order to use any of the functions
@@ -194,7 +194,7 @@ public class api
             }
 
             var json = JsonConvert.DeserializeObject<response_structure>(response);
-            if (json.ownerid == ownerid)
+            if (json?.ownerid == ownerid)
             {
                 load_response_struct(json);
                 if (json.success)
@@ -281,7 +281,7 @@ public class api
             var response = req(values_to_upload);
 
             var json = JsonConvert.DeserializeObject<response_structure>(response);
-            if (json.ownerid == ownerid)
+            if (json?.ownerid == ownerid)
             {
                 GlobalAddAtom(seed);
                 GlobalAddAtom(ownerid);
@@ -311,7 +311,7 @@ public class api
             var response = req(values_to_upload);
 
             var json = JsonConvert.DeserializeObject<response_structure>(response);
-            if (json.ownerid == ownerid)
+            if (json?.ownerid == ownerid)
             {
                 load_response_struct(json);
             }
@@ -345,7 +345,7 @@ public class api
 
             var json = JsonConvert.DeserializeObject<response_structure>(response);
 
-            if (json.ownerid == ownerid)
+            if (json?.ownerid == ownerid)
             {
                 GlobalAddAtom(seed);
                 GlobalAddAtom(ownerid);
@@ -378,7 +378,7 @@ public class api
             var response = req(values_to_upload);
 
             var json = JsonConvert.DeserializeObject<response_structure>(response);
-            if (json.ownerid == ownerid)
+            if (json?.ownerid == ownerid)
             {
                 load_response_struct(json);
             }
@@ -431,7 +431,7 @@ public class api
                     writer.WriteLine($"[{DateTime.Now}] [{AppDomain.CurrentDomain.FriendlyName}] {content}");
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
 
             }
@@ -589,12 +589,12 @@ public class api
 
         public class app_data_class
         {
-            public string numUsers { get; set; }
-            public string numOnlineUsers { get; set; }
-            public string numKeys { get; set; }
-            public string version { get; set; }
-            public string customerPanelLink { get; set; }
-            public string downloadLink { get; set; }
+            public string numUsers { get; set; } = "";
+            public string numOnlineUsers { get; set; } = "";
+            public string numKeys { get; set; } = "";
+            public string version { get; set; } = "";
+            public string customerPanelLink { get; set; } = "";
+            public string downloadLink { get; set; } = "";
         }
 
         private void load_app_data(app_data_structure data)
@@ -612,18 +612,18 @@ public class api
 
         public class user_data_class
         {
-            public string username { get; set; }
-            public string ip { get; set; }
-            public string hwid { get; set; }
-            public string createdate { get; set; }
-            public string lastlogin { get; set; }
-            public List<Data> subscriptions { get; set; } // array of subscriptions (basically multiple user ranks for user with individual expiry dates
+            public string username { get; set; } = "";
+            public string ip { get; set; } = "";
+            public string hwid { get; set; } = "";
+            public string createdate { get; set; } = "";
+            public string lastlogin { get; set; } = "";
+            public List<Data> subscriptions { get; set; } = new List<Data>(); // array of subscriptions (basically multiple user ranks for user with individual expiry dates
         }
         public class Data
         {
-            public string subscription { get; set; }
-            public string expiry { get; set; }
-            public string timeleft { get; set; }
+            public string subscription { get; set; } = "";
+            public string expiry { get; set; } = "";
+            public string timeleft { get; set; } = "";
         }
 
         private void load_user_data(user_data_structure data)
@@ -643,7 +643,7 @@ public class api
         public class response_class
         {
             public bool success { get; set; }
-            public string message { get; set; }
+            public string message { get; set; } = "";
         }
 
         private void load_response_struct(response_structure data)
@@ -692,7 +692,7 @@ public class api
             {
                 api.error("The session has ended, open program again.");
                 TerminateProcess(GetCurrentProcess(), 1);
-                return null;
+                return null!;
             }
         }
 

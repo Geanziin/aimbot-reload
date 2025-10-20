@@ -81,7 +81,7 @@ internal class Utils
           monitorRefreshRate = Convert.ToInt32(enumerator.Current["CurrentRefreshRate"]);
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
     }
     return monitorRefreshRate;

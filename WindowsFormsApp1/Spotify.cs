@@ -289,7 +289,7 @@ public class Spotify : Form
       this.Close();
       Application.Exit();
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       Environment.Exit(0);
     }
@@ -309,7 +309,7 @@ public class Spotify : Form
       spotify.Close();
       Application.Exit();
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       // Fechamento seguro
       try
@@ -381,7 +381,7 @@ public class Spotify : Form
       this.Close();
       Application.Exit();
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       Environment.Exit(0);
     }
@@ -452,7 +452,7 @@ public class Spotify : Form
         this.animatedButton2.Enabled = true;
         Application.DoEvents();
       }
-      catch (Exception finallyEx)
+      catch (Exception)
       {
         // Ignorar erros no finally
       }

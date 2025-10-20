@@ -289,7 +289,7 @@ public class Aimbot : UserControl
           
           this.status.Text = "Aimbot New ativado";
         }
-        catch (Exception ex)
+        catch (Exception)
         {
         }
       }
@@ -304,7 +304,7 @@ public class Aimbot : UserControl
         {
           Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
         }
       }
@@ -314,7 +314,7 @@ public class Aimbot : UserControl
         {
           Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
         }
         Console.Beep(500, 500);
@@ -439,7 +439,7 @@ public class Aimbot : UserControl
             int errorCode = Marshal.GetLastWin32Error();
           }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
         }
       }
@@ -453,7 +453,7 @@ public class Aimbot : UserControl
         return false;
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       return false;
     }
@@ -647,7 +647,7 @@ public class Aimbot : UserControl
           
           this.status.Text = "Aimbot legit ativado";
         }
-        catch (Exception ex)
+        catch (Exception)
         {
           
         }
@@ -668,7 +668,7 @@ public class Aimbot : UserControl
         var simpleResult = await Aimbot.Hello.AoBScan(simplePattern, true, true);
         
       }
-      catch (Exception ex)
+      catch (Exception)
       {
       }
 
@@ -679,7 +679,7 @@ public class Aimbot : UserControl
         {
           Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
           
         }
@@ -690,7 +690,7 @@ public class Aimbot : UserControl
         {
           Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
           
         }
@@ -918,7 +918,7 @@ public class Aimbot : UserControl
       await Task.Run(() => this.ApplyPrecisionValuesSync(activate));
       this.status.Text = activate ? "Precision ativado" : "Precision desativado";
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       this.status.Text = $"Erro: {ex.Message}";
     }
@@ -1123,7 +1123,7 @@ public class Aimbot : UserControl
               
             }
           }
-          catch (Exception ex)
+          catch (Exception)
           {
             
           }
@@ -1161,7 +1161,7 @@ public class Aimbot : UserControl
             }
           }
         }
-        catch (Exception ex2)
+        catch (Exception)
         {
           
         }
@@ -1187,7 +1187,7 @@ public class Aimbot : UserControl
             }
           }
         }
-        catch (Exception ex3)
+        catch (Exception)
         {
           
         }
@@ -1203,7 +1203,7 @@ public class Aimbot : UserControl
             string productName = Aimbot.Hello.theProc.MainModule?.FileVersionInfo?.ProductName ?? "N/A";
             
           }
-          catch (Exception ex4)
+          catch (Exception)
           {
             
           }
@@ -1214,7 +1214,7 @@ public class Aimbot : UserControl
         this.status.Text = "Padrão não encontrado na memória";
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       this.status.Text = $"Erro: {ex.Message}";
       throw;
@@ -1277,7 +1277,7 @@ public class Aimbot : UserControl
 
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       this.status.Text = $"Erro: {ex.Message}";
     }
@@ -1334,7 +1334,7 @@ public class Aimbot : UserControl
               
             }
           }
-          catch (Exception ex)
+          catch (Exception)
           {
 
           }
@@ -1354,7 +1354,7 @@ public class Aimbot : UserControl
         this.status.Text = "Padrão não encontrado na memória";
       }
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       this.status.Text = $"Erro: {ex.Message}";
       throw;

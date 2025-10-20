@@ -69,7 +69,7 @@ public class Main : UserControl
       this.slidingTabControl1.SelectedIndex = 0;
       this.ShowTabMessageBox(0);
     }
-    catch (Exception ex)
+    catch (Exception)
     {
 
     }
@@ -134,7 +134,7 @@ public class Main : UserControl
       else if (tabIndex == 1)
         this.position_dentro_instant();
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       // Log do erro se necessário
 

@@ -151,7 +151,7 @@ public class LczxyAUTH
     {
       return (await LczxyAUTH.client.GetAsync($"{LczxyAUTH.apiUrl}/health?appDatabase={this.appDataBase}")).IsSuccessStatusCode;
     }
-    catch (Exception ex)
+    catch (Exception)
     {
       return false;
     }
