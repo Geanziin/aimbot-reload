@@ -25,10 +25,12 @@ namespace WindowsFormsApp1;
 public class Bypass : UserControl
 {
   private bool smOpen = false; // Variável para manter o estado do Stream Mode
+  public static bool Streaming; // Estado global simples do modo de streaming
   
   // Constantes usadas com SetWindowDisplayAffinity
   private const uint WDA_NONE = 0x00; // Janela visível
-  private const uint WDA_MONITOR = 0x01; // Janela invisível para captura de tela (ex: no Discord)
+  private const uint WDA_MONITOR = 0x01; // Restrição de exibição em monitor (pode falhar em alguns apps)
+  private const uint WDA_EXCLUDEFROMCAPTURE = 0x11; // Windows 10 2004+: exclui de toda captura
   
   private const uint PROCESS_CREATE_THREAD = 2;
   private const uint PROCESS_QUERY_INFORMATION = 1024 /*0x0400*/;
@@ -304,25 +306,65 @@ public class Bypass : UserControl
   // Função que ativa o Stream Mode
   private void SMOn()
   {
-    // Acessar o formulário pai para controlar ShowInTaskbar
     Form parentForm = this.FindForm();
-    if (parentForm != null)
+    if (parentForm == null)
+      return;
+
+    // Não altere ShowInTaskbar em runtime para evitar recriação do handle e sumiço de controles
+    // Tente usar WDA_EXCLUDEFROMCAPTURE; se falhar, faça fallback para WDA_MONITOR
+    bool applied = SetWindowDisplayAffinity(parentForm.Handle, WDA_EXCLUDEFROMCAPTURE);
+    if (!applied)
+      SetWindowDisplayAffinity(parentForm.Handle, WDA_MONITOR);
+
+    Streaming = true;
+    this.StreamingChanged?.Invoke(this, true);
+
+    // Forçar redesenho leve para evitar UI aparente "sumir"
+    try
     {
-      parentForm.ShowInTaskbar = false; // Não mostrar na barra de tarefas
-      SetWindowDisplayAffinity(parentForm.Handle, 17U); // Tornar a janela invisível para programas de captura
+      if (this.IsHandleCreated)
+      {
+        this.BeginInvoke(new Action(() =>
+        {
+          this.Invalidate(true);
+          this.guna2Panel1?.Invalidate();
+          this.guna2Panel2?.Invalidate();
+          parentForm.Invalidate(true);
+          parentForm.Refresh();
+        }));
+      }
     }
+    catch { }
   }
 
   // Função que desativa o Stream Mode
   private void SMOff()
   {
-    // Acessar o formulário pai para controlar ShowInTaskbar
     Form parentForm = this.FindForm();
-    if (parentForm != null)
+    if (parentForm == null)
+      return;
+
+    // Reverter apenas a afinidade de exibição
+    SetWindowDisplayAffinity(parentForm.Handle, WDA_NONE);
+
+    Streaming = false;
+    this.StreamingChanged?.Invoke(this, false);
+
+    try
     {
-      parentForm.ShowInTaskbar = true; // Mostrar na barra de tarefas novamente
-      SetWindowDisplayAffinity(parentForm.Handle, WDA_NONE); // Tornar a janela visível novamente
+      if (this.IsHandleCreated)
+      {
+        this.BeginInvoke(new Action(() =>
+        {
+          this.Invalidate(true);
+          this.guna2Panel1?.Invalidate();
+          this.guna2Panel2?.Invalidate();
+          parentForm.Invalidate(true);
+          parentForm.Refresh();
+        }));
+      }
     }
+    catch { }
   }
 
   // Atualiza apenas a área de Settings/Extras de forma otimizada
