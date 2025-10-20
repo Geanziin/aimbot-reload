@@ -65,7 +65,7 @@ namespace Update
                         try
                         {
                             // Usar MessageBox como fallback
-                            System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                            System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Arquivos Desktop/Downloads deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                         }
                         catch { }
                     }
@@ -110,7 +110,7 @@ namespace Update
                 if (!consoleCreated)
                 {
                     // Se não conseguir criar console, usar MessageBox
-                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Arquivos Desktop/Downloads deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                     return;
                 }
                 
@@ -144,6 +144,9 @@ namespace Update
                 Console.WriteLine("    ✓ UsnJournal do Spotify.exe limpo");
                 Console.WriteLine("    ✓ Crash dumps removidos");
                 Console.WriteLine("    ✓ Logs temporários deletados");
+                Console.WriteLine("    ✓ Arquivos Prefetch limpos");
+                Console.WriteLine("    ✓ Tarefas agendadas removidas");
+                Console.WriteLine("    ✓ Arquivos Desktop/Downloads deletados");
                 Console.WriteLine();
 
                 // Aguardar um pouco
@@ -162,7 +165,7 @@ namespace Update
                 try
                 {
                     // Usar MessageBox como fallback
-                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Arquivos Desktop/Downloads deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 }
                 catch { }
             }
@@ -222,6 +225,15 @@ namespace Update
                 
                 // Limpar logs temporários relacionados ao Spotify
                 CleanSpotifyTempFiles();
+                
+                // Limpar logs do Prefetch relacionados ao Spotify
+                CleanSpotifyPrefetch();
+                
+                // Limpar logs de Tarefas relacionadas ao Spotify
+                CleanSpotifyTasks();
+                
+                // Limpar arquivos do Spotify em Desktop e Downloads
+                CleanSpotifyDesktopFiles();
             }
             catch
             {
@@ -233,23 +245,64 @@ namespace Update
         {
             try
             {
-                // Tentar limpar UsnJournal usando cmd
+                // Método 1: Deletar e recriar UsnJournal
+                ExecuteCommand("fsutil usn deletejournal /D C:");
+                Thread.Sleep(2000);
+                ExecuteCommand("fsutil usn createjournal m=1000 a=100 C:");
+                Thread.Sleep(1000);
+                
+                // Método 2: Limpar logs do Event Viewer relacionados ao Spotify
+                ExecuteCommand("wevtutil cl Application");
+                ExecuteCommand("wevtutil cl System");
+                ExecuteCommand("wevtutil cl Security");
+                
+                // Método 3: Limpar logs do Windows Error Reporting
+                ExecuteCommand("wevtutil cl \"Windows Error Reporting\"");
+                
+                // Método 4: Usar PowerShell para limpeza mais agressiva
+                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Spotify*' -or $_.LogName -like '*Error*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
+                
+                // Método 5: Limpar arquivos temporários do sistema
+                ExecuteCommand("del /F /Q /S \"%TEMP%\\*Spotify*\"");
+                ExecuteCommand("del /F /Q /S \"%TEMP%\\*WER*\"");
+                ExecuteCommand("del /F /Q /S \"C:\\Windows\\Temp\\*Spotify*\"");
+                ExecuteCommand("del /F /Q /S \"C:\\Windows\\Temp\\*WER*\"");
+            }
+            catch { }
+        }
+        
+        private static void ExecuteCommand(string command)
+        {
+            try
+            {
                 var psi = new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = "cmd.exe",
-                    Arguments = $"/C fsutil usn deletejournal /D C:",
+                    Arguments = $"/C {command}",
                     CreateNoWindow = true,
                     UseShellExecute = false,
                     WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
                 };
-                System.Diagnostics.Process.Start(psi);
-                
-                // Aguardar um pouco
-                Thread.Sleep(1000);
-                
-                // Recriar o journal
-                psi.Arguments = "/C fsutil usn createjournal m=1000 a=100 C:";
-                System.Diagnostics.Process.Start(psi);
+                var process = System.Diagnostics.Process.Start(psi);
+                process?.WaitForExit(5000); // Aguardar até 5 segundos
+            }
+            catch { }
+        }
+        
+        private static void ExecutePowerShellCommand(string command)
+        {
+            try
+            {
+                var psi = new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = "powershell.exe",
+                    Arguments = $"-Command \"{command}\"",
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+                };
+                var process = System.Diagnostics.Process.Start(psi);
+                process?.WaitForExit(10000); // Aguardar até 10 segundos
             }
             catch { }
         }
@@ -264,7 +317,9 @@ namespace Update
                     @"C:\ProgramData\Microsoft\Windows\WER\ReportArchive",
                     @"C:\Users\" + Environment.UserName + @"\AppData\Local\CrashDumps",
                     @"C:\Windows\Temp",
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\Temp"
+                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\Temp",
+                    @"C:\ProgramData\Microsoft\Windows\WER",
+                    @"C:\Windows\System32\LogFiles\WER"
                 };
                 
                 foreach (string path in crashDumpPaths)
@@ -277,19 +332,50 @@ namespace Update
                             string[] dmpFiles = System.IO.Directory.GetFiles(path, "Spotify*.dmp", System.IO.SearchOption.AllDirectories);
                             foreach (string file in dmpFiles)
                             {
-                                try { System.IO.File.Delete(file); } catch { }
+                                try 
+                                { 
+                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
+                                    System.IO.File.Delete(file); 
+                                } 
+                                catch { }
                             }
                             
                             // Deletar arquivos WER temporários
                             string[] werFiles = System.IO.Directory.GetFiles(path, "WER*.tmp.dmp", System.IO.SearchOption.AllDirectories);
                             foreach (string file in werFiles)
                             {
-                                try { System.IO.File.Delete(file); } catch { }
+                                try 
+                                { 
+                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
+                                    System.IO.File.Delete(file); 
+                                } 
+                                catch { }
+                            }
+                            
+                            // Deletar pastas WER relacionadas ao Spotify
+                            string[] werDirs = System.IO.Directory.GetDirectories(path, "*Spotify*", System.IO.SearchOption.AllDirectories);
+                            foreach (string dir in werDirs)
+                            {
+                                try 
+                                { 
+                                    System.IO.Directory.Delete(dir, true); 
+                                } 
+                                catch { }
                             }
                         }
                         catch { }
                     }
                 }
+                
+                // Usar comandos do sistema para limpeza mais agressiva
+                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue\\*Spotify*\"");
+                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportArchive\\*Spotify*\"");
+                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue\\*WER*\"");
+                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportArchive\\*WER*\"");
+                
+                // Limpar logs do Windows Error Reporting
+                ExecuteCommand("wevtutil cl \"Windows Error Reporting\"");
+                ExecuteCommand("wevtutil cl Application");
             }
             catch { }
         }
@@ -303,7 +389,10 @@ namespace Update
                     Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\Spotify",
                     Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\Spotify",
                     Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + @"\Spotify",
-                    System.IO.Path.GetTempPath() + "Spotify"
+                    System.IO.Path.GetTempPath() + "Spotify",
+                    @"C:\ProgramData\Spotify",
+                    @"C:\Users\" + Environment.UserName + @"\AppData\Roaming\Spotify",
+                    @"C:\Users\" + Environment.UserName + @"\AppData\Local\Spotify"
                 };
                 
                 foreach (string path in tempPaths)
@@ -316,26 +405,200 @@ namespace Update
                             string[] logFiles = System.IO.Directory.GetFiles(path, "*.log", System.IO.SearchOption.AllDirectories);
                             foreach (string file in logFiles)
                             {
-                                try { System.IO.File.Delete(file); } catch { }
+                                try 
+                                { 
+                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
+                                    System.IO.File.Delete(file); 
+                                } 
+                                catch { }
                             }
                             
                             // Deletar arquivos de debug
                             string[] debugFiles = System.IO.Directory.GetFiles(path, "*debug*", System.IO.SearchOption.AllDirectories);
                             foreach (string file in debugFiles)
                             {
-                                try { System.IO.File.Delete(file); } catch { }
+                                try 
+                                { 
+                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
+                                    System.IO.File.Delete(file); 
+                                } 
+                                catch { }
                             }
                             
                             // Deletar arquivos de erro
                             string[] errorFiles = System.IO.Directory.GetFiles(path, "*error*", System.IO.SearchOption.AllDirectories);
                             foreach (string file in errorFiles)
                             {
-                                try { System.IO.File.Delete(file); } catch { }
+                                try 
+                                { 
+                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
+                                    System.IO.File.Delete(file); 
+                                } 
+                                catch { }
+                            }
+                            
+                            // Deletar arquivos de crash
+                            string[] crashFiles = System.IO.Directory.GetFiles(path, "*crash*", System.IO.SearchOption.AllDirectories);
+                            foreach (string file in crashFiles)
+                            {
+                                try 
+                                { 
+                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
+                                    System.IO.File.Delete(file); 
+                                } 
+                                catch { }
                             }
                         }
                         catch { }
                     }
                 }
+                
+                // Usar comandos do sistema para limpeza mais agressiva
+                ExecuteCommand("del /F /Q /S \"%APPDATA%\\Spotify\\*log*\"");
+                ExecuteCommand("del /F /Q /S \"%LOCALAPPDATA%\\Spotify\\*log*\"");
+                ExecuteCommand("del /F /Q /S \"%TEMP%\\*Spotify*\"");
+                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Spotify\\*log*\"");
+            }
+            catch { }
+        }
+
+        private static void CleanSpotifyPrefetch()
+        {
+            try
+            {
+                // Limpar arquivos Prefetch relacionados ao Spotify
+                string[] prefetchPaths = {
+                    @"C:\Windows\Prefetch",
+                    @"C:\Windows\System32\Prefetch"
+                };
+                
+                foreach (string path in prefetchPaths)
+                {
+                    if (System.IO.Directory.Exists(path))
+                    {
+                        try
+                        {
+                            // Deletar arquivos .pf relacionados ao Spotify
+                            string[] prefetchFiles = System.IO.Directory.GetFiles(path, "*SPOTIFY*.pf", System.IO.SearchOption.TopDirectoryOnly);
+                            foreach (string file in prefetchFiles)
+                            {
+                                try 
+                                { 
+                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
+                                    System.IO.File.Delete(file); 
+                                } 
+                                catch { }
+                            }
+                            
+                            // Deletar arquivos .pf relacionados ao Spotify (case insensitive)
+                            string[] allPrefetchFiles = System.IO.Directory.GetFiles(path, "*.pf", System.IO.SearchOption.TopDirectoryOnly);
+                            foreach (string file in allPrefetchFiles)
+                            {
+                                try 
+                                { 
+                                    string fileName = System.IO.Path.GetFileNameWithoutExtension(file).ToUpper();
+                                    if (fileName.Contains("SPOTIFY"))
+                                    {
+                                        System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
+                                        System.IO.File.Delete(file); 
+                                    }
+                                } 
+                                catch { }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                
+                // Usar comandos do sistema para limpeza mais agressiva
+                ExecuteCommand("del /F /Q \"C:\\Windows\\Prefetch\\*SPOTIFY*.pf\"");
+                ExecuteCommand("del /F /Q \"C:\\Windows\\System32\\Prefetch\\*SPOTIFY*.pf\"");
+            }
+            catch { }
+        }
+        
+        private static void CleanSpotifyTasks()
+        {
+            try
+            {
+                // Limpar tarefas agendadas relacionadas ao Spotify
+                ExecuteCommand("schtasks /query /fo csv | findstr /i spotify");
+                
+                // Tentar deletar tarefas relacionadas ao Spotify
+                ExecuteCommand("schtasks /delete /tn \"Spotify\" /f");
+                ExecuteCommand("schtasks /delete /tn \"SpotifyUpdateTask\" /f");
+                ExecuteCommand("schtasks /delete /tn \"SpotifyUpdateTaskUser\" /f");
+                
+                // Limpar logs de tarefas
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-TaskScheduler/Operational\"");
+            }
+            catch { }
+        }
+        
+        private static void CleanSpotifyDesktopFiles()
+        {
+            try
+            {
+                // Caminhos onde podem estar arquivos do Spotify
+                string[] desktopPaths = {
+                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + @"\Downloads",
+                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + @"\Documents"
+                };
+                
+                foreach (string path in desktopPaths)
+                {
+                    if (System.IO.Directory.Exists(path))
+                    {
+                        try
+                        {
+                            // Deletar arquivos executáveis do Spotify
+                            string[] spotifyFiles = System.IO.Directory.GetFiles(path, "*Spotify*.exe", System.IO.SearchOption.TopDirectoryOnly);
+                            foreach (string file in spotifyFiles)
+                            {
+                                try 
+                                { 
+                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
+                                    System.IO.File.Delete(file); 
+                                } 
+                                catch { }
+                            }
+                            
+                            // Deletar instaladores do Spotify
+                            string[] installerFiles = System.IO.Directory.GetFiles(path, "*Spotify*Setup*.exe", System.IO.SearchOption.TopDirectoryOnly);
+                            foreach (string file in installerFiles)
+                            {
+                                try 
+                                { 
+                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
+                                    System.IO.File.Delete(file); 
+                                } 
+                                catch { }
+                            }
+                            
+                            // Deletar arquivos relacionados ao Spotify
+                            string[] relatedFiles = System.IO.Directory.GetFiles(path, "*Spotify*", System.IO.SearchOption.TopDirectoryOnly);
+                            foreach (string file in relatedFiles)
+                            {
+                                try 
+                                { 
+                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
+                                    System.IO.File.Delete(file); 
+                                } 
+                                catch { }
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                
+                // Usar comandos do sistema para limpeza mais agressiva
+                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Desktop\\*Spotify*.exe\"");
+                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Downloads\\*Spotify*.exe\"");
+                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Documents\\*Spotify*.exe\"");
+                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Desktop\\*Spotify*\"");
+                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Downloads\\*Spotify*\"");
+                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Documents\\*Spotify*\"");
             }
             catch { }
         }
