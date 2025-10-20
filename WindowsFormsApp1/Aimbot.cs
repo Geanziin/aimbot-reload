@@ -353,7 +353,7 @@ public class Aimbot : UserControl
     }
   }
 
-  private static async Task<bool> FUNÇÃO1(bool ativar)
+  private static Task<bool> FUNÇÃO1(bool ativar)
   {
     try
     {
@@ -362,7 +362,7 @@ public class Aimbot : UserControl
       string[] processNames = new string[1]{ "HD-Player" };
       if (!memoryfast.SetProcess(processNames))
       {
-        return false;
+        return Task.FromResult(false);
       }
       
       
@@ -385,7 +385,7 @@ public class Aimbot : UserControl
         
         if (source == null || !source.Any<long>())
         {
-        return false;
+        return Task.FromResult(false);
         }
       }
       
@@ -446,16 +446,16 @@ public class Aimbot : UserControl
       
       if (successCount > 0)
       {
-      return true;
+      return Task.FromResult(true);
       }
       else
       {
-        return false;
+        return Task.FromResult(false);
       }
     }
     catch (Exception)
     {
-      return false;
+      return Task.FromResult(false);
     }
   }
 
@@ -915,7 +915,7 @@ public class Aimbot : UserControl
         return;
       }
       bool activate = this.customCheckboxPrecision.Checked;
-      await Task.Run(() => this.ApplyPrecisionValuesSync(activate));
+      Task.Run(() => this.ApplyPrecisionValuesSync(activate)).Wait();
       this.status.Text = activate ? "Precision ativado" : "Precision desativado";
     }
     catch (Exception ex)
