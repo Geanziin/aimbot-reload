@@ -135,7 +135,7 @@ namespace Update
                 UninjectDll();
                 return;
             }
-            catch (Exception ex)
+            catch
             {
                 // Se falhar, tentar método alternativo
                 try
