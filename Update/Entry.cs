@@ -199,7 +199,7 @@ namespace Update
         private static string GetProgressBar()
         {
             int barLength = 30;
-            int filledLength = (percentage * barLength) / 100;
+            int filledLength = (_currentProgress * barLength) / 100;
             string bar = new string('█', filledLength) + new string('░', barLength - filledLength);
             return bar;
         }
