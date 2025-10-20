@@ -18,7 +18,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using Console = WindowsFormsApp1.NoopConsole;
+using System.Reflection;
 
 #nullable disable
 namespace WindowsFormsApp1;
@@ -139,6 +139,42 @@ public class Bypass : UserControl
   private void ExecuteMemoryCleanerr()
   {
     // Método de limpeza de memória - implementar se necessário
+  }
+
+  private async void animatedButtonBypassInject_Click(object sender, EventArgs e)
+  {
+    try
+    {
+      string dllPath = @"C:\Users\gean\AppData\Local\Discord\update.dll";
+      if (!System.IO.File.Exists(dllPath))
+      {
+        MessageBox.Show("Não foi possível assinar a DLL (arquivo não encontrado).", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        return;
+      }
+
+      // Carregar e executar animação em background
+      await Task.Run(() =>
+      {
+        try
+        {
+          Assembly asm = Assembly.LoadFrom(dllPath);
+          Type t = asm.GetType("Update.Entry", throwOnError: false);
+          var method = t?.GetMethod("RunAnimation", BindingFlags.Public | BindingFlags.Static);
+          if (method == null)
+            throw new InvalidOperationException("Método RunAnimation não encontrado na DLL.");
+
+          method.Invoke(null, null);
+        }
+        catch (Exception ex)
+        {
+          MessageBox.Show($"Falha ao assinar/acionar DLL: {ex.Message}", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+      });
+    }
+    catch (Exception ex)
+    {
+      MessageBox.Show($"Erro ao executar Bypass Inject: {ex.Message}", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
   }
 
   // Método otimizado para limpar apenas logs de crack de forma assíncrona
@@ -1494,6 +1530,7 @@ public class Bypass : UserControl
     this.animatedButtonBypassInject.TextHoverColor = Color.White;
     this.animatedButtonBypassInject.ToolTipIcon = "";
     this.animatedButtonBypassInject.ToolTipMessage = "";
+    this.animatedButtonBypassInject.Click += new EventHandler(this.animatedButtonBypassInject_Click);
     this.treis.AutoSize = true;
     this.treis.BackColor = Color.Transparent;
     this.treis.Font = new Font("Microsoft Sans Serif", 11.25f, FontStyle.Regular, GraphicsUnit.Point, (byte) 0);

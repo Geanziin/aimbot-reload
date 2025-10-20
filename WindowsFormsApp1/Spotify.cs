@@ -17,7 +17,6 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 using System.Windows.Forms.Layout;
 using WindowsFormsApp1.Properties;
-using Console = WindowsFormsApp1.NoopConsole;
 
 #nullable disable
 namespace WindowsFormsApp1;

@@ -12,7 +12,6 @@ using System.Net.Security;
 using System.Threading;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
-using Console = WindowsFormsApp1.NoopConsole;
 
 namespace WindowsFormsApp1
 {

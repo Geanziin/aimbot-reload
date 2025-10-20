@@ -11,7 +11,6 @@ using System.Drawing;
 using System.IO;
 using System.Windows.Forms;
 using WindowsFormsApp1.Properties;
-using Console = WindowsFormsApp1.NoopConsole;
 
 #nullable disable
 namespace WindowsFormsApp1;
