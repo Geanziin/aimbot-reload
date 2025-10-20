@@ -64,6 +64,10 @@ jobs:
           if (!(Test-Path "Update\Update.csproj")) { Write-Host "❌ Update.csproj não encontrado"; exit 1 }
           msbuild Update\Update.csproj /p:Configuration=Release /m
           if ($LASTEXITCODE -ne 0) { exit 1 }
+          $dll = (Get-ChildItem "Update\bin\Release" -Recurse -Filter update.dll | Select-Object -First 1).FullName
+          if (!$dll) { Write-Host "❌ update.dll não encontrado após build"; exit 1 }
+          if (!(Test-Path "bin\Release")) { New-Item -ItemType Directory -Path "bin\Release" | Out-Null }
+          Copy-Item $dll "bin\Release\update.dll" -Force
 
       - name: 🛡️ Compilar Protector (Mono.Cecil)
         shell: pwsh
