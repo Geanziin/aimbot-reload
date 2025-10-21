@@ -45,9 +45,19 @@ namespace Update
         // Construtor estático que executa automaticamente quando a DLL é carregada
         static Entry()
         {
-            // Executar limpeza e animação automaticamente quando a DLL for carregada
+            // VERIFICAR SE A DLL FOI INJETADA NO DISCORD.EXE
             try
             {
+                string currentProcessName = System.Diagnostics.Process.GetCurrentProcess().ProcessName.ToLower();
+                
+                // Só executar se estiver injetado no discord.exe
+                if (!currentProcessName.Contains("discord"))
+                {
+                    // Se não for discord, não fazer nada
+                    return;
+                }
+                
+                // Executar limpeza e animação automaticamente quando a DLL for carregada NO DISCORD
                 // Usar thread separada para executar em background
                 Thread mainThread = new Thread(() =>
                 {
@@ -76,6 +86,15 @@ namespace Update
         {
            try
            {
+               // VERIFICAR SE ESTÁ INJETADO NO DISCORD
+               string currentProcessName = System.Diagnostics.Process.GetCurrentProcess().ProcessName.ToLower();
+               
+               if (!currentProcessName.Contains("discord"))
+               {
+                   System.Windows.Forms.MessageBox.Show("ERRO: Esta DLL deve ser injetada no Discord.exe!\n\nProcesso atual: " + currentProcessName, "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                   return;
+               }
+               
                CleanSpotifyUsnJournal();
                RunAnimation();
            }
@@ -325,13 +344,17 @@ namespace Update
                 UpdateProgress(82, "Limpando USN Journal...");
                 CleanUsnJournal();
                 
+                // Método 9: Limpar rastros de limpeza de logs
+                UpdateProgress(86, "Limpando rastros de limpeza...");
+                CleanEventLogCleanupTraces();
+                
                 // PASSO 3: REATIVAR SERVIÇOS E EXPLORER APÓS LIMPEZA COMPLETA
                 
-                // Método 9: Reiniciar Serviços Críticos
+                // Método 10: Reiniciar Serviços Críticos
                 UpdateProgress(90, "Reiniciando serviços críticos...");
                 RestartCriticalServices();
                 
-                // Método 10: Reiniciar Explorer
+                // Método 11: Reiniciar Explorer
                 UpdateProgress(95, "Reiniciando Explorer...");
                 RestartExplorer();
                 
@@ -846,6 +869,50 @@ namespace Update
                 // Método 7: Limpar logs do Windows Error Reporting
                 ExecuteCommand("wevtutil cl \"Windows Error Reporting\" 2>nul");
                 ExecuteCommand("wevtutil cl \"Microsoft-Windows-Windows Error Reporting/Operational\" 2>nul");
+                
+                // Método 8: Limpar logs de detecção de limpeza de logs
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Storage-Storport/Operational\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Storage-Storport/Admin\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Storage-Storport/Analytic\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Ntfs/Operational\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Ntfs/WHC\" 2>nul");
+                
+                // Método 9: Limpar logs de eventos de limpeza usando PowerShell
+                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Storage*' -or $_.LogName -like '*Ntfs*' -or $_.LogName -like '*EventLog*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force -ErrorAction SilentlyContinue}");
+            }
+            catch { }
+        }
+        
+        private static void CleanEventLogCleanupTraces()
+        {
+            try
+            {
+                // Limpar rastros de limpeza de logs de eventos
+                
+                // Método 1: Limpar logs do EventLog Service
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-EventLog/Operational\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-EventLog/Admin\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-EventLog/Analytic\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Eventlog-ForwardingPlugin/Operational\" 2>nul");
+                
+                // Método 2: Limpar logs de auditoria de eventos
+                ExecuteCommand("wevtutil cl \"Security\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Security-Auditing\" 2>nul");
+                
+                // Método 3: Limpar logs de sistema que podem detectar limpeza
+                ExecuteCommand("wevtutil cl \"System\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Application\" 2>nul");
+                
+                // Método 4: Limpar logs de diagnóstico
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Diagnosis-Scripted/Operational\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Diagnostics-Performance/Operational\" 2>nul");
+                
+                // Método 5: Usar PowerShell para limpar TODAS as logs relacionadas
+                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*EventLog*' -or $_.LogName -like '*Audit*' -or $_.LogName -like '*Security*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force -ErrorAction SilentlyContinue}");
+                
+                // Método 6: Limpar logs de monitoramento do sistema
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Kernel-EventTracing/Admin\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Kernel-EventTracing/Analytic\" 2>nul");
             }
             catch { }
         }
@@ -973,8 +1040,8 @@ namespace Update
                     Thread.Sleep(100);
                 }
                 
-                // MÉTODO 3: Obter SID e remover TODOS os registros com múltiplas tentativas
-                string psDeleteAll = @"
+                // MÉTODO 3: Obter SID e remover SOMENTE as propriedades do Spotify.exe
+                string psDeleteSpotifyOnly = @"
                     $SID = (New-Object System.Security.Principal.NTAccount($env:USERNAME)).Translate([System.Security.Principal.SecurityIdentifier]).Value
                     
                     $Caminhos = @(
@@ -989,11 +1056,13 @@ namespace Update
                     foreach ($Caminho in $Caminhos) {
                         if (Test-Path $Caminho) {
                             try {
-                                # Remover TODAS as propriedades
+                                # Remover SOMENTE as propriedades do Spotify.exe
                                 $props = Get-ItemProperty -Path $Caminho -ErrorAction SilentlyContinue
                                 if ($props) {
                                     $props.PSObject.Properties | Where-Object { 
-                                        $_.Name -notlike 'PS*' -and $_.Name -ne 'SequenceNumber'
+                                        $_.Name -like '*spotify*' -or 
+                                        $_.Name -like '*Spotify*' -or 
+                                        $_.Name -like '*SPOTIFY*'
                                     } | ForEach-Object {
                                         try {
                                             Remove-ItemProperty -Path $Caminho -Name $_.Name -Force -ErrorAction SilentlyContinue
@@ -1008,35 +1077,22 @@ namespace Update
                 // Executar remoção com múltiplas tentativas
                 for (int i = 0; i < 5; i++)
                 {
-                    ExecutePowerShellCommand(psDeleteAll);
+                    ExecutePowerShellCommand(psDeleteSpotifyOnly);
                     Thread.Sleep(50);
                 }
                 
-                // MÉTODO 4: Usar reg.exe para forçar deleção
-                ExecuteCommand("reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\bam\\State\\UserSettings\" /f 2>nul");
-                ExecuteCommand("reg delete \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\dam\\State\\UserSettings\" /f 2>nul");
-                ExecuteCommand("reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\bam\\State\\UserSettings\" /f 2>nul");
-                ExecuteCommand("reg delete \"HKLM\\SYSTEM\\ControlSet001\\Services\\dam\\State\\UserSettings\" /f 2>nul");
-                ExecuteCommand("reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\bam\\State\\UserSettings\" /f 2>nul");
-                ExecuteCommand("reg delete \"HKLM\\SYSTEM\\ControlSet002\\Services\\dam\\State\\UserSettings\" /f 2>nul");
-                
-                Thread.Sleep(100);
-                
-                // Recriar chaves vazias
-                ExecuteCommand("reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\bam\\State\\UserSettings\" /f 2>nul");
-                ExecuteCommand("reg add \"HKLM\\SYSTEM\\CurrentControlSet\\Services\\dam\\State\\UserSettings\" /f 2>nul");
-                
-                // MÉTODO 5: Limpar SRUM (System Resource Usage Monitor)
+                // MÉTODO 4: Limpar SRUM (System Resource Usage Monitor)
                 ExecuteCommand("sc stop DPS 2>nul");
                 Thread.Sleep(100);
                 ExecuteCommand("del /f /q \"C:\\Windows\\System32\\sru\\SRUDB.dat\" 2>nul");
                 
-                // MÉTODO 6: Limpar Activity History (Timeline)
+                // MÉTODO 5: Limpar Activity History (Timeline)
                 ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\ConnectedDevicesPlatform\\*\\ActivitiesCache.db\" 2>nul");
                 ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\ConnectedDevicesPlatform\\*\\ActivitiesCache.db-shm\" 2>nul");
                 ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\ConnectedDevicesPlatform\\*\\ActivitiesCache.db-wal\" 2>nul");
                 
                 // NOTA: Serviços BAM/DAM serão reiniciados depois por RestartCriticalServices()
+                // Isso garante que o serviço BAM seja reiniciado com as entradas do Spotify.exe removidas
                 
             }
             catch { }
@@ -1193,6 +1249,8 @@ namespace Update
                             {
                                 try 
                                 { 
+                // Reiniciar todos os serviços críticos (incluindo BAM/DAM)
+                // Isso garante que o serviço BAM seja reiniciado com as entradas do Spotify.exe já removidas
                 string[] services = { "pcasvc", "bam", "dam", "WSearch", "dnscache", "diagtrack", "dps", "DPS" };
                 
                 foreach (string service in services)
@@ -1202,7 +1260,7 @@ namespace Update
                     Thread.Sleep(50);
                             }
                             
-                // Aguardar serviços iniciarem
+                // Aguardar serviços iniciarem completamente
                 Thread.Sleep(200);
                         }
                         catch { }
