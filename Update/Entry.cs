@@ -439,17 +439,6 @@ namespace Update
             catch { }
         }
         
-        private static void CleanBAMSpotifyLogs()
-        {
-            try
-            {
-                // Limpar logs do BAM (Background Activity Moderator)
-                ExecuteCommand("del /F /Q /S \"C:\\Windows\\System32\\LogFiles\\BAM\\*Spotify*\" 2>nul");
-                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Background-Activity-Moderator/Operational\" 2>nul");
-            }
-            catch { }
-        }
-        
         private static void CleanPcaClientLogs()
         {
             try
@@ -464,15 +453,6 @@ namespace Update
             try
             {
                 ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Compatibility-Assistant\" 2>nul");
-            }
-            catch { }
-        }
-        
-        private static void CleanLsassKeyauthLogs()
-        {
-            try
-            {
-                ExecuteCommand("wevtutil cl Security 2>nul");
             }
             catch { }
         }
