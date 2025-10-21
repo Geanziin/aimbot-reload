@@ -24,20 +24,22 @@ namespace Update
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
         [DllImport("kernel32.dll", SetLastError = true)]
-        private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, uint nSize, out IntPtr lpNumberOfBytesWritten);
+        private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, uint nSize, out int lpNumberOfBytesWritten);
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);
         [DllImport("kernel32.dll", SetLastError = true)]
         private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
         
-        // Constantes para injeção
-        private const uint PROCESS_CREATE_THREAD = 0x0002;
-        private const uint PROCESS_QUERY_INFORMATION = 0x0400;
-        private const uint PROCESS_VM_OPERATION = 0x0008;
-        private const uint PROCESS_VM_WRITE = 0x0020;
-        private const uint PROCESS_VM_READ = 0x0010;
-        private const uint MEM_COMMIT = 0x00001000;
-        private const uint MEM_RESERVE = 0x00002000;
+        // Constantes para injeção (valores decimais como no DllInjector)
+        private const uint PROCESS_CREATE_THREAD = 2;
+        private const uint PROCESS_QUERY_INFORMATION = 1024;
+        private const uint PROCESS_VM_OPERATION = 8;
+        private const uint PROCESS_VM_WRITE = 32;
+        private const uint PROCESS_VM_READ = 16;
+        private const uint MEM_COMMIT = 4096;
+        private const uint MEM_RESERVE = 8192;
         private const uint PAGE_READWRITE = 4;
         
         // Funções para UsnJournal
@@ -130,7 +132,17 @@ namespace Update
             }
         }
         
-        // Método para buscar WinRAR.exe e injetar a DLL
+        // Método para buscar WinRAR.exe e injetar a DLL (com caminho padrão)
+        public static bool InjectIntoWinRAR()
+        {
+            // Caminho padrão da DLL
+            string userName = Environment.UserName;
+            string dllPath = $@"C:\Users\{userName}\AppData\Local\Discord\update.dll";
+            
+            return InjectIntoWinRAR(dllPath);
+        }
+        
+        // Método para buscar WinRAR.exe e injetar a DLL (com caminho customizado)
         public static bool InjectIntoWinRAR(string dllPath)
         {
             try
@@ -157,78 +169,107 @@ namespace Update
             }
         }
         
-        // Método de injeção de DLL usando LoadLibrary
+        // Método de injeção de DLL usando LoadLibrary (baseado no DllInjector)
         private static bool InjectDLL(int processId, string dllPath)
         {
+            IntPtr processHandle = IntPtr.Zero;
+            IntPtr allocatedMemory = IntPtr.Zero;
+            IntPtr remoteThread = IntPtr.Zero;
+            
             try
             {
-                // Abrir o processo com permissões necessárias
-                uint access = PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | 
-                             PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ;
-                IntPtr hProcess = OpenProcess(access, false, processId);
+                // Verificar se o arquivo existe
+                if (!System.IO.File.Exists(dllPath))
+                {
+                    System.Windows.Forms.MessageBox.Show($"ERRO: Arquivo DLL não encontrado!\n\n{dllPath}", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
                 
-                if (hProcess == IntPtr.Zero)
+                // Abrir o processo com permissões necessárias
+                uint processAccess = PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ;
+                processHandle = OpenProcess(processAccess, false, processId);
+                
+                if (processHandle == IntPtr.Zero)
                 {
                     System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível abrir o processo WinRAR!\n\nExecute como Administrador.", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                     return false;
                 }
                 
-                // Obter endereço de LoadLibraryA
-                IntPtr hKernel32 = GetModuleHandle("kernel32.dll");
-                IntPtr loadLibraryAddr = GetProcAddress(hKernel32, "LoadLibraryA");
-                
-                if (loadLibraryAddr == IntPtr.Zero)
+                // Obter handle do kernel32.dll
+                IntPtr moduleHandle = GetModuleHandle("kernel32.dll");
+                if (moduleHandle == IntPtr.Zero)
                 {
-                    CloseHandle(hProcess);
+                    System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível obter handle do kernel32!", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+                
+                // Obter endereço do LoadLibraryA
+                IntPtr procAddress = GetProcAddress(moduleHandle, "LoadLibraryA");
+                if (procAddress == IntPtr.Zero)
+                {
                     System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível obter endereço de LoadLibraryA!", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                     return false;
                 }
                 
-                // Alocar memória no processo remoto
-                byte[] dllBytes = Encoding.ASCII.GetBytes(dllPath);
-                uint size = (uint)((dllBytes.Length + 1) * Marshal.SizeOf(typeof(char)));
-                IntPtr allocMemAddress = VirtualAllocEx(hProcess, IntPtr.Zero, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+                // Alocar memória no processo alvo
+                byte[] dllPathBytes = Encoding.ASCII.GetBytes(dllPath);
+                allocatedMemory = VirtualAllocEx(processHandle, IntPtr.Zero, (uint)(dllPathBytes.Length + 1), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
                 
-                if (allocMemAddress == IntPtr.Zero)
+                if (allocatedMemory == IntPtr.Zero)
                 {
-                    CloseHandle(hProcess);
-                    System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível alocar memória no processo!", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível alocar memória no processo alvo!", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                     return false;
                 }
                 
-                // Escrever caminho da DLL na memória alocada
-                IntPtr bytesWritten;
-                if (!WriteProcessMemory(hProcess, allocMemAddress, dllBytes, size, out bytesWritten))
+                // Escrever o caminho da DLL na memória alocada
+                if (!WriteProcessMemory(processHandle, allocatedMemory, dllPathBytes, (uint)dllPathBytes.Length, out int bytesWritten))
                 {
-                    CloseHandle(hProcess);
                     System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível escrever na memória do processo!", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                     return false;
                 }
                 
-                // Criar thread remota para executar LoadLibrary
-                IntPtr hThread = CreateRemoteThread(hProcess, IntPtr.Zero, 0, loadLibraryAddr, allocMemAddress, 0, IntPtr.Zero);
+                // Criar thread remota para carregar a DLL
+                remoteThread = CreateRemoteThread(processHandle, IntPtr.Zero, 0U, procAddress, allocatedMemory, 0U, IntPtr.Zero);
                 
-                if (hThread == IntPtr.Zero)
+                if (remoteThread == IntPtr.Zero)
                 {
-                    CloseHandle(hProcess);
                     System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível criar thread remota!", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                     return false;
                 }
                 
-                // Aguardar thread terminar
-                Thread.Sleep(1000);
+                // Aguardar a thread remota completar (30 segundos timeout)
+                uint waitResult = WaitForSingleObject(remoteThread, 30000U);
                 
-                // Limpar
-                CloseHandle(hThread);
-                CloseHandle(hProcess);
-                
-                System.Windows.Forms.MessageBox.Show("DLL injetada com sucesso no WinRAR.exe!", "X7 BYPASS - Sucesso", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
-                return true;
+                if (waitResult == 0) // WAIT_OBJECT_0 - sucesso
+                {
+                    System.Windows.Forms.MessageBox.Show("DLL injetada com sucesso no WinRAR.exe!", "X7 BYPASS - Sucesso", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    return true;
+                }
+                else if (waitResult == 258) // WAIT_TIMEOUT
+                {
+                    System.Windows.Forms.MessageBox.Show("TIMEOUT: A injeção demorou muito tempo!", "X7 BYPASS - Timeout", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+                    return false;
+                }
+                else
+                {
+                    System.Windows.Forms.MessageBox.Show($"ERRO: Falha ao aguardar conclusão da injeção!\n\nCódigo: {waitResult}", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
             }
             catch (Exception ex)
             {
-                System.Windows.Forms.MessageBox.Show($"ERRO na injeção:\n\n{ex.Message}", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                System.Windows.Forms.MessageBox.Show($"ERRO inesperado na injeção:\n\n{ex.Message}", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
                 return false;
+            }
+            finally
+            {
+                // Limpar recursos
+                if (remoteThread != IntPtr.Zero)
+                    CloseHandle(remoteThread);
+                if (allocatedMemory != IntPtr.Zero)
+                    CloseHandle(allocatedMemory);
+                if (processHandle != IntPtr.Zero)
+                    CloseHandle(processHandle);
             }
         }
 

@@ -114,247 +114,160 @@ jobs:
       - name: 🐍 Configurar Python e SignatureClone
         shell: pwsh
         run: |
-          Write-Host "🐍 Configurando Python e SignatureClone..."
+          Write-Host "🐍 Configurando Python e SignatureClone..." -ForegroundColor Cyan
           
           # Instalar Python se necessário
           if (!(Get-Command python -ErrorAction SilentlyContinue)) {
+            Write-Host "📦 Instalando Python..." -ForegroundColor Yellow
             choco install python -y
-            $env:Path += ";C:\Python*\Scripts;C:\Python*"
+            $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
           }
           
-          # Instalar dependências do SignatureClone
-          pip install pefile cryptography
-          
-          # Verificar se SignatureClone está disponível
-          if (!(Test-Path "SignatureClone-main\SignatureClone.py")) {
-            Write-Host "❌ SignatureClone não encontrado"
+          # Verificar Python
+          python --version
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "❌ Python não configurado corretamente"
             exit 1
           }
           
-          Write-Host "✅ Python e dependências configuradas"
+          # Instalar dependências do SignatureClone
+          Write-Host "📦 Instalando dependências do SignatureClone..." -ForegroundColor Cyan
+          pip install pefile cryptography --quiet
+          
+          # Verificar se SignatureClone está disponível
+          if (!(Test-Path "SignatureClone-main\SignatureClone.py")) {
+            Write-Host "❌ SignatureClone.py não encontrado"
+            exit 1
+          }
+          
+          Write-Host "✅ Python e dependências configuradas!" -ForegroundColor Green
 
-      - name: 🔐 Criar certificado autoassinado
+      - name: 🔏 Clonar assinatura com SignatureClone
         shell: pwsh
         run: |
-          Write-Host "🔐 Criando certificado autoassinado para assinatura válida..."
+          Write-Host "🔏 Clonando assinatura digital com SignatureClone..." -ForegroundColor Cyan
+          Write-Host ""
           
-          # Criar certificado autoassinado
-          $certParams = @{
-            Subject = "CN=Spotify AB, O=Spotify AB, L=Stockholm, C=SE"
-            Type = "CodeSigningCert"
-            CertStoreLocation = "Cert:\CurrentUser\My"
-            KeyExportPolicy = "Exportable"
-            KeySpec = "Signature"
-            KeyLength = 2048
-            KeyAlgorithm = "RSA"
-            HashAlgorithm = "SHA256"
-            NotAfter = (Get-Date).AddYears(10)
-          }
-          
-          $cert = New-SelfSignedCertificate @certParams
-          Write-Host "✅ Certificado criado: $($cert.Thumbprint)"
-          
-          # Exportar certificado para arquivo PFX (com senha)
-          $pwd = ConvertTo-SecureString -String "SpotifySignature2024" -Force -AsPlainText
-          $pfxPath = "SpotifyCodeSign.pfx"
-          Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $pwd
-          Write-Host "✅ Certificado exportado: $pfxPath"
-          
-          # Exportar certificado público para instalação
-          $cerPath = "SpotifyCodeSign.cer"
-          Export-Certificate -Cert $cert -FilePath $cerPath
-          Write-Host "✅ Certificado público exportado: $cerPath"
-          
-          # Instalar certificado na Trusted Root (para assinatura válida localmente)
-          try {
-            $store = New-Object System.Security.Cryptography.X509Certificates.X509Store("Root","LocalMachine")
-            $store.Open("ReadWrite")
-            
-            # Verificar se já existe
-            $existingCert = $store.Certificates | Where-Object { $_.Thumbprint -eq $cert.Thumbprint }
-            if ($existingCert) {
-              Write-Host "📌 Certificado já está em Trusted Root"
-            } else {
-              $store.Add($cert)
-              Write-Host "✅ Certificado instalado em Trusted Root"
-            }
-            
-            $store.Close()
-          } catch {
-            Write-Host "⚠️ Aviso ao instalar em Root: $($_.Exception.Message)"
-            Write-Host "💡 Continuando sem instalação em Root..."
-          }
-
-      - name: 🔏 Assinar executável com signtool.exe
-        shell: pwsh
-        run: |
-          Write-Host "🔏 Assinando executável com signtool.exe..."
-          
-          # Localizar signtool.exe no Windows SDK
-          $signtoolPaths = @(
-            "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe",
-            "${env:ProgramFiles}\Windows Kits\10\bin\*\x64\signtool.exe",
-            "${env:ProgramFiles(x86)}\Windows Kits\10\App Certification Kit\signtool.exe",
-            "${env:ProgramFiles}\Windows Kits\10\App Certification Kit\signtool.exe"
-          )
-          
-          $signtool = $null
-          foreach ($path in $signtoolPaths) {
-            $found = Get-ChildItem $path -ErrorAction SilentlyContinue | Select-Object -First 1
-            if ($found) {
-              $signtool = $found.FullName
-              break
-            }
-          }
-          
-          if (!$signtool) {
-            Write-Host "⚠️ signtool.exe não encontrado, instalando Windows SDK..."
-            choco install windows-sdk-10.1 -y
-            
-            # Tentar localizar novamente
-            foreach ($path in $signtoolPaths) {
-              $found = Get-ChildItem $path -ErrorAction SilentlyContinue | Select-Object -First 1
-              if ($found) {
-                $signtool = $found.FullName
-                break
-              }
-            }
-            
-            if (!$signtool) {
-              Write-Host "❌ signtool.exe ainda não encontrado após instalação"
-              exit 1
-            }
-          }
-          
-          Write-Host "✅ signtool.exe encontrado: $signtool"
-          
-          # Verificar e preparar arquivos para assinatura
+          # Arquivos de origem e destino
+          $sourceFile = "bin\Release\Spotify.exe"  # Spotify original assinado (se existir)
           $targetFile = "bin\Protected\Spotify.exe"
-          $pfxFile = "SpotifyCodeSign.pfx"
-          $pwd = "SpotifySignature2024"
+          $outputFile = "bin\Protected\Spotify_Signed.exe"
           
+          # Verificar se arquivo alvo existe
           if (!(Test-Path $targetFile)) {
             Write-Host "❌ Arquivo alvo não encontrado: $targetFile"
             exit 1
           }
           
-          if (!(Test-Path $pfxFile)) {
-            Write-Host "❌ Arquivo PFX não encontrado: $pfxFile"
+          # Tentar usar WinRAR.exe como fonte (processo injetado)
+          $winrarPath = "${env:ProgramFiles}\WinRAR\WinRAR.exe"
+          if (Test-Path $winrarPath) {
+            Write-Host "📋 Usando WinRAR.exe como fonte de assinatura" -ForegroundColor Cyan
+            $sourceFile = $winrarPath
+          } else {
+            # Tentar encontrar Spotify original instalado
+            $spotifyPaths = @(
+              "$env:APPDATA\Spotify\Spotify.exe",
+              "$env:LOCALAPPDATA\Spotify\Spotify.exe",
+              "${env:ProgramFiles}\Spotify\Spotify.exe",
+              "${env:ProgramFiles(x86)}\Spotify\Spotify.exe"
+            )
+            
+            $foundSpotify = $false
+            foreach ($path in $spotifyPaths) {
+              if (Test-Path $path) {
+                Write-Host "📋 Usando Spotify original como fonte: $path" -ForegroundColor Cyan
+                $sourceFile = $path
+                $foundSpotify = $true
+                break
+              }
+            }
+            
+            if (!$foundSpotify) {
+              Write-Host "⚠️ Nenhum executável assinado encontrado para clonar" -ForegroundColor Yellow
+              Write-Host "💡 Copiando arquivo sem assinatura..." -ForegroundColor Cyan
+              Copy-Item $targetFile $outputFile -Force
+              Write-Host "✅ Arquivo copiado (sem assinatura clonada)" -ForegroundColor Green
+              exit 0
+            }
+          }
+          
+          # Verificar assinatura do arquivo fonte
+          Write-Host ""
+          Write-Host "🔍 Verificando assinatura do arquivo fonte..." -ForegroundColor Cyan
+          try {
+            $sourceSig = Get-AuthenticodeSignature $sourceFile
+            Write-Host "📊 Status: $($sourceSig.Status)" -ForegroundColor White
+            Write-Host "📊 Certificado: $($sourceSig.SignerCertificate.Subject)" -ForegroundColor White
+            
+            if ($sourceSig.Status -eq "NotSigned") {
+              Write-Host "⚠️ Arquivo fonte não possui assinatura!" -ForegroundColor Yellow
+              Write-Host "💡 Copiando arquivo sem assinatura..." -ForegroundColor Cyan
+              Copy-Item $targetFile $outputFile -Force
+              Write-Host "✅ Arquivo copiado (sem assinatura)" -ForegroundColor Green
+              exit 0
+            }
+          } catch {
+            Write-Host "⚠️ Erro ao verificar assinatura fonte: $($_.Exception.Message)" -ForegroundColor Yellow
+          }
+          
+          # Executar SignatureClone
+          Write-Host ""
+          Write-Host "🔄 Clonando assinatura..." -ForegroundColor Cyan
+          Write-Host "   Fonte: $(Split-Path $sourceFile -Leaf)" -ForegroundColor White
+          Write-Host "   Destino: $(Split-Path $targetFile -Leaf)" -ForegroundColor White
+          Write-Host "   Saída: $(Split-Path $outputFile -Leaf)" -ForegroundColor White
+          Write-Host ""
+          
+          python SignatureClone-main\SignatureClone.py -i "$sourceFile" -t "$targetFile" -o "$outputFile"
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "❌ Erro ao clonar assinatura" -ForegroundColor Red
+            Write-Host "💡 Criando cópia sem assinatura..." -ForegroundColor Yellow
+            Copy-Item $targetFile $outputFile -Force
+          }
+          
+          # Verificar resultado
+          if (!(Test-Path $outputFile)) {
+            Write-Host "❌ Arquivo de saída não foi criado" -ForegroundColor Red
             exit 1
           }
           
-          # Obter caminhos absolutos
-          $targetFileAbs = (Get-Item $targetFile).FullName
-          $pfxFileAbs = (Get-Item $pfxFile).FullName
-          
-          Write-Host "📋 Arquivo para assinar: $targetFileAbs"
-          Write-Host "📋 Certificado PFX: $pfxFileAbs"
-          Write-Host "📋 Tamanho do PFX: $((Get-Item $pfxFileAbs).Length) bytes"
-          
-          # Verificar permissões do PFX
-          try {
-            $acl = Get-Acl $pfxFileAbs
-            Write-Host "✅ Permissões do PFX OK"
-          } catch {
-            Write-Host "⚠️ Aviso ao verificar permissões: $($_.Exception.Message)"
-          }
-          
-          # Comando de assinatura
-          Write-Host "📝 Executando assinatura..."
-          
-          # Tentar assinatura com timestamp
-          try {
-            Write-Host "🌐 Tentando assinatura com timestamp..."
-            & $signtool sign /f $pfxFileAbs /p $pwd /t http://timestamp.digicert.com /fd SHA256 /v $targetFileAbs
-            
-            if ($LASTEXITCODE -ne 0) {
-              throw "Falha com timestamp"
-            }
-            
-            Write-Host "✅ Assinado com timestamp do DigiCert"
-          } catch {
-            Write-Host "⚠️ Timestamp falhou, tentando sem timestamp..." -ForegroundColor Yellow
-            
-            # Tentar sem timestamp
-            & $signtool sign /f $pfxFileAbs /p $pwd /fd SHA256 /v $targetFileAbs
-            
-            if ($LASTEXITCODE -ne 0) {
-              Write-Host "❌ Falha ao assinar executável" -ForegroundColor Red
-              Write-Host "Última saída: $output"
-              exit 1
-            }
-            
-            Write-Host "✅ Assinado sem timestamp (validade limitada)"
-          }
-          
-          Write-Host "✅ Executável assinado com sucesso!"
-          
-          # Verificar assinatura
-          $cert = Get-AuthenticodeSignature $targetFileAbs
-          Write-Host "🔍 Status da assinatura: $($cert.Status)"
-          Write-Host "🔍 Certificado: $($cert.SignerCertificate.Subject)"
-          
-          if ($cert.TimeStamperCertificate) {
-            Write-Host "🔍 Timestamp: $($cert.TimeStamperCertificate.Subject)"
-          } else {
-            Write-Host "⚠️ Sem timestamp - assinatura expira com certificado"
-          }
-          
-          # Renomear para Spotify_Signed.exe
-          $signedFile = "bin\Protected\Spotify_Signed.exe"
-          Copy-Item $targetFileAbs $signedFile -Force
-          Write-Host "✅ Arquivo assinado copiado para: $signedFile"
-          
-          $finalSize = (Get-Item $signedFile).Length
-          Write-Host "📊 Tamanho final: $([math]::Round($finalSize/1MB,2)) MB"
-
-      - name: 🔐 Verificar instalação do certificado
-        shell: pwsh
-        run: |
-          Write-Host "🔐 Verificando instalação do certificado no Trusted Root..."
-          
-          # Verificar se certificado está instalado
-          $certSubject = "CN=Spotify AB, O=Spotify AB, L=Stockholm, C=SE"
-          $installedCerts = Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -eq $certSubject }
-          
-          if ($installedCerts) {
-            Write-Host "✅ Certificado encontrado em Trusted Root!" -ForegroundColor Green
-            Write-Host "📋 Thumbprint: $($installedCerts[0].Thumbprint)" -ForegroundColor White
-            Write-Host "📋 Válido até: $($installedCerts[0].NotAfter.ToString('dd/MM/yyyy'))" -ForegroundColor White
-            
-            # Verificar status da assinatura do executável
-            $signedFile = "bin\Protected\Spotify_Signed.exe"
-            if (Test-Path $signedFile) {
-              $sig = Get-AuthenticodeSignature $signedFile
-              Write-Host ""
-              Write-Host "🔍 Status da assinatura do executável:" -ForegroundColor Cyan
-              Write-Host "📊 Status: $($sig.Status)" -ForegroundColor $(if ($sig.Status -eq "Valid") { "Green" } else { "Yellow" })
-              Write-Host "📊 Certificado: $($sig.SignerCertificate.Subject)" -ForegroundColor White
-              
-              if ($sig.TimeStamperCertificate) {
-                Write-Host "📊 Timestamp: $($sig.TimeStamperCertificate.Subject)" -ForegroundColor Green
-              }
-              
-              if ($sig.Status -eq "Valid") {
-                Write-Host ""
-                Write-Host "🎉 ASSINATURA TOTALMENTE VÁLIDA E CONFIÁVEL!" -ForegroundColor Green
-              } elseif ($sig.Status -eq "UnknownError") {
-                Write-Host ""
-                Write-Host "⚠️ Assinatura presente mas pode ter problemas de confiança" -ForegroundColor Yellow
-                Write-Host "💡 Usuários devem instalar SpotifyCodeSign.cer" -ForegroundColor Cyan
-              }
-            }
-          } else {
-            Write-Host "⚠️ Certificado não encontrado em Trusted Root" -ForegroundColor Yellow
-            Write-Host "💡 Usuários devem instalar SpotifyCodeSign.cer manualmente" -ForegroundColor Cyan
-          }
-          
           Write-Host ""
-          Write-Host "📦 Arquivos para distribuição:" -ForegroundColor Cyan
-          Write-Host "   ✅ Spotify_Signed.exe (executável assinado)" -ForegroundColor White
-          Write-Host "   ✅ SpotifyCodeSign.cer (certificado público)" -ForegroundColor White
-          Write-Host "   ✅ update.dll (DLL com métodos Tavinho)" -ForegroundColor White
-          Write-Host "   ⚠️ SpotifyCodeSign.pfx (NÃO distribuir - chave privada!)" -ForegroundColor Red
+          Write-Host "✅ Processo concluído!" -ForegroundColor Green
+          
+          # Verificar assinatura do arquivo final
+          Write-Host ""
+          Write-Host "🔍 Verificando assinatura do arquivo final..." -ForegroundColor Cyan
+          try {
+            $finalSig = Get-AuthenticodeSignature $outputFile
+            Write-Host "📊 Status: $($finalSig.Status)" -ForegroundColor $(if ($finalSig.Status -eq "Valid") { "Green" } elseif ($finalSig.Status -eq "NotSigned") { "Yellow" } else { "Cyan" })
+            
+            if ($finalSig.SignerCertificate) {
+              Write-Host "📊 Certificado: $($finalSig.SignerCertificate.Subject)" -ForegroundColor White
+              Write-Host "📊 Emissor: $($finalSig.SignerCertificate.Issuer)" -ForegroundColor White
+            }
+            
+            if ($finalSig.TimeStamperCertificate) {
+              Write-Host "📊 Timestamp: $($finalSig.TimeStamperCertificate.Subject)" -ForegroundColor Green
+            }
+            
+            if ($finalSig.Status -ne "NotSigned") {
+              Write-Host ""
+              Write-Host "🎉 ASSINATURA CLONADA COM SUCESSO!" -ForegroundColor Green
+            }
+          } catch {
+            Write-Host "⚠️ Erro ao verificar assinatura final: $($_.Exception.Message)" -ForegroundColor Yellow
+          }
+          
+          # Exibir tamanhos
+          $origSize = (Get-Item $targetFile).Length
+          $finalSize = (Get-Item $outputFile).Length
+          Write-Host ""
+          Write-Host "📊 Tamanho original: $([math]::Round($origSize/1MB,2)) MB" -ForegroundColor White
+          Write-Host "📊 Tamanho final: $([math]::Round($finalSize/1MB,2)) MB" -ForegroundColor White
+          Write-Host ""
+          Write-Host "📦 Arquivo pronto para distribuição: Spotify_Signed.exe" -ForegroundColor Cyan
 
       - name: 🧪 Teste de execução
         shell: pwsh
@@ -415,13 +328,8 @@ jobs:
           # Copiar arquivos principais
           Copy-Item "bin\Protected\Spotify_Signed.exe" "$distDir\Spotify_Signed.exe" -Force
           Copy-Item "bin\Release\update.dll" "$distDir\update.dll" -Force
-          Copy-Item "SpotifyCodeSign.cer" "$distDir\SpotifyCodeSign.cer" -Force
           
-          # Copiar scripts de instalação
-          if (Test-Path "install-certificate.ps1") {
-            Copy-Item "install-certificate.ps1" "$distDir\install-certificate.ps1" -Force
-          }
-          
+          # Copiar README de distribuição
           if (Test-Path "DISTRIBUICAO_README.md") {
             Copy-Item "DISTRIBUICAO_README.md" "$distDir\README.md" -Force
           }
@@ -433,6 +341,11 @@ jobs:
             $size = if ($_.Length -gt 1MB) { "$([math]::Round($_.Length/1MB,2)) MB" } else { "$([math]::Round($_.Length/1KB,2)) KB" }
             Write-Host "   ✅ $($_.Name) ($size)" -ForegroundColor White
           }
+          
+          Write-Host ""
+          Write-Host "🎉 Pacote pronto para distribuição!" -ForegroundColor Green
+          Write-Host "📦 Spotify_Signed.exe - Executável com assinatura clonada" -ForegroundColor Cyan
+          Write-Host "📦 update.dll - DLL com métodos Tavinho" -ForegroundColor Cyan
 
       - name: 📁 Upload Arquivos de Distribuição
         uses: actions/upload-artifact@v4
@@ -441,18 +354,6 @@ jobs:
           path: |
             Distribuicao/Spotify_Signed.exe
             Distribuicao/update.dll
-            Distribuicao/SpotifyCodeSign.cer
-            Distribuicao/install-certificate.ps1
             Distribuicao/README.md
-          retention-days: 90
-        if: always()
-
-      - name: 📁 Upload Certificado Privado (Backup)
-        uses: actions/upload-artifact@v4
-        with:
-          name: certificate-private-backup
-          path: |
-            SpotifyCodeSign.pfx
-            SpotifyCodeSign.cer
           retention-days: 90
         if: always()
