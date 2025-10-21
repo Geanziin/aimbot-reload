@@ -154,13 +154,25 @@ public class Bypass : UserControl
 
       // Desabilitar botão durante a injeção
       this.animatedButtonBypassInject.Enabled = false;
-      this.animatedButtonBypassInject.Text = "Procurando Discord...";
+      this.animatedButtonBypassInject.Text = "Procurando processos...";
       
-      // Procurar pelo processo Discord.exe usando DllInjector
+      // Procurar pelos processos Discord e Terminal
       Process discordProcess = DllInjector.GetProcessByName("Discord");
-      if (discordProcess == null)
+      Process terminalProcess = DllInjector.GetProcessByName("WindowsTerminal");
+      
+      if (terminalProcess == null)
       {
-        MessageBox.Show("Discord não está rodando! Abra o Discord primeiro.", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        // Tentar outros nomes de terminal
+        terminalProcess = DllInjector.GetProcessByName("cmd");
+        if (terminalProcess == null)
+        {
+          terminalProcess = DllInjector.GetProcessByName("powershell");
+        }
+      }
+      
+      if (discordProcess == null && terminalProcess == null)
+      {
+        MessageBox.Show("Discord e Terminal não estão rodando! Abra pelo menos um deles primeiro.", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Warning);
         this.animatedButtonBypassInject.Text = "Tentar Novamente";
         this.animatedButtonBypassInject.Enabled = true;
         return;
@@ -168,20 +180,36 @@ public class Bypass : UserControl
       
       this.animatedButtonBypassInject.Text = "Injetando update.dll...";
       
-      // Usar método personalizado para injetar e executar no Discord
-      bool sucesso = await Task.Run(() => InjectAndExecuteDllInDiscord(dllPath));
+      // Injetar em ambos os processos se estiverem disponíveis
+      bool sucessoDiscord = false;
+      bool sucessoTerminal = false;
+      
+      if (discordProcess != null)
+      {
+        sucessoDiscord = await Task.Run(() => InjectAndExecuteDllInProcess("Discord", dllPath));
+      }
+      
+      if (terminalProcess != null)
+      {
+        sucessoTerminal = await Task.Run(() => InjectAndExecuteDllInProcess("Terminal", dllPath));
+      }
 
       // Reabilitar botão
       this.animatedButtonBypassInject.Enabled = true;
       
-      if (sucesso)
+      if (sucessoDiscord || sucessoTerminal)
       {
+        string resultado = "";
+        if (sucessoDiscord) resultado += "Discord: ✓ ";
+        if (sucessoTerminal) resultado += "Terminal: ✓ ";
+        
         this.animatedButtonBypassInject.Text = "Concluído";
+        MessageBox.Show($"DLL injetada com sucesso!\n{resultado}", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
       }
       else
       {
         this.animatedButtonBypassInject.Text = "Falhou - Tentar Novamente";
-        MessageBox.Show("Falha ao injetar DLL no Discord!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        MessageBox.Show("Falha ao injetar DLL em ambos os processos!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
       }
     }
     catch (Exception ex)
@@ -192,12 +220,12 @@ public class Bypass : UserControl
     }
   }
 
-  private bool InjectAndExecuteDllInDiscord(string dllPath)
+  private bool InjectAndExecuteDllInProcess(string processName, string dllPath)
   {
     try
     {
-      // Injetar a DLL no Discord
-      bool injectionSuccess = DllInjector.InjectDll("Discord", dllPath);
+      // Injetar a DLL no processo especificado
+      bool injectionSuccess = DllInjector.InjectDll(processName, dllPath);
       
       if (!injectionSuccess)
       {

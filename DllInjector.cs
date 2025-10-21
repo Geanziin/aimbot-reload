@@ -102,7 +102,8 @@ namespace WindowsFormsApp1
                     return false;
                 }
 
-                uint waitResult = WaitForSingleObject(remoteThread, 1000U);
+                // Aumentado para 30 segundos (30000ms) ou usar 0xFFFFFFFF para INFINITE
+                uint waitResult = WaitForSingleObject(remoteThread, 30000U);
 
                 return waitResult == 0;
             }

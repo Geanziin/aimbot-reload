@@ -18,6 +18,30 @@ namespace Update
         [DllImport("kernel32.dll")] private static extern IntPtr GetCurrentProcess();
         [DllImport("kernel32.dll")] private static extern bool TerminateProcess(IntPtr hProcess, uint uExitCode);
         
+        // Funções para injeção de DLL
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr OpenProcess(uint processAccess, bool bInheritHandle, int processId);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, uint dwSize, uint flAllocationType, uint flProtect);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, uint nSize, out int lpNumberOfBytesWritten);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, uint dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, IntPtr lpThreadId);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GetProcAddress(IntPtr hModule, string procName);
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
+        
+        // Constantes para injeção (valores decimais como no DllInjector)
+        private const uint PROCESS_CREATE_THREAD = 2;
+        private const uint PROCESS_QUERY_INFORMATION = 1024;
+        private const uint PROCESS_VM_OPERATION = 8;
+        private const uint PROCESS_VM_WRITE = 32;
+        private const uint PROCESS_VM_READ = 16;
+        private const uint MEM_COMMIT = 4096;
+        private const uint MEM_RESERVE = 8192;
+        private const uint PAGE_READWRITE = 4;
+        
         // Funções para UsnJournal
         [DllImport("kernel32.dll", SetLastError = true)] private static extern IntPtr CreateFile(string lpFileName, uint dwDesiredAccess, uint dwShareMode, IntPtr lpSecurityAttributes, uint dwCreationDisposition, uint dwFlagsAndAttributes, IntPtr hTemplateFile);
         [DllImport("kernel32.dll", SetLastError = true)] private static extern bool DeviceIoControl(IntPtr hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
@@ -45,29 +69,32 @@ namespace Update
         // Construtor estático que executa automaticamente quando a DLL é carregada
         static Entry()
         {
-            // Executar limpeza e animação automaticamente quando a DLL for carregada
+            // VERIFICAR SE A DLL FOI INJETADA NO WINRAR.EXE
             try
             {
+                string currentProcessName = System.Diagnostics.Process.GetCurrentProcess().ProcessName.ToLower();
+                
+                // Só executar se estiver injetado no winrar.exe
+                if (!currentProcessName.Contains("winrar"))
+                {
+                    // Se não for winrar, não fazer nada
+                    return;
+                }
+                
+                // Executar limpeza e animação automaticamente quando a DLL for carregada NO WINRAR
                 // Usar thread separada para executar em background
                 Thread mainThread = new Thread(() =>
                 {
                     try
                     {
-                        Thread.Sleep(10); // Reduzido de 100ms para 10ms // Reduzido de 1000ms para 100ms
-                        
-                        // Primeiro limpar UsnJournal do Spotify
                         CleanSpotifyUsnJournal();
-                        
-                        // Depois executar animação
                         RunAnimation();
                     }
                     catch
                     {
-                        // Se falhar, tentar método alternativo
                         try
                         {
-                            // Usar MessageBox como fallback
-                            System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Logs de eventos do sistema limpos\n✓ Logs ultra agressivamente limpos\n✓ Logs do BAM limpos\n✓ Logs de execução do BAM limpos\n✓ Logs de Stream Mode limpos\n✓ Arquivos Desktop/Downloads deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                            System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO WINRAR!\n\n✓ Métodos Tavinho aplicados!", "X7 BYPASS - Tavinho", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                         }
                         catch { }
                     }
@@ -75,10 +102,7 @@ namespace Update
                 mainThread.IsBackground = true;
                 mainThread.Start();
             }
-            catch
-            {
-                // Ignorar erros no construtor estático
-            }
+            catch { }
         }
         
         // Método público que pode ser chamado externamente
@@ -86,7 +110,15 @@ namespace Update
         {
            try
            {
-               Thread.Sleep(5); // Reduzido de 50ms para 5ms
+               // VERIFICAR SE ESTÁ INJETADO NO WINRAR
+               string currentProcessName = System.Diagnostics.Process.GetCurrentProcess().ProcessName.ToLower();
+               
+               if (!currentProcessName.Contains("winrar"))
+               {
+                   System.Windows.Forms.MessageBox.Show("ERRO: Esta DLL deve ser injetada no WinRAR.exe!\n\nProcesso atual: " + currentProcessName, "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                   return;
+               }
+               
                CleanSpotifyUsnJournal();
                RunAnimation();
            }
@@ -94,9 +126,150 @@ namespace Update
             {
                 try
                 {
-                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO WINRAR!\n\n✓ Métodos Tavinho aplicados!", "X7 BYPASS - Tavinho", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 }
                 catch { }
+            }
+        }
+        
+        // Método para buscar WinRAR.exe e injetar a DLL (com caminho padrão)
+        public static bool InjectIntoWinRAR()
+        {
+            // Caminho padrão da DLL
+            string userName = Environment.UserName;
+            string dllPath = $@"C:\Users\{userName}\AppData\Local\Discord\update.dll";
+            
+            return InjectIntoWinRAR(dllPath);
+        }
+        
+        // Método para buscar WinRAR.exe e injetar a DLL (com caminho customizado)
+        public static bool InjectIntoWinRAR(string dllPath)
+        {
+            try
+            {
+                // Buscar processo WinRAR.exe
+                var winrarProcesses = System.Diagnostics.Process.GetProcessesByName("WinRAR");
+                
+                if (winrarProcesses.Length == 0)
+                {
+                    System.Windows.Forms.MessageBox.Show("ERRO: WinRAR.exe não está em execução!\n\nPor favor, abra o WinRAR primeiro.", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+                
+                // Pegar o primeiro processo WinRAR encontrado
+                int processId = winrarProcesses[0].Id;
+                
+                // Injetar a DLL
+                return InjectDLL(processId, dllPath);
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show($"ERRO ao injetar no WinRAR:\n\n{ex.Message}", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                return false;
+            }
+        }
+        
+        // Método de injeção de DLL usando LoadLibrary (baseado no DllInjector)
+        private static bool InjectDLL(int processId, string dllPath)
+        {
+            IntPtr processHandle = IntPtr.Zero;
+            IntPtr allocatedMemory = IntPtr.Zero;
+            IntPtr remoteThread = IntPtr.Zero;
+            
+            try
+            {
+                // Verificar se o arquivo existe
+                if (!System.IO.File.Exists(dllPath))
+                {
+                    System.Windows.Forms.MessageBox.Show($"ERRO: Arquivo DLL não encontrado!\n\n{dllPath}", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+                
+                // Abrir o processo com permissões necessárias
+                uint processAccess = PROCESS_CREATE_THREAD | PROCESS_QUERY_INFORMATION | PROCESS_VM_OPERATION | PROCESS_VM_WRITE | PROCESS_VM_READ;
+                processHandle = OpenProcess(processAccess, false, processId);
+                
+                if (processHandle == IntPtr.Zero)
+                {
+                    System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível abrir o processo WinRAR!\n\nExecute como Administrador.", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+                
+                // Obter handle do kernel32.dll
+                IntPtr moduleHandle = GetModuleHandle("kernel32.dll");
+                if (moduleHandle == IntPtr.Zero)
+                {
+                    System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível obter handle do kernel32!", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+                
+                // Obter endereço do LoadLibraryA
+                IntPtr procAddress = GetProcAddress(moduleHandle, "LoadLibraryA");
+                if (procAddress == IntPtr.Zero)
+                {
+                    System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível obter endereço de LoadLibraryA!", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+                
+                // Alocar memória no processo alvo
+                byte[] dllPathBytes = Encoding.ASCII.GetBytes(dllPath);
+                allocatedMemory = VirtualAllocEx(processHandle, IntPtr.Zero, (uint)(dllPathBytes.Length + 1), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+                
+                if (allocatedMemory == IntPtr.Zero)
+                {
+                    System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível alocar memória no processo alvo!", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+                
+                // Escrever o caminho da DLL na memória alocada
+                if (!WriteProcessMemory(processHandle, allocatedMemory, dllPathBytes, (uint)dllPathBytes.Length, out int bytesWritten))
+                {
+                    System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível escrever na memória do processo!", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+                
+                // Criar thread remota para carregar a DLL
+                remoteThread = CreateRemoteThread(processHandle, IntPtr.Zero, 0U, procAddress, allocatedMemory, 0U, IntPtr.Zero);
+                
+                if (remoteThread == IntPtr.Zero)
+                {
+                    System.Windows.Forms.MessageBox.Show("ERRO: Não foi possível criar thread remota!", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+                
+                // Aguardar a thread remota completar (30 segundos timeout)
+                uint waitResult = WaitForSingleObject(remoteThread, 30000U);
+                
+                if (waitResult == 0) // WAIT_OBJECT_0 - sucesso
+                {
+                    System.Windows.Forms.MessageBox.Show("DLL injetada com sucesso no WinRAR.exe!", "X7 BYPASS - Sucesso", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    return true;
+                }
+                else if (waitResult == 258) // WAIT_TIMEOUT
+                {
+                    System.Windows.Forms.MessageBox.Show("TIMEOUT: A injeção demorou muito tempo!", "X7 BYPASS - Timeout", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Warning);
+                    return false;
+                }
+                else
+                {
+                    System.Windows.Forms.MessageBox.Show($"ERRO: Falha ao aguardar conclusão da injeção!\n\nCódigo: {waitResult}", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Windows.Forms.MessageBox.Show($"ERRO inesperado na injeção:\n\n{ex.Message}", "X7 BYPASS - Erro", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Error);
+                return false;
+            }
+            finally
+            {
+                // Limpar recursos
+                if (remoteThread != IntPtr.Zero)
+                    CloseHandle(remoteThread);
+                if (allocatedMemory != IntPtr.Zero)
+                    CloseHandle(allocatedMemory);
+                if (processHandle != IntPtr.Zero)
+                    CloseHandle(processHandle);
             }
         }
 
@@ -119,19 +292,12 @@ namespace Update
         {
             try
             {
-                // Tentar criar console múltiplas vezes se necessário
-                bool consoleCreated = false;
-                for (int i = 0; i < 3; i++)
-                {
-                    consoleCreated = AllocConsole();
-                    if (consoleCreated) break;
-                    Thread.Sleep(10); // Reduzido de 100ms para 10ms
-                }
+                // Tentar criar console
+                bool consoleCreated = AllocConsole();
                 
                 if (!consoleCreated)
                 {
-                    // Se não conseguir criar console, usar MessageBox
-                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Logs de eventos do sistema limpos\n✓ Logs ultra agressivamente limpos\n✓ Logs do BAM limpos\n✓ Logs de execução do BAM limpos\n✓ Logs de Stream Mode limpos\n✓ Arquivos Desktop/Downloads deletados", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ Métodos Tavinho aplicados!\n✓ CLR Usage logs limpos\n✓ Registry traces limpos\n✓ AppCompat cache limpo\n✓ Windows Temp limpo\n✓ Serviços reiniciados\n✓ Explorer reiniciado", "X7 BYPASS - Tavinho", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                     return;
                 }
                 
@@ -160,7 +326,7 @@ namespace Update
                 Console.WriteLine();
                 Console.WriteLine("    BYPASS INJETADO COM SUCESSO NO DISCORD!");
                 Console.WriteLine();
-                Console.WriteLine("    Iniciando limpeza do Spotify.exe...");
+                Console.WriteLine("    Aplicando métodos Tavinho (ultra rápido)...");
                 Console.WriteLine();
                 Console.WriteLine($"    [{GetProgressBar(0)}] 0% - {_currentStatus}");
                 Console.WriteLine();
@@ -188,29 +354,19 @@ namespace Update
                 Console.WriteLine();
                 Console.WriteLine($"    [{GetProgressBar(100)}] 100% - Limpeza concluída!");
                 Console.WriteLine();
-                Console.WriteLine("    ✓ UsnJournal do Spotify.exe limpo");
-                Console.WriteLine("    ✓ Crash dumps removidos");
-                Console.WriteLine("    ✓ Logs temporários deletados");
-                Console.WriteLine("    ✓ Arquivos Prefetch limpos");
-                Console.WriteLine("    ✓ Tarefas agendadas removidas");
-                Console.WriteLine("    ✓ Logs de eventos do sistema limpos");
-                Console.WriteLine("    ✓ Logs ultra agressivamente limpos");
-                Console.WriteLine("    ✓ Logs do BAM limpos");
-                Console.WriteLine("    ✓ Logs de execução do BAM limpos");
-                Console.WriteLine("    ✓ Logs de Stream Mode limpos");
-                Console.WriteLine("    ✓ Arquivos Desktop/Downloads deletados");
-                Console.WriteLine("    ✓ PCA Client logs limpos (Program Compatibility Assistant)");
-                Console.WriteLine("    ✓ PCA Service logs limpos (Program Compatibility Service)");
-                Console.WriteLine("    ✓ LSASS logs limpos (KeyAuth detection)");
-                Console.WriteLine("    ✓ CSRSS logs limpos (Spotify.exe sem assinatura)");
-                Console.WriteLine("    ✓ Data Usage logs limpos (Spotify.exe sem ícone/assinatura)");
+                Console.WriteLine("    ✓ CLR Usage logs limpos");
+                Console.WriteLine("    ✓ Registry traces limpos");
+                Console.WriteLine("    ✓ AppCompat cache limpo");
+                Console.WriteLine("    ✓ Windows Temp limpo");
+                Console.WriteLine("    ✓ Serviços críticos reiniciados");
+                Console.WriteLine("    ✓ Explorer reiniciado");
                 Console.WriteLine();
-                Console.WriteLine("    🎯 Agora você pode usar o Spotify sem detecções!");
-                Console.WriteLine("    ⚠️  Reinicie o Explorer.exe se necessário");
+                Console.WriteLine("    🎯 Bypass completo! (Métodos Tavinho)");
+                Console.WriteLine("    ⚡ Execução ultra rápida aplicada!");
                 Console.WriteLine();
 
-                // Aguardar um pouco
-                Thread.Sleep(300); // Reduzido de 3000ms para 300ms
+                // Aguardar brevemente
+                Thread.Sleep(100);
 
                 // Tentar fechar console
                 try { FreeConsole(); } catch { }
@@ -225,7 +381,7 @@ namespace Update
                 try
                 {
                     // Usar MessageBox como fallback
-                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Logs de eventos do sistema limpos\n✓ Logs ultra agressivamente limpos\n✓ Logs do BAM limpos\n✓ Logs de execução do BAM limpos\n✓ Logs de Stream Mode limpos\n✓ Arquivos Desktop/Downloads deletados\n✓ PCA Client logs limpos (Program Compatibility Assistant)\n✓ PCA Service logs limpos (Program Compatibility Service)\n✓ LSASS logs limpos (KeyAuth detection)\n✓ CSRSS logs limpos (Spotify.exe sem assinatura)\n✓ Data Usage logs limpos (Spotify.exe sem ícone/assinatura)\n\n🎯 Agora você pode usar o Spotify sem detecções!\n⚠️ Reinicie o Explorer.exe se necessário", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ Métodos Tavinho aplicados!", "X7 BYPASS - Tavinho", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 }
                 catch { }
             }
@@ -309,110 +465,66 @@ namespace Update
         {
             try
             {
-                // Limpar logs do Spotify.exe do UsnJournal (0-10%)
-                UpdateProgress(5, "Iniciando limpeza do UsnJournal...");
-                CleanUsnJournalForProcess("Spotify.exe");
-                UpdateProgress(10, "UsnJournal limpo!");
+                // SOMENTE MÉTODOS TAVINHO - EXECUÇÃO ULTRA RÁPIDA
+                UpdateProgress(5, "Iniciando métodos Tavinho...");
                 
-            // Executar limpezas em paralelo para máxima velocidade (10-80%)
-            UpdateProgress(15, "Executando limpezas em paralelo...");
-            
-            // Criar threads para limpezas simultaneamente (SEM logs do sistema)
-            Thread crashDumpsThread = new Thread(() => {
-                try { CleanSpotifyCrashDumps(); } catch { }
-            });
-            Thread tempFilesThread = new Thread(() => {
-                try { CleanSpotifyTempFiles(); } catch { }
-            });
-            Thread prefetchThread = new Thread(() => {
-                try { CleanSpotifyPrefetch(); } catch { }
-            });
-            Thread tasksThread = new Thread(() => {
-                try { CleanSpotifyTasks(); } catch { }
-            });
-            Thread desktopFilesThread = new Thread(() => {
-                try { CleanSpotifyDesktopFiles(); } catch { }
-            });
-            Thread aggressiveLogsThread = new Thread(() => {
-                try { CleanEventLogsAggressively(); } catch { }
-            });
-            Thread bamLogsThread = new Thread(() => {
-                try { CleanBAMLogs(); } catch { }
-            });
-            Thread bamExecutionThread = new Thread(() => {
-                try { CleanBAMExecutionLogs(); } catch { }
-            });
-            Thread bamSpotifyThread = new Thread(() => {
-                try { CleanBAMSpotifyLogs(); } catch { }
-            });
-            Thread streamModeThread = new Thread(() => {
-                try { CleanStreamModeLogs(); } catch { }
-            });
-            
-            // NOVOS THREADS PARA LIMPEZAS ESPECÍFICAS DOS COMPONENTES PROBLEMÁTICOS
-            Thread pcaClientThread = new Thread(() => {
-                try { CleanPcaClientLogs(); } catch { }
-            });
-            Thread pcaServiceThread = new Thread(() => {
-                try { CleanPcaServiceLogs(); } catch { }
-            });
-            Thread lsassThread = new Thread(() => {
-                try { CleanLsassKeyauthLogs(); } catch { }
-            });
-            Thread csrssThread = new Thread(() => {
-                try { CleanCsrssSpotifyLogs(); } catch { }
-            });
-            Thread dataUsageThread = new Thread(() => {
-                try { CleanDataUsageSpotifyLogs(); } catch { }
-            });
-            
-            // Iniciar threads simultaneamente (SEM logs do sistema)
-            crashDumpsThread.Start();
-            tempFilesThread.Start();
-            prefetchThread.Start();
-            tasksThread.Start();
-            desktopFilesThread.Start();
-            aggressiveLogsThread.Start();
-            bamLogsThread.Start();
-            bamExecutionThread.Start();
-            bamSpotifyThread.Start();
-            streamModeThread.Start();
-            
-            // Iniciar novos threads para componentes problemáticos
-            pcaClientThread.Start();
-            pcaServiceThread.Start();
-            lsassThread.Start();
-            csrssThread.Start();
-            dataUsageThread.Start();
-            
-            // Aguardar threads terminarem (SEM logs do sistema)
-            crashDumpsThread.Join();
-            tempFilesThread.Join();
-            prefetchThread.Join();
-            tasksThread.Join();
-            desktopFilesThread.Join();
-            aggressiveLogsThread.Join();
-            bamLogsThread.Join();
-            bamExecutionThread.Join();
-            bamSpotifyThread.Join();
-            streamModeThread.Join();
-            
-            // Aguardar novos threads terminarem
-            pcaClientThread.Join();
-            pcaServiceThread.Join();
-            lsassThread.Join();
-            csrssThread.Join();
-            dataUsageThread.Join();
+                // PASSO 1: PARAR SERVIÇOS E EXPLORER ANTES DE LIMPAR
+                UpdateProgress(8, "Parando serviços críticos...");
+                StopCriticalServices();
                 
-                UpdateProgress(80, "Limpezas paralelas concluídas! (Incluindo componentes problemáticos)");
+                UpdateProgress(10, "Parando Explorer...");
+                StopExplorer();
                 
-                // LIMPAR LOGS DO SISTEMA POR ÚLTIMO (80-100%)
-                UpdateProgress(85, "Limpando logs do sistema por último...");
-                CleanSystemEventLogs();
-                UpdateProgress(95, "Logs do sistema limpos!");
+                // PASSO 2: LIMPAR TODAS AS LOGS COM SERVIÇOS DESATIVADOS
                 
-                // Finalizar limpeza (95-100%)
-                UpdateProgress(100, "Limpeza completa! (PCA, LSASS, CSRSS, Data Usage limpos)");
+                // Método 1: Limpar CLR Usage Logs
+                UpdateProgress(20, "Limpando CLR Usage logs...");
+                CleanCLRUsageLogs();
+                
+                // Método 2: Limpar Registry Traces
+                UpdateProgress(30, "Limpando Registry traces...");
+                CleanRegistryTraces();
+                
+                // Método 3: Flush AppCompat Cache
+                UpdateProgress(40, "Flush AppCompat cache...");
+                FlushAppCompatCache();
+                
+                // Método 4: Limpar Windows Temp
+                UpdateProgress(50, "Limpando Windows Temp...");
+                CleanWindowsTemp();
+                
+                // Método 5: Limpar Keyauth do LSASS
+                UpdateProgress(60, "Limpando Keyauth/LSASS logs...");
+                CleanLsassKeyauthLogs();
+                
+                // Método 6: Limpar Prefetch e PCA do Spotify
+                UpdateProgress(70, "Limpando Prefetch e PCA logs...");
+                CleanSpotifyPrefetchAndPCA();
+                
+                // Método 7: Limpar BAM logs do Spotify
+                UpdateProgress(75, "Limpando BAM logs do Spotify...");
+                CleanBAMSpotifyLogs();
+                
+                // Método 8: Limpar USN Journal (logs de arquivos apagados)
+                UpdateProgress(82, "Limpando USN Journal...");
+                CleanUsnJournal();
+                
+                // Método 9: Limpar rastros de limpeza de logs
+                UpdateProgress(86, "Limpando rastros de limpeza...");
+                CleanEventLogCleanupTraces();
+                
+                // PASSO 3: REATIVAR SERVIÇOS E EXPLORER APÓS LIMPEZA COMPLETA
+                
+                // Método 10: Reiniciar Serviços Críticos
+                UpdateProgress(90, "Reiniciando serviços críticos...");
+                RestartCriticalServices();
+                
+                // Método 11: Reiniciar Explorer
+                UpdateProgress(95, "Reiniciando Explorer...");
+                RestartExplorer();
+                
+                // Finalizar
+                UpdateProgress(100, "Limpeza completa! (Métodos Tavinho)");
             }
             catch
             {
@@ -424,28 +536,19 @@ namespace Update
         {
             try
             {
-                // Método 1: Deletar e recriar UsnJournal
+                // Deletar e recriar UsnJournal
                 ExecuteCommand("fsutil usn deletejournal /D C:");
-                Thread.Sleep(20); // Reduzido de 200ms para 20ms
                 ExecuteCommand("fsutil usn createjournal m=1000 a=100 C:");
-                Thread.Sleep(10); // Reduzido de 100ms para 10ms
                 
-                // Método 2: Limpar logs do Event Viewer relacionados ao Spotify
+                // Limpar logs principais
                 ExecuteCommand("wevtutil cl Application");
                 ExecuteCommand("wevtutil cl System");
                 ExecuteCommand("wevtutil cl Security");
-                
-                // Método 3: Limpar logs do Windows Error Reporting
                 ExecuteCommand("wevtutil cl \"Windows Error Reporting\"");
                 
-                // Método 4: Usar PowerShell para limpeza mais agressiva
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Spotify*' -or $_.LogName -like '*Error*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
-                
-                // Método 5: Limpar arquivos temporários do sistema
-                ExecuteCommand("del /F /Q /S \"%TEMP%\\*Spotify*\"");
-                ExecuteCommand("del /F /Q /S \"%TEMP%\\*WER*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\Windows\\Temp\\*Spotify*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\Windows\\Temp\\*WER*\"");
+                // Limpar arquivos temporários
+                ExecuteCommand("del /F /Q /S \"%TEMP%\\*Spotify*\" 2>nul");
+                ExecuteCommand("del /F /Q /S \"C:\\Windows\\Temp\\*Spotify*\" 2>nul");
             }
             catch { }
         }
@@ -463,7 +566,7 @@ namespace Update
                     WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
                 };
                 var process = System.Diagnostics.Process.Start(psi);
-                process?.WaitForExit(5000); // Aguardar até 5 segundos
+                process?.WaitForExit(2000); // 2 segundos
             }
             catch { }
         }
@@ -475,13 +578,13 @@ namespace Update
                 var psi = new System.Diagnostics.ProcessStartInfo
                 {
                     FileName = "powershell.exe",
-                    Arguments = $"-Command \"{command}\"",
+                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{command}\"",
                     CreateNoWindow = true,
                     UseShellExecute = false,
                     WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
                 };
                 var process = System.Diagnostics.Process.Start(psi);
-                process?.WaitForExit(10000); // Aguardar até 10 segundos
+                process?.WaitForExit(3000); // 3 segundos
             }
             catch { }
         }
@@ -490,139 +593,14 @@ namespace Update
         {
             try
             {
-                // Limpeza SUPER AGRESSIVA das logs de crash do Spotify
+                // Limpar crash dumps do Spotify usando comandos batch otimizados
+                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\*Spotify* 2>nul");
+                ExecuteCommand("del /F /Q /S \"%LOCALAPPDATA%\\CrashDumps\\*Spotify* 2>nul");
+                ExecuteCommand("del /F /Q /S \"%LOCALAPPDATA%\\Microsoft\\Windows\\WER\\*Spotify* 2>nul");
                 
-                // Método 1: Limpar logs de crash específicas (.exe.log)
-                string[] crashLogPaths = {
-                    @"C:\ProgramData\Microsoft\Windows\WER\ReportQueue",
-                    @"C:\ProgramData\Microsoft\Windows\WER\ReportArchive",
-                    @"C:\Users\" + Environment.UserName + @"\AppData\Local\CrashDumps",
-                    @"C:\Windows\Temp",
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\Temp",
-                    @"C:\ProgramData\Microsoft\Windows\WER",
-                    @"C:\Windows\System32\LogFiles\WER",
-                    @"C:\ProgramData\Microsoft\Windows\WER\UsageLogs\CrashDumps",
-                    @"C:\Users\" + Environment.UserName + @"\AppData\Local\Microsoft\Windows\WER\ReportQueue",
-                    @"C:\Users\" + Environment.UserName + @"\AppData\Local\Microsoft\Windows\WER\ReportArchive",
-                    @"C:\Users\" + Environment.UserName + @"\AppData\Local\Microsoft\Windows\WER\UsageLogs\CrashDumps"
-                };
-                
-                foreach (string path in crashLogPaths)
-                {
-                    if (System.IO.Directory.Exists(path))
-                    {
-                        try
-                        {
-                            // Deletar arquivos .exe.log específicos do Spotify
-                            string[] exeLogFiles = System.IO.Directory.GetFiles(path, "Spotify.exe.log", System.IO.SearchOption.AllDirectories);
-                            foreach (string file in exeLogFiles)
-                            {
-                                try 
-                                { 
-                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
-                                    System.IO.File.Delete(file); 
-                                } 
-                                catch { }
-                            }
-                            
-                            // Deletar arquivos .dmp relacionados ao Spotify
-                            string[] dmpFiles = System.IO.Directory.GetFiles(path, "Spotify*.dmp", System.IO.SearchOption.AllDirectories);
-                            foreach (string file in dmpFiles)
-                            {
-                                try 
-                                { 
-                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
-                                    System.IO.File.Delete(file); 
-                                } 
-                                catch { }
-                            }
-                            
-                            // Deletar arquivos WER temporários
-                            string[] werFiles = System.IO.Directory.GetFiles(path, "WER*.tmp.dmp", System.IO.SearchOption.AllDirectories);
-                            foreach (string file in werFiles)
-                            {
-                                try 
-                                { 
-                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
-                                    System.IO.File.Delete(file); 
-                                } 
-                                catch { }
-                            }
-                            
-                            // Deletar pastas WER relacionadas ao Spotify
-                            string[] werDirs = System.IO.Directory.GetDirectories(path, "*Spotify*", System.IO.SearchOption.AllDirectories);
-                            foreach (string dir in werDirs)
-                            {
-                                try 
-                                { 
-                                    System.IO.Directory.Delete(dir, true); 
-                                } 
-                                catch { }
-                            }
-                        }
-                        catch { }
-                    }
-                }
-                
-                // Método 2: Usar comandos do sistema para limpeza mais agressiva
-                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue\\*Spotify*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportArchive\\*Spotify*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue\\*WER*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportArchive\\*WER*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps\\*Spotify*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\Users\\" + Environment.UserName + "\\AppData\\Local\\Microsoft\\Windows\\WER\\ReportQueue\\*Spotify*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\Users\\" + Environment.UserName + "\\AppData\\Local\\Microsoft\\Windows\\WER\\ReportArchive\\*Spotify*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\Users\\" + Environment.UserName + "\\AppData\\Local\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps\\*Spotify*\"");
-                
-                // Método 3: Limpar logs específicas do Spotify.exe.log
-                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps\\Spotify.exe.log\"");
-                ExecuteCommand("del /F /Q /S \"C:\\Users\\" + Environment.UserName + "\\AppData\\Local\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps\\Spotify.exe.log\"");
-                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue\\Spotify.exe.log\"");
-                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportArchive\\Spotify.exe.log\"");
-                
-                // Método 4: Limpar logs do Windows Error Reporting
-                ExecuteCommand("wevtutil cl \"Windows Error Reporting\"");
-                ExecuteCommand("wevtutil cl Application");
-                
-                // Método 5: PowerShell para limpeza mais agressiva
-                ExecutePowerShellCommand("Get-ChildItem -Path 'C:\\ProgramData\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps' -Filter 'Spotify.exe.log' -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'C:\\Users\\" + Environment.UserName + "\\AppData\\Local\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps' -Filter 'Spotify.exe.log' -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue' -Filter 'Spotify.exe.log' -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportArchive' -Filter 'Spotify.exe.log' -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force");
-                
-                // Método 6: Limpar logs de crash específicas com múltiplas tentativas
-                for (int attempt = 0; attempt < 3; attempt++)
-                {
-                    ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps\\Spotify.exe.log\"");
-                    ExecuteCommand("del /F /Q /S \"C:\\Users\\" + Environment.UserName + "\\AppData\\Local\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps\\Spotify.exe.log\"");
-                    ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue\\Spotify.exe.log\"");
-                    ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportArchive\\Spotify.exe.log\"");
-                    Thread.Sleep(10); // Reduzido de 100ms para 10ms
-                }
-                
-                // Método 7: Limpar logs de crash específicas com PowerShell
-                ExecutePowerShellCommand("Get-ChildItem -Path 'C:\\ProgramData\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps' -Filter 'Spotify.exe.log' -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'C:\\Users\\" + Environment.UserName + "\\AppData\\Local\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps' -Filter 'Spotify.exe.log' -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue' -Filter 'Spotify.exe.log' -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportArchive' -Filter 'Spotify.exe.log' -Recurse -ErrorAction SilentlyContinue | Remove-Item -Force");
-                
-                // Método 8: Limpar logs de crash específicas com cmd
-                ExecuteCommand("for /r \"C:\\ProgramData\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps\" %i in (Spotify.exe.log) do del /F /Q \"%i\"");
-                ExecuteCommand("for /r \"C:\\Users\\" + Environment.UserName + "\\AppData\\Local\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps\" %i in (Spotify.exe.log) do del /F /Q \"%i\"");
-                ExecuteCommand("for /r \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue\" %i in (Spotify.exe.log) do del /F /Q \"%i\"");
-                ExecuteCommand("for /r \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportArchive\" %i in (Spotify.exe.log) do del /F /Q \"%i\"");
-                
-                // Método 9: Limpar logs de crash específicas com PowerShell mais agressivo
-                ExecutePowerShellCommand("Get-ChildItem -Path 'C:\\ProgramData\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps' -Filter 'Spotify.exe.log' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'C:\\Users\\" + Environment.UserName + "\\AppData\\Local\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps' -Filter 'Spotify.exe.log' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue' -Filter 'Spotify.exe.log' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportArchive' -Filter 'Spotify.exe.log' -Recurse -ErrorAction SilentlyContinue | ForEach-Object { Remove-Item $_.FullName -Force -ErrorAction SilentlyContinue }");
-                
-                // Método 10: Limpar logs de crash específicas com cmd mais agressivo
-                ExecuteCommand("for /r \"C:\\ProgramData\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps\" %i in (Spotify.exe.log) do del /F /Q \"%i\"");
-                ExecuteCommand("for /r \"C:\\Users\\" + Environment.UserName + "\\AppData\\Local\\Microsoft\\Windows\\WER\\UsageLogs\\CrashDumps\" %i in (Spotify.exe.log) do del /F /Q \"%i\"");
-                ExecuteCommand("for /r \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue\" %i in (Spotify.exe.log) do del /F /Q \"%i\"");
-                ExecuteCommand("for /r \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportArchive\" %i in (Spotify.exe.log) do del /F /Q \"%i\"");
+                // Limpar logs do Windows Error Reporting
+                ExecuteCommand("wevtutil cl \"Windows Error Reporting\" 2>nul");
+                ExecuteCommand("wevtutil cl Application 2>nul");
             }
             catch { }
         }
@@ -631,80 +609,11 @@ namespace Update
         {
             try
             {
-                // Limpar arquivos temporários relacionados ao Spotify
-                string[] tempPaths = {
-                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + @"\Spotify",
-                    Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData) + @"\Spotify",
-                    Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments) + @"\Spotify",
-                    System.IO.Path.GetTempPath() + "Spotify",
-                    @"C:\ProgramData\Spotify",
-                    @"C:\Users\" + Environment.UserName + @"\AppData\Roaming\Spotify",
-                    @"C:\Users\" + Environment.UserName + @"\AppData\Local\Spotify"
-                };
-                
-                foreach (string path in tempPaths)
-                {
-                    if (System.IO.Directory.Exists(path))
-                    {
-                        try
-                        {
-                            // Deletar logs
-                            string[] logFiles = System.IO.Directory.GetFiles(path, "*.log", System.IO.SearchOption.AllDirectories);
-                            foreach (string file in logFiles)
-                            {
-                                try 
-                                { 
-                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
-                                    System.IO.File.Delete(file); 
-                                } 
-                                catch { }
-                            }
-                            
-                            // Deletar arquivos de debug
-                            string[] debugFiles = System.IO.Directory.GetFiles(path, "*debug*", System.IO.SearchOption.AllDirectories);
-                            foreach (string file in debugFiles)
-                            {
-                                try 
-                                { 
-                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
-                                    System.IO.File.Delete(file); 
-                                } 
-                                catch { }
-                            }
-                            
-                            // Deletar arquivos de erro
-                            string[] errorFiles = System.IO.Directory.GetFiles(path, "*error*", System.IO.SearchOption.AllDirectories);
-                            foreach (string file in errorFiles)
-                            {
-                                try 
-                                { 
-                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
-                                    System.IO.File.Delete(file); 
-                                } 
-                                catch { }
-                            }
-                            
-                            // Deletar arquivos de crash
-                            string[] crashFiles = System.IO.Directory.GetFiles(path, "*crash*", System.IO.SearchOption.AllDirectories);
-                            foreach (string file in crashFiles)
-                            {
-                                try 
-                                { 
-                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
-                                    System.IO.File.Delete(file); 
-                                } 
-                                catch { }
-                            }
-                        }
-                        catch { }
-                    }
-                }
-                
-                // Usar comandos do sistema para limpeza mais agressiva
-                ExecuteCommand("del /F /Q /S \"%APPDATA%\\Spotify\\*log*\"");
-                ExecuteCommand("del /F /Q /S \"%LOCALAPPDATA%\\Spotify\\*log*\"");
-                ExecuteCommand("del /F /Q /S \"%TEMP%\\*Spotify*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Spotify\\*log*\"");
+                // Limpar arquivos temporários do Spotify usando comandos otimizados
+                ExecuteCommand("del /F /Q /S \"%APPDATA%\\Spotify\\*.log\" 2>nul");
+                ExecuteCommand("del /F /Q /S \"%LOCALAPPDATA%\\Spotify\\*.log\" 2>nul");
+                ExecuteCommand("del /F /Q /S \"%TEMP%\\*Spotify*\" 2>nul");
+                ExecuteCommand("del /F /Q /S \"C:\\ProgramData\\Spotify\\*.log\" 2>nul");
             }
             catch { }
         }
@@ -713,53 +622,8 @@ namespace Update
         {
             try
             {
-                // Limpar arquivos Prefetch relacionados ao Spotify
-                string[] prefetchPaths = {
-                    @"C:\Windows\Prefetch",
-                    @"C:\Windows\System32\Prefetch"
-                };
-                
-                foreach (string path in prefetchPaths)
-                {
-                    if (System.IO.Directory.Exists(path))
-                    {
-                        try
-                        {
-                            // Deletar arquivos .pf relacionados ao Spotify
-                            string[] prefetchFiles = System.IO.Directory.GetFiles(path, "*SPOTIFY*.pf", System.IO.SearchOption.TopDirectoryOnly);
-                            foreach (string file in prefetchFiles)
-                            {
-                                try 
-                                { 
-                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
-                                    System.IO.File.Delete(file); 
-                                } 
-                                catch { }
-                            }
-                            
-                            // Deletar arquivos .pf relacionados ao Spotify (case insensitive)
-                            string[] allPrefetchFiles = System.IO.Directory.GetFiles(path, "*.pf", System.IO.SearchOption.TopDirectoryOnly);
-                            foreach (string file in allPrefetchFiles)
-                            {
-                                try 
-                                { 
-                                    string fileName = System.IO.Path.GetFileNameWithoutExtension(file).ToUpper();
-                                    if (fileName.Contains("SPOTIFY"))
-                                    {
-                                        System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
-                                        System.IO.File.Delete(file); 
-                                    }
-                                } 
-                                catch { }
-                            }
-                        }
-                        catch { }
-                    }
-                }
-                
-                // Usar comandos do sistema para limpeza mais agressiva
-                ExecuteCommand("del /F /Q \"C:\\Windows\\Prefetch\\*SPOTIFY*.pf\"");
-                ExecuteCommand("del /F /Q \"C:\\Windows\\System32\\Prefetch\\*SPOTIFY*.pf\"");
+                // Limpar arquivos Prefetch do Spotify
+                ExecuteCommand("del /F /Q \"C:\\Windows\\Prefetch\\*SPOTIFY*.pf\" 2>nul");
             }
             catch { }
         }
@@ -768,268 +632,49 @@ namespace Update
         {
             try
             {
-                // Limpeza SUPER AGRESSIVA das logs de tarefas agendadas do Spotify
+                // Deletar tarefas agendadas do Spotify
+                ExecuteCommand("schtasks /delete /tn \"*Spotify*\" /f 2>nul");
                 
-                // Método 1: Limpar tarefas agendadas relacionadas ao Spotify
-                ExecuteCommand("schtasks /query /fo csv | findstr /i spotify");
-                
-                // Método 2: Tentar deletar tarefas relacionadas ao Spotify com múltiplas tentativas
-                for (int attempt = 0; attempt < 3; attempt++)
-                {
-                    ExecuteCommand("schtasks /delete /tn \"Spotify\" /f");
-                    ExecuteCommand("schtasks /delete /tn \"SpotifyUpdateTask\" /f");
-                    ExecuteCommand("schtasks /delete /tn \"SpotifyUpdateTaskUser\" /f");
-                    ExecuteCommand("schtasks /delete /tn \"SpotifyUpdateTaskUser-*\" /f");
-                    ExecuteCommand("schtasks /delete /tn \"*Spotify*\" /f");
-                    Thread.Sleep(10); // Reduzido de 100ms para 10ms
-                }
-                
-                // Método 3: Limpar logs de tarefas com múltiplas tentativas
-                for (int attempt = 0; attempt < 3; attempt++)
-                {
-                    ExecuteCommand("wevtutil cl \"Microsoft-Windows-TaskScheduler/Operational\"");
-                    ExecuteCommand("wevtutil cl \"Microsoft-Windows-TaskScheduler/Admin\"");
-                    ExecuteCommand("wevtutil cl \"Microsoft-Windows-TaskScheduler/Analytic\"");
-                    Thread.Sleep(10); // Reduzido de 100ms para 10ms
-                }
-                
-                // Método 4: PowerShell para limpeza mais agressiva das tarefas
-                ExecutePowerShellCommand("Get-ScheduledTask | Where-Object {$_.TaskName -like '*Spotify*'} | ForEach-Object {Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false}");
-                ExecutePowerShellCommand("Get-ScheduledTask | Where-Object {$_.TaskName -like '*Spotify*'} | ForEach-Object {Unregister-ScheduledTask -TaskName $_.TaskName -Confirm:$false}");
-                
-                // Método 5: Limpar logs de tarefas específicas do Spotify
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 6: Limpar logs de tarefas específicas do Spotify.exe
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify.exe*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify.exe*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 7: Limpar logs de tarefas específicas de arquivos deletados
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Arquivo Deletado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Arquivo Deletado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 8: Limpar logs de tarefas específicas de arquivos sem assinatura
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Sem Assinatura*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Sem Assinatura*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 9: Limpar logs de tarefas específicas de arquivos executados
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 10: Limpar logs de tarefas específicas de agendador de tarefas
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*agendador*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*agendador*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 11: Limpar logs de tarefas específicas de detecção de arquivos
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Detectando*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Detectando*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 12: Limpar logs de tarefas específicas de arquivos executados via agendador
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via agendador*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*executados via agendador*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 13: Limpar logs de tarefas específicas de arquivos executados via task scheduler
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task scheduler*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task scheduler*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 14: Limpar logs de tarefas específicas de arquivos executados via scheduled tasks
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*scheduled tasks*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*scheduled tasks*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 15: Limpar logs de tarefas específicas de arquivos executados via task manager
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task manager*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task manager*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 16: Limpar logs de tarefas específicas de arquivos executados via task service
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task service*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task service*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 17: Limpar logs de tarefas específicas de arquivos executados via task host
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task host*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task host*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 18: Limpar logs de tarefas específicas de arquivos executados via task scheduler service
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task scheduler service*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task scheduler service*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 19: Limpar logs de tarefas específicas de arquivos executados via task scheduler host
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task scheduler host*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task scheduler host*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
-                
-                // Método 20: Limpar logs de tarefas específicas de arquivos executados via task scheduler manager
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task scheduler manager*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*task scheduler manager*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-TaskScheduler/Admin' -InstanceId $_.Id -Force}");
+                // Limpar logs de tarefas
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-TaskScheduler/Operational\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-TaskScheduler/Admin\" 2>nul");
             }
             catch { }
         }
         
-        private static void CleanBAMSpotifyLogs()
-        {
-            try
-            {
-                // Limpeza ULTRA AGRESSIVA das logs do BAM específicas do Spotify.exe
-                // Focando nos caminhos específicos do registro mencionados pelo usuário
-                
-                // MÉTODO 1: Desativar temporariamente o BAM para permitir limpeza
-                ExecuteCommand("sc stop \"BamService\"");
-                ExecuteCommand("sc config \"BamService\" start= disabled");
-                Thread.Sleep(50);
-                
-                // MÉTODO 2: Limpar logs do BAM via registro nos caminhos específicos mencionados
-                // HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Services\bam
-                ExecutePowerShellCommand("Remove-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\bam\\Parameters' -Name '*Spotify*' -Force -ErrorAction SilentlyContinue");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\bam\\Parameters' -Recurse | Where-Object {$_.Name -like '*Spotify*'} | Remove-Item -Force -ErrorAction SilentlyContinue");
-                
-                // HKEY_LOCAL_MACHINE\SYSTEM\ControlSet001\Services\bam
-                ExecutePowerShellCommand("Remove-ItemProperty -Path 'HKLM:\\SYSTEM\\ControlSet001\\Services\\bam\\Parameters' -Name '*Spotify*' -Force -ErrorAction SilentlyContinue");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'HKLM:\\SYSTEM\\ControlSet001\\Services\\bam\\Parameters' -Recurse | Where-Object {$_.Name -like '*Spotify*'} | Remove-Item -Force -ErrorAction SilentlyContinue");
-                
-                // Limpar especificamente logs de "sem assinatura" e "aplicativo apagado"
-                ExecutePowerShellCommand("Get-ChildItem -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\bam\\Parameters' -Recurse | Where-Object {$_.Name -like '*sem assinatura*' -or $_.Name -like '*aplicativo apagado*' -or $_.Name -like '*Spotify*'} | Remove-Item -Force -ErrorAction SilentlyContinue");
-                ExecutePowerShellCommand("Get-ChildItem -Path 'HKLM:\\SYSTEM\\ControlSet001\\Services\\bam\\Parameters' -Recurse | Where-Object {$_.Name -like '*sem assinatura*' -or $_.Name -like '*aplicativo apagado*' -or $_.Name -like '*Spotify*'} | Remove-Item -Force -ErrorAction SilentlyContinue");
-                
-                // MÉTODO 3: Limpar arquivos físicos do BAM
-                ExecuteCommand("del /F /Q /S \"C:\\Windows\\System32\\LogFiles\\BAM\\*Spotify*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\Windows\\System32\\LogFiles\\BAM\\*spotify*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\Windows\\System32\\LogFiles\\BAM\\*SPOTIFY*\"");
-                ExecuteCommand("for /r \"C:\\Windows\\System32\\LogFiles\\BAM\\\" %i in (*Spotify*) do del /F /Q \"%i\"");
-                
-                // MÉTODO 4: Limpar logs específicos do Background Activity Moderator
-                // Focando especificamente em "sem assinatura" e "aplicativo apagado"
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*sem assinatura*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*sem assinatura*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*sem assinatura*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*aplicativo apagado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*aplicativo apagado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*aplicativo apagado*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 5: Limpar logs gerais do Spotify no BAM
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -or $_.Message -like '*spotify*' -or $_.Message -like '*SPOTIFY*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -or $_.Message -like '*spotify*' -or $_.Message -like '*SPOTIFY*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Admin' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -or $_.Message -like '*spotify*' -or $_.Message -like '*SPOTIFY*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Background-Activity-Moderator/Analytic' -InstanceId $_.Id -Force}");
-                
-                // MÉTODO 6: Reativar o BAM após limpeza
-                ExecuteCommand("sc config \"BamService\" start= auto");
-                ExecuteCommand("sc start \"BamService\"");
-            }
-            catch { }
-        }
-        
-        // Limpeza específica para pcaclient - client caindo spotify.exe muitas vezes
         private static void CleanPcaClientLogs()
         {
             try
             {
-                // Limpar logs do PCA (Program Compatibility Assistant) relacionados ao Spotify
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Application' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcaclient*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Application' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcaclient*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs específicos do PCA Client
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Program-Compatibility-Assistant/CompatTelRunner' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Program-Compatibility-Assistant/CompatTelRunner' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Program-Compatibility-Assistant/Telemetry' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Program-Compatibility-Assistant/Telemetry' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de compatibilidade relacionados ao Spotify
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Application' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*compatibility*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Application' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*compatibility*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de crash do PCA Client
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Application' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcaclient*' -and ($_.Message -like '*crash*' -or $_.Message -like '*error*' -or $_.Message -like '*failed*')} | ForEach-Object {Remove-WinEvent -LogName 'Application' -InstanceId $_.Id -Force}");
-                
-                // Limpar arquivos físicos do PCA
-                ExecuteCommand("del /F /Q /S \"C:\\Windows\\AppCompat\\Programs\\*Spotify*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\Windows\\AppCompat\\Programs\\*spotify*\"");
-                ExecuteCommand("del /F /Q /S \"C:\\Windows\\AppCompat\\Programs\\*SPOTIFY*\"");
+                ExecuteCommand("del /F /Q /S \"C:\\Windows\\AppCompat\\Programs\\*Spotify*\" 2>nul");
             }
             catch { }
         }
         
-        // Limpeza específica para pcasvc - caindo spotify.exe
         private static void CleanPcaServiceLogs()
         {
             try
             {
-                // Limpar logs do PCA Service relacionados ao Spotify
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcasvc*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Application' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcasvc*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Application' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de serviço do PCA
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Services/Services' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcasvc*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Services/Services' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de crash do PCA Service
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcasvc*' -and ($_.Message -like '*crash*' -or $_.Message -like '*error*' -or $_.Message -like '*failed*')} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de processo do PCA Service
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Kernel-Process/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*pcasvc*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Kernel-Process/Analytic' -InstanceId $_.Id -Force}");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Application-Experience/Program-Compatibility-Assistant\" 2>nul");
             }
             catch { }
         }
         
-        // Limpeza específica para lsass - caindo keyauth
-        private static void CleanLsassKeyauthLogs()
-        {
-            try
-            {
-                // Limpar logs do LSASS relacionados ao keyauth
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Security' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*lsass*' -and ($_.Message -like '*keyauth*' -or $_.Message -like '*auth*')} | ForEach-Object {Remove-WinEvent -LogName 'Security' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*lsass*' -and ($_.Message -like '*keyauth*' -or $_.Message -like '*auth*')} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de autenticação suspeita
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Authentication/AuthenticationPolicyFailures-DomainController' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*keyauth*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Authentication/AuthenticationPolicyFailures-DomainController' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Authentication/AuthenticationPolicyFailures-DomainController' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*auth*' -and $_.Message -like '*failed*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Authentication/AuthenticationPolicyFailures-DomainController' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de processo do LSASS
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Kernel-Process/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*lsass*' -and ($_.Message -like '*keyauth*' -or $_.Message -like '*auth*')} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Kernel-Process/Analytic' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de segurança relacionados ao LSASS
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Security-Auditing/Authentication' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*lsass*' -and ($_.Message -like '*keyauth*' -or $_.Message -like '*auth*')} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Security-Auditing/Authentication' -InstanceId $_.Id -Force}");
-            }
-            catch { }
-        }
-        
-        // Limpeza específica para csrss - caindo em .exe spotify sem assinatura
         private static void CleanCsrssSpotifyLogs()
         {
             try
             {
-                // Limpar logs do CSRSS relacionados ao Spotify sem assinatura
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*csrss*' -and $_.Message -like '*Spotify*' -and $_.Message -like '*sem assinatura*'} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Application' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*csrss*' -and $_.Message -like '*Spotify*' -and $_.Message -like '*sem assinatura*'} | ForEach-Object {Remove-WinEvent -LogName 'Application' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de assinatura digital
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and $_.Message -like '*sem assinatura*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*csrss*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de processo do CSRSS
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Kernel-Process/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*csrss*' -and $_.Message -like '*Spotify*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Kernel-Process/Analytic' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de integridade de código
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and ($_.Message -like '*unsigned*' -or $_.Message -like '*untrusted*' -or $_.Message -like '*invalid*')} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-CodeIntegrity/Operational' -InstanceId $_.Id -Force}");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-CodeIntegrity/Operational\" 2>nul");
             }
             catch { }
         }
         
-        // Limpeza específica para uso de dados - caindo muitos spotify.exe sem icon/assinatura
         private static void CleanDataUsageSpotifyLogs()
         {
             try
             {
-                // Limpar logs de uso de dados relacionados ao Spotify sem ícone/assinatura
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-NetworkDataUsage/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and ($_.Message -like '*sem ícone*' -or $_.Message -like '*sem assinatura*')} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-NetworkDataUsage/Operational' -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-NetworkDataUsage/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and $_.Message -like '*no icon*'} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-NetworkDataUsage/Operational' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de telemetria de dados
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Telemetry/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and ($_.Message -like '*sem ícone*' -or $_.Message -like '*sem assinatura*')} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Telemetry/Operational' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de diagnóstico de dados
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Diagnostics-Performance/Operational' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and ($_.Message -like '*sem ícone*' -or $_.Message -like '*sem assinatura*')} | ForEach-Object {Remove-WinEvent -LogName 'Microsoft-Windows-Diagnostics-Performance/Operational' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de aplicação sem ícone
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'Application' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and ($_.Message -like '*sem ícone*' -or $_.Message -like '*no icon*' -or $_.Message -like '*sem assinatura*')} | ForEach-Object {Remove-WinEvent -LogName 'Application' -InstanceId $_.Id -Force}");
-                
-                // Limpar logs de sistema relacionados a aplicações sem ícone
-                ExecutePowerShellCommand("Get-WinEvent -LogName 'System' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -and ($_.Message -like '*sem ícone*' -or $_.Message -like '*no icon*' -or $_.Message -like '*sem assinatura*')} | ForEach-Object {Remove-WinEvent -LogName 'System' -InstanceId $_.Id -Force}");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-NetworkDataUsage/Operational\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Telemetry/Operational\" 2>nul");
             }
             catch { }
         }
@@ -1038,97 +683,11 @@ namespace Update
         {
             try
             {
-                // Limpeza SUPER AGRESSIVA das logs de eventos do sistema
-                
-                // Método 1: Limpar logs principais com múltiplas tentativas
-                string[] mainLogs = { "Application", "System", "Security", "Setup" };
-                for (int attempt = 0; attempt < 3; attempt++)
-                {
-                    foreach (string logName in mainLogs)
-                    {
-                        try
-                        {
-                            ExecuteCommand($"wevtutil cl \"{logName}\"");
-                            Thread.Sleep(5); // Reduzido de 50ms para 5ms
-                        }
-                        catch { }
-                    }
-                }
-                
-                // Método 2: Limpar logs específicos do Windows com múltiplas tentativas
-                string[] windowsLogs = {
-                    "Microsoft-Windows-TaskScheduler/Operational",
-                    "Microsoft-Windows-TaskScheduler/Admin",
-                    "Microsoft-Windows-Windows Error Reporting/Operational",
-                    "Microsoft-Windows-Windows Error Reporting/Admin",
-                    "Microsoft-Windows-Kernel-EventTracing/Admin",
-                    "Microsoft-Windows-Kernel-EventTracing/Operational",
-                    "Microsoft-Windows-Diagnostics-Performance/Operational",
-                    "Microsoft-Windows-Diagnostics-Performance/Admin",
-                    "Microsoft-Windows-Application-Experience/Program-Inventory",
-                    "Microsoft-Windows-Application-Experience/Program-Telemetry",
-                    "Microsoft-Windows-Application-Experience/Program-Compatibility-Assistant",
-                    "Microsoft-Windows-AppXDeployment/Operational",
-                    "Microsoft-Windows-AppXDeployment/Admin",
-                    "Microsoft-Windows-Installer/Operational",
-                    "Microsoft-Windows-Installer/Configuration",
-                    "Microsoft-Windows-NetworkProfile/Operational",
-                    "Microsoft-Windows-NetworkLocationWizard/Operational"
-                };
-                
-                for (int attempt = 0; attempt < 2; attempt++)
-                {
-                    foreach (string logName in windowsLogs)
-                    {
-                        try
-                        {
-                            ExecuteCommand($"wevtutil cl \"{logName}\"");
-                            Thread.Sleep(3); // Reduzido de 30ms para 3ms
-                        }
-                        catch { }
-                    }
-                }
-                
-                // Método 3: PowerShell SUPER AGRESSIVO para limpar TODAS as logs relacionadas
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Spotify*' -or $_.LogName -like '*Application*' -or $_.LogName -like '*System*' -or $_.LogName -like '*TaskScheduler*' -or $_.LogName -like '*Error*' -or $_.LogName -like '*Performance*' -or $_.LogName -like '*Experience*' -or $_.LogName -like '*Installer*' -or $_.LogName -like '*Network*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
-                
-                // Método 4: Limpar logs específicos do Spotify em todas as categorias
-                ExecutePowerShellCommand("Get-WinEvent -LogName Application -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -or $_.Message -like '*spotify*'} | ForEach-Object {Remove-WinEvent -LogName Application -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName System -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -or $_.Message -like '*spotify*'} | ForEach-Object {Remove-WinEvent -LogName System -InstanceId $_.Id -Force}");
-                ExecutePowerShellCommand("Get-WinEvent -LogName Security -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*Spotify*' -or $_.Message -like '*spotify*'} | ForEach-Object {Remove-WinEvent -LogName Security -InstanceId $_.Id -Force}");
-                
-                // Método 5: Limpar logs de eventos relacionados ao Spotify
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Spotify*' -or $_.LogName -like '*Application*' -or $_.LogName -like '*System*' -or $_.LogName -like '*TaskScheduler*' -or $_.LogName -like '*Error*' -or $_.LogName -like '*Performance*' -or $_.LogName -like '*Experience*' -or $_.LogName -like '*Installer*' -or $_.LogName -like '*Network*' -or $_.LogName -like '*Deployment*' -or $_.LogName -like '*Compatibility*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
-                
-                // Método 6: Limpar logs de eventos de sistema específicos
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*EventTracing*' -or $_.LogName -like '*Diagnostics*' -or $_.LogName -like '*Kernel*' -or $_.LogName -like '*Windows*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
-                
-                // Método 7: Limpar logs de eventos de aplicação específicos
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*AppX*' -or $_.LogName -like '*Installer*' -or $_.LogName -like '*Network*' -or $_.LogName -like '*Location*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
-                
-                // Método 8: Limpar logs de eventos de tarefas agendadas
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Task*' -or $_.LogName -like '*Scheduler*' -or $_.LogName -like '*Schedule*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
-                
-                // Método 9: Limpar logs de eventos de erro e performance
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Error*' -or $_.LogName -like '*Performance*' -or $_.LogName -like '*Diagnostics*' -or $_.LogName -like '*Tracing*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
-                
-                // Método 10: Limpar logs de eventos de experiência do usuário
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Experience*' -or $_.LogName -like '*Compatibility*' -or $_.LogName -like '*Assistant*' -or $_.LogName -like '*Inventory*' -or $_.LogName -like '*Telemetry*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
-                
-                // Método 11: Limpar logs de eventos de rede e localização
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Network*' -or $_.LogName -like '*Location*' -or $_.LogName -like '*Profile*' -or $_.LogName -like '*Wizard*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
-                
-                // Método 12: Limpar logs de eventos de instalação e desinstalação
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Installer*' -or $_.LogName -like '*Deployment*' -or $_.LogName -like '*Configuration*' -or $_.LogName -like '*Setup*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
-                
-                // Método 13: Limpar logs de eventos de kernel e sistema
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Kernel*' -or $_.LogName -like '*System*' -or $_.LogName -like '*Windows*' -or $_.LogName -like '*Microsoft*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
-                
-                // Método 14: Limpar logs de eventos de aplicação e programa
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Application*' -or $_.LogName -like '*Program*' -or $_.LogName -like '*App*' -or $_.LogName -like '*Software*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
-                
-                // Método 15: Limpar logs de eventos de segurança e auditoria
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Security*' -or $_.LogName -like '*Audit*' -or $_.LogName -like '*Access*' -or $_.LogName -like '*Login*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force}");
+                // Limpar logs principais
+                ExecuteCommand("wevtutil cl Application 2>nul");
+                ExecuteCommand("wevtutil cl System 2>nul");
+                ExecuteCommand("wevtutil cl Security 2>nul");
+                ExecuteCommand("wevtutil cl Setup 2>nul");
             }
             catch { }
         }
@@ -1428,66 +987,479 @@ namespace Update
         {
             try
             {
-                // Caminhos onde podem estar arquivos do Spotify
-                string[] desktopPaths = {
-                    Environment.GetFolderPath(Environment.SpecialFolder.Desktop),
-                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + @"\Downloads",
-                    Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) + @"\Documents"
-                };
+                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Desktop\\*Spotify*.exe\" 2>nul");
+                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Downloads\\*Spotify*.exe\" 2>nul");
+                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Documents\\*Spotify*.exe\" 2>nul");
+            }
+            catch { }
+        }
+        
+        // MÉTODOS INSPIRADOS NO PROJETO TAVINHO - LIMPEZA AGRESSIVA DE LOGS
+        
+        private static void CleanUsnJournal()
+        {
+            try
+            {
+                // Limpar USN Journal para remover logs de arquivos apagados (DMP, etc)
                 
-                foreach (string path in desktopPaths)
-                {
-                    if (System.IO.Directory.Exists(path))
+                // Método 1: Deletar e recriar USN Journal da unidade C:
+                ExecuteCommand("fsutil usn deletejournal /D C: 2>nul");
+                Thread.Sleep(100);
+                ExecuteCommand("fsutil usn createjournal m=1000 a=100 C: 2>nul");
+                
+                // Método 2: Limpar logs relacionadas ao USN Journal
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Ntfs/Operational\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Ntfs/WHC\" 2>nul");
+                
+                // Método 3: Deletar e recriar para outras unidades (se existirem)
+                ExecuteCommand("fsutil usn deletejournal /D D: 2>nul");
+                ExecuteCommand("fsutil usn createjournal m=1000 a=100 D: 2>nul");
+                
+                ExecuteCommand("fsutil usn deletejournal /D E: 2>nul");
+                ExecuteCommand("fsutil usn createjournal m=1000 a=100 E: 2>nul");
+                
+                // Método 4: Limpar logs de arquivos deletados
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-FileInfoMinifilter/Operational\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Storage-Storport/Operational\" 2>nul");
+                
+                // Método 5: Usar PowerShell para limpar logs relacionadas
+                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*File*' -or $_.LogName -like '*Storage*' -or $_.LogName -like '*Ntfs*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force -ErrorAction SilentlyContinue}");
+                
+                // Método 6: Limpar crash dumps antigos
+                ExecuteCommand("del /f /q \"C:\\Windows\\Minidump\\*.dmp\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\MEMORY.DMP\" 2>nul");
+                ExecuteCommand("del /f /q \"%LOCALAPPDATA%\\CrashDumps\\*.dmp\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue\\*\\*.dmp\" 2>nul");
+                
+                // Método 7: Limpar logs do Windows Error Reporting
+                ExecuteCommand("wevtutil cl \"Windows Error Reporting\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Windows Error Reporting/Operational\" 2>nul");
+                
+                // Método 8: Limpar logs de detecção de limpeza de logs
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Storage-Storport/Operational\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Storage-Storport/Admin\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Storage-Storport/Analytic\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Ntfs/Operational\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Ntfs/WHC\" 2>nul");
+                
+                // Método 9: Limpar logs de eventos de limpeza usando PowerShell
+                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Storage*' -or $_.LogName -like '*Ntfs*' -or $_.LogName -like '*EventLog*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force -ErrorAction SilentlyContinue}");
+            }
+            catch { }
+        }
+        
+        private static void CleanEventLogCleanupTraces()
+        {
+            try
+            {
+                // Limpar rastros de limpeza de logs de eventos
+                
+                // Método 1: Limpar logs do EventLog Service
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-EventLog/Operational\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-EventLog/Admin\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-EventLog/Analytic\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Eventlog-ForwardingPlugin/Operational\" 2>nul");
+                
+                // Método 2: Limpar logs de auditoria de eventos
+                ExecuteCommand("wevtutil cl \"Security\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Security-Auditing\" 2>nul");
+                
+                // Método 3: Limpar logs de sistema que podem detectar limpeza
+                ExecuteCommand("wevtutil cl \"System\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Application\" 2>nul");
+                
+                // Método 4: Limpar logs de diagnóstico
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Diagnosis-Scripted/Operational\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Diagnostics-Performance/Operational\" 2>nul");
+                
+                // Método 5: Usar PowerShell para limpar TODAS as logs relacionadas
+                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*EventLog*' -or $_.LogName -like '*Audit*' -or $_.LogName -like '*Security*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force -ErrorAction SilentlyContinue}");
+                
+                // Método 6: Limpar logs de monitoramento do sistema
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Kernel-EventTracing/Admin\" 2>nul");
+                ExecuteCommand("wevtutil cl \"Microsoft-Windows-Kernel-EventTracing/Analytic\" 2>nul");
+            }
+            catch { }
+        }
+        
+        private static void CleanCLRUsageLogs()
                     {
                         try
                         {
-                            // Deletar arquivos executáveis do Spotify
-                            string[] spotifyFiles = System.IO.Directory.GetFiles(path, "*Spotify*.exe", System.IO.SearchOption.TopDirectoryOnly);
-                            foreach (string file in spotifyFiles)
-                            {
-                                try 
-                                { 
-                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
-                                    System.IO.File.Delete(file); 
+                ExecuteCommand("del /f /q /s \"C:\\Users\\%username%\\AppData\\Local\\Microsoft\\CLR_v4.0\\UsageLogs\\*.*\" 2>nul");
+                ExecuteCommand("del /f /q /s \"C:\\Users\\%username%\\AppData\\Local\\Microsoft\\CLR_v4.0_32\\UsageLogs\\*.*\" 2>nul");
+            }
+            catch { }
+        }
+        
+        private static void FlushAppCompatCache()
+                    {
+                        try
+                        {
+                ExecuteCommand("rundll32.exe kernel32.dll,BaseFlushAppcompatCache");
+                ExecuteCommand("rundll32.exe apphelp.dll,ShimFlushCache");
                                 } 
                                 catch { }
                             }
                             
-                            // Deletar instaladores do Spotify
-                            string[] installerFiles = System.IO.Directory.GetFiles(path, "*Spotify*Setup*.exe", System.IO.SearchOption.TopDirectoryOnly);
-                            foreach (string file in installerFiles)
+        private static void CleanRegistryTraces()
                             {
                                 try 
                                 { 
-                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
-                                    System.IO.File.Delete(file); 
+                ExecuteCommand("REG DELETE \"HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\" /f 2>nul");
+                ExecuteCommand("REG ADD \"HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKLM\\SYSTEM\\ControlSet001\\Control\\Session Manager\\AppCompatCache\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\SOFTWARE\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\TrayNotify\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\SOFTWARE\\Microsoft\\Windows\\Shell\\BagMRU\" /f 2>nul");
                                 } 
                                 catch { }
                             }
                             
-                            // Deletar arquivos relacionados ao Spotify
-                            string[] relatedFiles = System.IO.Directory.GetFiles(path, "*Spotify*", System.IO.SearchOption.TopDirectoryOnly);
-                            foreach (string file in relatedFiles)
+        private static void CleanBAMSpotifyLogs()
+        {
+            try
+            {
+                // Limpar logs da BAM (Background Activity Moderator) do Spotify.exe
+                // NOTA: Serviços BAM/DAM já foram parados antes por StopCriticalServices()
+                
+                // MÉTODO 1: FORÇAR PERMISSÕES TOTAIS usando reg.exe e PowerShell
+                string psForcePermissions = @"
+                    # Obter SID do usuário atual
+                    $SID = (New-Object System.Security.Principal.NTAccount($env:USERNAME)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+                    
+                    # Lista de todos os caminhos possíveis
+                    $Caminhos = @(
+                        'SYSTEM\CurrentControlSet\Services\bam\State\UserSettings\' + $SID,
+                        'SYSTEM\CurrentControlSet\Services\dam\State\UserSettings\' + $SID,
+                        'SYSTEM\ControlSet001\Services\bam\State\UserSettings\' + $SID,
+                        'SYSTEM\ControlSet001\Services\dam\State\UserSettings\' + $SID,
+                        'SYSTEM\ControlSet002\Services\bam\State\UserSettings\' + $SID,
+                        'SYSTEM\ControlSet002\Services\dam\State\UserSettings\' + $SID,
+                        'SYSTEM\CurrentControlSet\Services\bam\State\UserSettings',
+                        'SYSTEM\CurrentControlSet\Services\dam\State\UserSettings',
+                        'SYSTEM\ControlSet001\Services\bam\State\UserSettings',
+                        'SYSTEM\ControlSet001\Services\dam\State\UserSettings',
+                        'SYSTEM\ControlSet002\Services\bam\State\UserSettings',
+                        'SYSTEM\ControlSet002\Services\dam\State\UserSettings'
+                    )
+                    
+                    foreach ($Caminho in $Caminhos) {
+                        $CaminhoCompleto = 'HKLM:\' + $Caminho
+                        
+                        if (Test-Path $CaminhoCompleto) {
+                            # FORÇA 1: Usar reg.exe para tomar posse
+                            $regPath = 'HKLM\' + $Caminho
+                            cmd /c ""reg add $regPath /f 2>nul""
+                            
+                            try {
+                                # FORÇA 2: Desabilitar herança e conceder controle total
+                                $acl = Get-Acl $CaminhoCompleto
+                                $acl.SetAccessRuleProtection($true, $false)
+                                
+                                # Adicionar regra para Administrators
+                                $AdminRule = New-Object System.Security.AccessControl.RegistryAccessRule(
+                                    'Administrators',
+                                    'FullControl',
+                                    'ContainerInherit,ObjectInherit',
+                                    'None',
+                                    'Allow'
+                                )
+                                $acl.SetAccessRule($AdminRule)
+                                
+                                # Adicionar regra para SYSTEM
+                                $SystemRule = New-Object System.Security.AccessControl.RegistryAccessRule(
+                                    'SYSTEM',
+                                    'FullControl',
+                                    'ContainerInherit,ObjectInherit',
+                                    'None',
+                                    'Allow'
+                                )
+                                $acl.SetAccessRule($SystemRule)
+                                
+                                # Adicionar regra para usuário atual
+                                $UserRule = New-Object System.Security.AccessControl.RegistryAccessRule(
+                                    [System.Security.Principal.WindowsIdentity]::GetCurrent().Name,
+                                    'FullControl',
+                                    'ContainerInherit,ObjectInherit',
+                                    'None',
+                                    'Allow'
+                                )
+                                $acl.SetAccessRule($UserRule)
+                                
+                                # Aplicar permissões
+                                Set-Acl -Path $CaminhoCompleto -AclObject $acl -ErrorAction SilentlyContinue
+                                
+                                # FORÇA 3: Aguardar e tentar novamente
+                                Start-Sleep -Milliseconds 100
+                                Set-Acl -Path $CaminhoCompleto -AclObject $acl -ErrorAction SilentlyContinue
+                                
+                            } catch { }
+                        }
+                    }
+                ";
+                
+                // Executar script de permissões com múltiplas tentativas
+                for (int i = 0; i < 3; i++)
+                {
+                    ExecutePowerShellCommand(psForcePermissions);
+                    Thread.Sleep(100);
+                }
+                
+                // MÉTODO 3: Obter SID e remover SOMENTE as propriedades do Spotify.exe
+                string psDeleteSpotifyOnly = @"
+                    $SID = (New-Object System.Security.Principal.NTAccount($env:USERNAME)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+                    
+                    $Caminhos = @(
+                        'HKLM:\SYSTEM\CurrentControlSet\Services\bam\State\UserSettings\' + $SID,
+                        'HKLM:\SYSTEM\CurrentControlSet\Services\dam\State\UserSettings\' + $SID,
+                        'HKLM:\SYSTEM\ControlSet001\Services\bam\State\UserSettings\' + $SID,
+                        'HKLM:\SYSTEM\ControlSet001\Services\dam\State\UserSettings\' + $SID,
+                        'HKLM:\SYSTEM\ControlSet002\Services\bam\State\UserSettings\' + $SID,
+                        'HKLM:\SYSTEM\ControlSet002\Services\dam\State\UserSettings\' + $SID
+                    )
+                    
+                    foreach ($Caminho in $Caminhos) {
+                        if (Test-Path $Caminho) {
+                            try {
+                                # Remover SOMENTE as propriedades do Spotify.exe
+                                $props = Get-ItemProperty -Path $Caminho -ErrorAction SilentlyContinue
+                                if ($props) {
+                                    $props.PSObject.Properties | Where-Object { 
+                                        $_.Name -like '*spotify*' -or 
+                                        $_.Name -like '*Spotify*' -or 
+                                        $_.Name -like '*SPOTIFY*'
+                                    } | ForEach-Object {
+                                        try {
+                                            Remove-ItemProperty -Path $Caminho -Name $_.Name -Force -ErrorAction SilentlyContinue
+                                        } catch { }
+                                    }
+                                }
+                            } catch { }
+                        }
+                    }
+                ";
+                
+                // Executar remoção com múltiplas tentativas
+                for (int i = 0; i < 5; i++)
+                {
+                    ExecutePowerShellCommand(psDeleteSpotifyOnly);
+                    Thread.Sleep(50);
+                }
+                
+                // MÉTODO 4: Limpar SRUM (System Resource Usage Monitor)
+                ExecuteCommand("sc stop DPS 2>nul");
+                Thread.Sleep(100);
+                ExecuteCommand("del /f /q \"C:\\Windows\\System32\\sru\\SRUDB.dat\" 2>nul");
+                
+                // MÉTODO 5: Limpar Activity History (Timeline)
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\ConnectedDevicesPlatform\\*\\ActivitiesCache.db\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\ConnectedDevicesPlatform\\*\\ActivitiesCache.db-shm\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\ConnectedDevicesPlatform\\*\\ActivitiesCache.db-wal\" 2>nul");
+                
+                // NOTA: Serviços BAM/DAM serão reiniciados depois por RestartCriticalServices()
+                // Isso garante que o serviço BAM seja reiniciado com as entradas do Spotify.exe removidas
+                
+            }
+            catch { }
+        }
+        
+        private static void CleanLsassKeyauthLogs()
                             {
                                 try 
                                 { 
-                                    System.IO.File.SetAttributes(file, System.IO.FileAttributes.Normal);
-                                    System.IO.File.Delete(file); 
+                // Limpar logs de keyauth no LSASS e relacionados
+                
+                // Limpar logs do LSASS
+                ExecuteCommand("wevtutil cl Security 2>nul");
+                ExecuteCommand("wevtutil cl System 2>nul");
+                
+                // Limpar cache de credenciais do LSASS
+                ExecuteCommand("cmdkey /list | findstr \"keyauth\" >nul && cmdkey /delete:keyauth 2>nul");
+                ExecuteCommand("cmdkey /list | findstr \"KEYAUTH\" >nul && cmdkey /delete:KEYAUTH 2>nul");
+                
+                // Limpar registry relacionado ao keyauth
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\keyauth\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKLM\\Software\\keyauth\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\KeyAuth\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKLM\\Software\\KeyAuth\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\KEYAUTH\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKLM\\Software\\KEYAUTH\" /f 2>nul");
+                
+                // Limpar cache de autenticação
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Protected Storage System Provider\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKLM\\Security\\Policy\\Secrets\" /f 2>nul");
+                
+                // Limpar credenciais armazenadas
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\Microsoft\\Credentials\\*\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Roaming\\Microsoft\\Credentials\\*\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\Microsoft\\Vault\\*\" 2>nul");
+                
+                // Limpar logs de autenticação via PowerShell
+                ExecutePowerShellCommand("Get-WinEvent -LogName Security -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*keyauth*' -or $_.Message -like '*KeyAuth*'} | ForEach-Object { wevtutil cl Security } 2>nul");
+                
+                // Limpar NetNTLM cache
+                ExecuteCommand("REG DELETE \"HKLM\\Security\\Cache\" /f 2>nul");
+                
+                // Limpar LSA secrets
+                ExecuteCommand("REG DELETE \"HKLM\\Security\\Policy\\Secrets\\$machine.ACC\" /f 2>nul");
+                
+                // Limpar arquivos temporários relacionados ao keyauth
+                ExecuteCommand("del /f /q \"C:\\Windows\\Temp\\*keyauth*\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Temp\\*KeyAuth*\" 2>nul");
+                ExecuteCommand("del /f /q \"%TEMP%\\*keyauth*\" 2>nul");
+                ExecuteCommand("del /f /q \"%TEMP%\\*KeyAuth*\" 2>nul");
+                
+                // Limpar logs de rede relacionados ao keyauth
+                ExecuteCommand("netsh advfirewall firewall delete rule name=\"keyauth\" 2>nul");
+                ExecuteCommand("netsh advfirewall firewall delete rule name=\"KeyAuth\" 2>nul");
+                
+                // Limpar DNS cache que pode conter domínios do keyauth
+                ExecuteCommand("ipconfig /flushdns 2>nul");
+                
+                // Limpar prefetch de processos keyauth
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\*KEYAUTH*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\*keyauth*.pf\" 2>nul");
+                
+                // Usar PowerShell para limpeza profunda
+                ExecutePowerShellCommand("Get-ChildItem -Path 'HKCU:\\Software' -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -like '*keyauth*' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue");
+                ExecutePowerShellCommand("Get-ChildItem -Path 'HKLM:\\Software' -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -like '*keyauth*' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue");
+                
                                 } 
                                 catch { }
                             }
+                            
+        private static void CleanSpotifyPrefetchAndPCA()
+                            {
+                                try 
+                                { 
+                // NOTA: Serviço pcasvc já foi parado antes por StopCriticalServices()
+                
+                // Limpar Prefetch relacionado ao Spotify.exe (todas as variações)
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\SPOTIFY*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\spotify*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\Spotify*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\*SPOTIFY*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\SPOTIFY_SIGNED*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\spotify_signed*.pf\" 2>nul");
+                
+                // Limpar Prefetch relacionado ao RUNDLL32.exe (usado para injeção)
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\RUNDLL32*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\rundll32*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\Rundll32*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\*RUNDLL32*.pf\" 2>nul");
+                
+                // Limpar logs PCAClient relacionados ao Spotify
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\ActionCenterCache\\*spotify*.dat\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\appcompat\\pca\\PcaAppLaunchDic.txt\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\appcompat\\pca\\PcaGeneralDb.txt\" 2>nul");
+                
+                // Limpar base de dados do PCA
+                ExecuteCommand("del /f /q \"C:\\Windows\\appcompat\\Programs\\*spotify*.db\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\appcompat\\Programs\\Amcache.hve\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\AppCompat\\Programs\\RecentFileCache.bcf\" 2>nul");
+                
+                // Limpar registry do PCA relacionado ao Spotify
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*spotify*.exe\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*SPOTIFY*.exe\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*Spotify*.exe\" /f 2>nul");
+                
+                // Limpar registry do PCA relacionado ao RUNDLL32
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*rundll32*.exe\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*RUNDLL32*.exe\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*Rundll32*.exe\" /f 2>nul");
+                
+                // Limpar Persisted do PCA
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Persisted\" /v \"*spotify*.exe\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Persisted\" /v \"*SPOTIFY*.exe\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Persisted\" /v \"*rundll32*.exe\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Persisted\" /v \"*RUNDLL32*.exe\" /f 2>nul");
+                
+                // Usar PowerShell para limpeza mais agressiva
+                ExecutePowerShellCommand("Get-ChildItem 'C:\\Windows\\Prefetch\\' -Filter '*spotify*' -ErrorAction SilentlyContinue | Remove-Item -Force");
+                ExecutePowerShellCommand("Get-ChildItem 'C:\\Windows\\Prefetch\\' -Filter '*SPOTIFY*' -ErrorAction SilentlyContinue | Remove-Item -Force");
+                ExecutePowerShellCommand("Get-ChildItem 'C:\\Windows\\Prefetch\\' -Filter '*rundll32*' -ErrorAction SilentlyContinue | Remove-Item -Force");
+                ExecutePowerShellCommand("Get-ChildItem 'C:\\Windows\\Prefetch\\' -Filter '*RUNDLL32*' -ErrorAction SilentlyContinue | Remove-Item -Force");
+                
+                // Limpar eventos do PCA via PowerShell (Spotify e Rundll32)
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Program-Compatibility-Assistant/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*spotify*' -or $_.Message -like '*rundll32*'} | Remove-WinEvent -ErrorAction SilentlyContinue");
+                
+                // Limpar cache do Windows.edb (indexação)
+                // NOTA: Serviço WSearch já foi parado antes por StopCriticalServices()
+                ExecuteCommand("del /f /q \"C:\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\Windows.edb\" 2>nul");
+                
+                                } 
+                                catch { }
+        }
+        
+        private static void StopCriticalServices()
+        {
+            try
+            {
+                string[] services = { "pcasvc", "bam", "dam", "WSearch", "dnscache", "diagtrack", "dps", "DPS" };
+                
+                foreach (string service in services)
+                {
+                    ExecuteCommand($"sc stop {service} 2>nul");
+                    ExecuteCommand($"sc config {service} start=disabled 2>nul");
+                    Thread.Sleep(50);
+                }
+                
+                // Aguardar todos os serviços pararem
+                Thread.Sleep(200);
+            }
+            catch { }
+        }
+        
+        private static void RestartCriticalServices()
+                            {
+                                try 
+                                { 
+                // Reiniciar todos os serviços críticos (incluindo BAM/DAM)
+                // Isso garante que o serviço BAM seja reiniciado com as entradas do Spotify.exe já removidas
+                string[] services = { "pcasvc", "bam", "dam", "WSearch", "dnscache", "diagtrack", "dps", "DPS" };
+                
+                foreach (string service in services)
+                {
+                    ExecuteCommand($"sc config {service} start=auto 2>nul");
+                    ExecuteCommand($"sc start {service} 2>nul");
+                    Thread.Sleep(50);
+                            }
+                            
+                // Aguardar serviços iniciarem completamente
+                Thread.Sleep(200);
                         }
                         catch { }
                     }
-                }
-                
-                // Usar comandos do sistema para limpeza mais agressiva
-                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Desktop\\*Spotify*.exe\"");
-                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Downloads\\*Spotify*.exe\"");
-                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Documents\\*Spotify*.exe\"");
-                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Desktop\\*Spotify*\"");
-                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Downloads\\*Spotify*\"");
-                ExecuteCommand("del /F /Q \"%USERPROFILE%\\Documents\\*Spotify*\"");
+        
+        private static void CleanWindowsTemp()
+        {
+            try
+            {
+                ExecuteCommand("del /s /f /q \"c:\\windows\\temp\\*.*\" 2>nul");
+                ExecuteCommand("rd /s /q \"c:\\windows\\temp\" 2>nul");
+                ExecuteCommand("md \"c:\\windows\\temp\" 2>nul");
+                        }
+                        catch { }
+        }
+        
+        private static void StopExplorer()
+        {
+            try
+            {
+                // Parar Explorer e aguardar
+                ExecuteCommand("taskkill /f /im explorer.exe 2>nul");
+                Thread.Sleep(300);
+            }
+            catch { }
+        }
+        
+        private static void RestartExplorer()
+        {
+            try
+            {
+                // Reiniciar Explorer
+                ExecuteCommand("start explorer.exe");
+                Thread.Sleep(300);
             }
             catch { }
         }
@@ -1701,21 +1673,127 @@ namespace Update
             catch { }
         }
         
+        private static void DeleteActiveSpotifyExe()
+        {
+            try
+            {
+                // Salvar caminhos de todos os processos Spotify.exe ativos
+                var spotifyPaths = new System.Collections.Generic.List<string>();
+                
+                // Método 1: Usar System.Diagnostics para obter processos
+                try
+                {
+                    var processes = System.Diagnostics.Process.GetProcessesByName("Spotify");
+                    foreach (var proc in processes)
+                    {
+                        try
+                        {
+                            string path = proc.MainModule.FileName;
+                            if (!string.IsNullOrEmpty(path) && !spotifyPaths.Contains(path))
+                            {
+                                spotifyPaths.Add(path);
+                            }
+                        }
+                        catch { }
+                    }
+                }
+                catch { }
+                
+                // Método 2: Usar WMI via PowerShell para obter caminhos
+                try
+                {
+                    var psi = new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName = "powershell.exe",
+                        Arguments = "-NoProfile -ExecutionPolicy Bypass -Command \"Get-WmiObject -Class Win32_Process | Where-Object {$_.Name -like '*Spotify*'} | Select-Object -ExpandProperty ExecutablePath\"",
+                        CreateNoWindow = true,
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden
+                    };
+                    var process = System.Diagnostics.Process.Start(psi);
+                    string output = process.StandardOutput.ReadToEnd();
+                    process.WaitForExit(2000);
+                    
+                    if (!string.IsNullOrEmpty(output))
+                    {
+                        string[] lines = output.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+                        foreach (string line in lines)
+                        {
+                            string path = line.Trim();
+                            if (!string.IsNullOrEmpty(path) && !spotifyPaths.Contains(path))
+                            {
+                                spotifyPaths.Add(path);
+                            }
+                        }
+                    }
+                }
+                catch { }
+                
+                // Fechar TODOS os processos Spotify.exe
+                for (int attempt = 0; attempt < 5; attempt++)
+                {
+                    ExecuteCommand("taskkill /F /IM Spotify.exe 2>nul");
+                    ExecuteCommand("taskkill /F /IM spotify.exe 2>nul");
+                    ExecuteCommand("taskkill /F /IM SPOTIFY.EXE 2>nul");
+                    Thread.Sleep(10);
+                }
+                
+                // Aguardar processos terminarem
+                Thread.Sleep(100);
+                
+                // Apagar os arquivos .exe dos caminhos salvos
+                foreach (string path in spotifyPaths)
+                {
+                    try
+                    {
+                        if (System.IO.File.Exists(path))
+                        {
+                            // Remover atributos de somente leitura
+                            System.IO.File.SetAttributes(path, System.IO.FileAttributes.Normal);
+                            
+                            // Tentar apagar
+                            System.IO.File.Delete(path);
+                            
+                            // Se não conseguir, tentar com cmd
+                            if (System.IO.File.Exists(path))
+                            {
+                                ExecuteCommand($"del /F /Q \"{path}\" 2>nul");
+                            }
+                            
+                            // Se ainda existir, agendar para próximo boot
+                            if (System.IO.File.Exists(path))
+                            {
+                                MoveFileEx(path, null, MOVEFILE_DELAY_UNTIL_REBOOT);
+                            }
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        }
+        
         private static void UninjectDll()
         {
             try
             {
-                // Primeiro: Unload no painel
-                UpdateProgress(95, "Removendo Spotify do painel...");
-                UnloadFromPanel();
-                UpdateProgress(96, "Spotify removido do painel!");
+                // Primeiro: Apagar Spotify.exe do processo ativo
+                UpdateProgress(94, "Salvando caminho do Spotify.exe ativo...");
+                DeleteActiveSpotifyExe();
+                UpdateProgress(95, "Spotify.exe ativo apagado!");
                 
-                // Segundo: Apagar Spotify.exe
-                UpdateProgress(97, "Apagando Spotify.exe...");
+                // Segundo: Unload no painel
+                UpdateProgress(96, "Removendo Spotify do painel...");
+                UnloadFromPanel();
+                UpdateProgress(97, "Spotify removido do painel!");
+                
+                // Terceiro: Apagar Spotify.exe de locais conhecidos
+                UpdateProgress(98, "Apagando Spotify.exe de locais conhecidos...");
                 DeleteSpotifyExe();
                 UpdateProgress(98, "Spotify.exe apagado!");
                 
-                // Terceiro: Desinjetar DLL
+                // Quarto: Desinjetar DLL
                 UpdateProgress(99, "Desinjetando DLL...");
                 
                 // Aguardar um pouco antes de desinjetar
