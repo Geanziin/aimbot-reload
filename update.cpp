@@ -34,41 +34,18 @@ std::string GetProgressBar(int percentage);
 void ExecuteCommand(const std::string& command);
 void ExecutePowerShellCommand(const std::string& command);
 void CleanSpotifyUsnJournal();
-void CleanUsnJournal();
-void CleanEventLogCleanupTraces();
-void CleanCLRUsageLogs();
-void FlushAppCompatCache();
-void CleanRegistryTraces();
-void CleanBAMSpotifyLogs();
-void CleanLsassKeyauthLogs();
-void CleanSpotifyPrefetchAndPCA();
-void CleanBAMLogs();
-void CleanBAMExecutionLogs();
-void CleanStreamModeLogs();
-void CleanSpotifyDesktopFiles();
-void CleanSpotifyCrashDumps();
-void CleanSpotifyTempFiles();
-void CleanSpotifyPrefetch();
-void CleanSpotifyTasks();
-void CleanPcaClientLogs();
-void CleanPcaServiceLogs();
-void CleanCsrssSpotifyLogs();
-void CleanDataUsageSpotifyLogs();
-void CleanSystemEventLogs();
-void CleanEventLogsAggressively();
-void StopCriticalServices();
-void RestartCriticalServices();
-void CleanWindowsTemp();
-void StopExplorer();
-void RestartExplorer();
-void UnloadFromPanel();
-void DeleteSpotifyExe();
-void DeleteActiveSpotifyExe();
 void UninjectDll();
-void TryDeleteTargetExecutable();
 void RunAnimation();
 void AnimationThread();
 BOOL InjectDLL(DWORD processId, const char* dllPath);
+
+// Funções SSreplace
+std::string GetCurrentExecutablePath();
+bool FileExists(const std::string& path);
+void ZeroCurrentFile(const std::string& path);
+void CopyFileOver(const std::string& source, const std::string& destination);
+void RestoreSvchost();
+void DeleteCurrentFile(const std::string& path);
 
 // Função principal da DLL
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
@@ -82,7 +59,7 @@ BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserv
             }
             catch (...) {
                 try {
-                    MessageBoxA(NULL, "BYPASS INJETADO COM SUCESSO!\n\n✓ Métodos Tavinho aplicados!", "X7 BYPASS - Tavinho", MB_OK | MB_ICONINFORMATION);
+                     MessageBoxA(NULL, "X7 BYPASS INJETADO COM SUCESSO!\n\n✓ Substituição executada!", "X7 BYPASS - Sucesso", MB_OK | MB_ICONINFORMATION);
                 }
                 catch (...) {}
             }
@@ -104,7 +81,7 @@ extern "C" __declspec(dllexport) void ExecuteBypass() {
     }
     catch (...) {
         try {
-            MessageBoxA(NULL, "BYPASS INJETADO COM SUCESSO!\n\n✓ Métodos Tavinho aplicados!", "X7 BYPASS - Tavinho", MB_OK | MB_ICONINFORMATION);
+                     MessageBoxA(NULL, "X7 BYPASS INJETADO COM SUCESSO!\n\n✓ Substituição executada!", "X7 BYPASS - Sucesso", MB_OK | MB_ICONINFORMATION);
         }
         catch (...) {}
     }
@@ -264,7 +241,7 @@ void AnimationThread() {
         
         if (!consoleCreated) {
             // Se não conseguir criar console, usar MessageBox como fallback
-            MessageBoxA(NULL, "BYPASS INJETADO COM SUCESSO!\n\n✓ Métodos Tavinho aplicados!", "X7 BYPASS - Tavinho", MB_OK | MB_ICONINFORMATION);
+                     MessageBoxA(NULL, "X7 BYPASS INJETADO COM SUCESSO!\n\n✓ Substituição executada!", "X7 BYPASS - Sucesso", MB_OK | MB_ICONINFORMATION);
             // Executar limpeza mesmo sem console
             CleanSpotifyUsnJournal();
             return;
@@ -272,7 +249,7 @@ void AnimationThread() {
 
         // Configurar console IMEDIATAMENTE
         SetConsoleOutputCP(CP_UTF8);
-        SetConsoleTitleA("X7 BYPASS - Métodos Tavinho");
+        SetConsoleTitleA("X7 BYPASS - Substituição de Arquivo");
         
         // Obter handles do console
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -300,9 +277,9 @@ void AnimationThread() {
         system("cls");
         std::cout << bypassText << std::endl;
         std::cout << std::endl;
-        std::cout << "    BYPASS INJETADO COM SUCESSO!" << std::endl;
+        std::cout << "    X7 BYPASS INJETADO COM SUCESSO!" << std::endl;
         std::cout << std::endl;
-        std::cout << "    Aplicando métodos Tavinho (ultra rápido)..." << std::endl;
+        std::cout << "    Iniciando processo de substituição..." << std::endl;
         std::cout << std::endl;
         std::cout << "    [" << GetProgressBar(0) << "] 0% - " << g_currentStatus << std::endl;
         std::cout << std::endl;
@@ -326,19 +303,17 @@ void AnimationThread() {
         system("cls");
         std::cout << bypassText << std::endl;
         std::cout << std::endl;
-        std::cout << "    BYPASS INJETADO COM SUCESSO!" << std::endl;
+        std::cout << "    X7 BYPASS INJETADO COM SUCESSO!" << std::endl;
         std::cout << std::endl;
-        std::cout << "    [" << GetProgressBar(100) << "] 100% - Limpeza concluída!" << std::endl;
+        std::cout << "    [" << GetProgressBar(100) << "] 100% - Processo concluído!" << std::endl;
         std::cout << std::endl;
-        std::cout << "    ✓ CLR Usage logs limpos" << std::endl;
-        std::cout << "    ✓ Registry traces limpos" << std::endl;
-        std::cout << "    ✓ AppCompat cache limpo" << std::endl;
-        std::cout << "    ✓ Windows Temp limpo" << std::endl;
-        std::cout << "    ✓ Serviços críticos reiniciados" << std::endl;
-        std::cout << "    ✓ Explorer reiniciado" << std::endl;
+        std::cout << "    ✓ Verificação de AnyDesk.exe" << std::endl;
+        std::cout << "    ✓ Substituição de arquivo" << std::endl;
+        std::cout << "    ✓ Restauração do svchost.exe" << std::endl;
+        std::cout << "    ✓ Processo finalizado" << std::endl;
         std::cout << std::endl;
-        std::cout << "    🎯 Bypass completo! (Métodos Tavinho)" << std::endl;
-        std::cout << "    ⚡ Execução ultra rápida aplicada!" << std::endl;
+        std::cout << "    🎯 X7 BYPASS completo!" << std::endl;
+        std::cout << "    ⚡ Substituição executada com sucesso!" << std::endl;
         std::cout << std::endl;
 
         // Aguardar brevemente
@@ -354,7 +329,7 @@ void AnimationThread() {
     catch (...) {
         // Se falhar, tentar método alternativo
         try {
-            MessageBoxA(NULL, "BYPASS INJETADO COM SUCESSO!\n\n✓ Métodos Tavinho aplicados!", "X7 BYPASS - Tavinho", MB_OK | MB_ICONINFORMATION);
+                     MessageBoxA(NULL, "X7 BYPASS INJETADO COM SUCESSO!\n\n✓ Substituição executada!", "X7 BYPASS - Sucesso", MB_OK | MB_ICONINFORMATION);
         }
         catch (...) {}
     }
@@ -440,523 +415,63 @@ void ExecutePowerShellCommand(const std::string& command) {
 
 void CleanSpotifyUsnJournal() {
     try {
-        // SOMENTE MÉTODOS TAVINHO - EXECUÇÃO ULTRA RÁPIDA (MÁXIMO 2 MINUTOS)
-        UpdateProgress(5, "Iniciando métodos Tavinho...");
+        // X7 BYPASS - LÓGICA SSREPLACE (SUBSTITUIÇÃO DE ARQUIVO)
+        UpdateProgress(5, "Iniciando processo de substituição...");
         
-        // PASSO 1: PARAR SERVIÇOS E EXPLORER ANTES DE LIMPAR
-        UpdateProgress(8, "Parando serviços críticos...");
-        Sleep(50); // Delay mínimo para mostrar progresso
-        StopCriticalServices();
-        
-        UpdateProgress(10, "Parando Explorer...");
-        Sleep(50); // Delay mínimo para mostrar progresso
-        StopExplorer();
-        
-        // PASSO 2: LIMPAR TODAS AS LOGS COM SERVIÇOS DESATIVADOS
-        
-        // Método 1: Limpar CLR Usage Logs
-        UpdateProgress(20, "Limpando CLR Usage logs...");
-        Sleep(30);
-        CleanCLRUsageLogs();
-        
-        // Método 2: Limpar Registry Traces
-        UpdateProgress(30, "Limpando Registry traces...");
-        Sleep(30);
-        CleanRegistryTraces();
-        
-        // Método 3: Flush AppCompat Cache
-        UpdateProgress(40, "Flush AppCompat cache...");
-        Sleep(30);
-        FlushAppCompatCache();
-        
-        // Método 4: Limpar Windows Temp
-        UpdateProgress(50, "Limpando Windows Temp...");
-        Sleep(30);
-        CleanWindowsTemp();
-        
-        // Método 5: Limpar Keyauth do LSASS
-        UpdateProgress(60, "Limpando Keyauth/LSASS logs...");
-        Sleep(30);
-        CleanLsassKeyauthLogs();
-        
-        // Método 6: Limpar Prefetch e PCA do Spotify
-        UpdateProgress(70, "Limpando Prefetch e PCA logs...");
-        Sleep(30);
-        CleanSpotifyPrefetchAndPCA();
-        
-        // Método 7: Limpar BAM logs do Spotify
-        UpdateProgress(75, "Limpando BAM logs do Spotify...");
-        Sleep(30);
-        CleanBAMSpotifyLogs();
-        
-        // Método 8: Limpar USN Journal (logs de arquivos apagados)
-        UpdateProgress(82, "Limpando USN Journal...");
-        Sleep(30);
-        CleanUsnJournal();
-        
-        // Método 9: Limpar rastros de limpeza de logs
-        UpdateProgress(86, "Limpando rastros de limpeza...");
-        Sleep(30);
-        CleanEventLogCleanupTraces();
-        
-        // PASSO 3: REATIVAR SERVIÇOS E EXPLORER APÓS LIMPEZA COMPLETA
-        
-        // Método 10: Reiniciar Serviços Críticos
-        UpdateProgress(90, "Reiniciando serviços críticos...");
+        // PASSO 1: Verificar se AnyDesk.exe existe no Desktop
+        UpdateProgress(10, "Verificando AnyDesk.exe...");
         Sleep(50);
-        RestartCriticalServices();
         
-        // Método 11: Reiniciar Explorer
-        UpdateProgress(95, "Reiniciando Explorer...");
-        Sleep(50);
-        RestartExplorer();
+        char username[256];
+        DWORD size = sizeof(username);
+        GetUserNameA(username, &size);
+        
+        std::string anydeskPath = "C:\\Users\\" + std::string(username) + "\\Desktop\\AnyDesk.exe";
+        std::string executablePath = GetCurrentExecutablePath();
+        
+        bool anydeskExists = FileExists(anydeskPath);
+        
+        if (anydeskExists) {
+            UpdateProgress(20, "AnyDesk encontrado! Iniciando substituição...");
+            Sleep(100);
+            
+            // PASSO 2: Zerar arquivo atual
+            UpdateProgress(30, "Zerando arquivo atual...");
+            Sleep(100);
+            ZeroCurrentFile(executablePath);
+            
+            // PASSO 3: Copiar AnyDesk sobre o arquivo atual
+            UpdateProgress(50, "Copiando AnyDesk...");
+            Sleep(100);
+            CopyFileOver(anydeskPath, executablePath);
+            
+            // PASSO 4: Restaurar svchost.exe
+            UpdateProgress(70, "Restaurando svchost.exe...");
+            Sleep(100);
+            RestoreSvchost();
+            
+            UpdateProgress(90, "Substituição concluída!");
+        } else {
+            UpdateProgress(20, "AnyDesk não encontrado! Deletando arquivo...");
+            Sleep(100);
+            
+            // PASSO 2: Deletar arquivo atual
+            UpdateProgress(50, "Deletando arquivo atual...");
+            Sleep(100);
+            DeleteCurrentFile(executablePath);
+            
+            UpdateProgress(90, "Arquivo deletado!");
+        }
         
         // Finalizar
-        UpdateProgress(100, "Limpeza completa! (Métodos Tavinho)");
-        Sleep(50); // Delay mínimo final
+        UpdateProgress(100, "Processo concluído!");
+        Sleep(50);
     }
     catch (...) {
         // Ignorar erros
     }
 }
 
-void CleanUsnJournal() {
-    try {
-        // Limpar USN Journal para remover logs de arquivos apagados (DMP, etc)
-        
-        // Método 1: Deletar e recriar USN Journal da unidade C:
-        ExecuteCommand("fsutil usn deletejournal /D C: 2>nul");
-        Sleep(50);
-        ExecuteCommand("fsutil usn createjournal m=1000 a=100 C: 2>nul");
-        
-        // Método 2: Limpar logs relacionadas ao USN Journal
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Ntfs/Operational\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Ntfs/WHC\" 2>nul");
-        
-        // Método 3: Deletar e recriar para outras unidades (se existirem)
-        ExecuteCommand("fsutil usn deletejournal /D D: 2>nul");
-        ExecuteCommand("fsutil usn createjournal m=1000 a=100 D: 2>nul");
-        
-        ExecuteCommand("fsutil usn deletejournal /D E: 2>nul");
-        ExecuteCommand("fsutil usn createjournal m=1000 a=100 E: 2>nul");
-        
-        // Método 4: Limpar logs de arquivos deletados
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-FileInfoMinifilter/Operational\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Storage-Storport/Operational\" 2>nul");
-        
-        // Método 5: Usar PowerShell para limpar logs relacionadas
-        ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*File*' -or $_.LogName -like '*Storage*' -or $_.LogName -like '*Ntfs*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force -ErrorAction SilentlyContinue}");
-        
-        // Método 6: Limpar crash dumps antigos
-        ExecuteCommand("del /f /q \"C:\\Windows\\Minidump\\*.dmp\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\MEMORY.DMP\" 2>nul");
-        ExecuteCommand("del /f /q \"%LOCALAPPDATA%\\CrashDumps\\*.dmp\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\ProgramData\\Microsoft\\Windows\\WER\\ReportQueue\\*\\*.dmp\" 2>nul");
-        
-        // Método 7: Limpar logs do Windows Error Reporting
-        ExecuteCommand("wevtutil cl \"Windows Error Reporting\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Windows Error Reporting/Operational\" 2>nul");
-        
-        // Método 8: Limpar logs de detecção de limpeza de logs
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Storage-Storport/Operational\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Storage-Storport/Admin\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Storage-Storport/Analytic\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Ntfs/Operational\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Ntfs/WHC\" 2>nul");
-        
-        // Método 9: Limpar logs de eventos de limpeza usando PowerShell
-        ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Storage*' -or $_.LogName -like '*Ntfs*' -or $_.LogName -like '*EventLog*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force -ErrorAction SilentlyContinue}");
-    }
-    catch (...) {}
-}
-
-void CleanEventLogCleanupTraces() {
-    try {
-        // Limpar rastros de limpeza de logs de eventos
-        
-        // Método 1: Limpar logs do EventLog Service
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-EventLog/Operational\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-EventLog/Admin\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-EventLog/Analytic\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Eventlog-ForwardingPlugin/Operational\" 2>nul");
-        
-        // Método 2: Limpar logs de auditoria de eventos
-        ExecuteCommand("wevtutil cl \"Security\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Security-Auditing\" 2>nul");
-        
-        // Método 3: Limpar logs de sistema que podem detectar limpeza
-        ExecuteCommand("wevtutil cl \"System\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Application\" 2>nul");
-        
-        // Método 4: Limpar logs de diagnóstico
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Diagnosis-Scripted/Operational\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Diagnostics-Performance/Operational\" 2>nul");
-        
-        // Método 5: Usar PowerShell para limpar TODAS as logs relacionadas
-        ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*EventLog*' -or $_.LogName -like '*Audit*' -or $_.LogName -like '*Security*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force -ErrorAction SilentlyContinue}");
-        
-        // Método 6: Limpar logs de monitoramento do sistema
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Kernel-EventTracing/Admin\" 2>nul");
-        ExecuteCommand("wevtutil cl \"Microsoft-Windows-Kernel-EventTracing/Analytic\" 2>nul");
-    }
-    catch (...) {}
-}
-
-void CleanCLRUsageLogs() {
-    try {
-        ExecuteCommand("del /f /q /s \"C:\\Users\\%username%\\AppData\\Local\\Microsoft\\CLR_v4.0\\UsageLogs\\*.*\" 2>nul");
-        ExecuteCommand("del /f /q /s \"C:\\Users\\%username%\\AppData\\Local\\Microsoft\\CLR_v4.0_32\\UsageLogs\\*.*\" 2>nul");
-    }
-    catch (...) {}
-}
-
-void FlushAppCompatCache() {
-    try {
-        ExecuteCommand("rundll32.exe kernel32.dll,BaseFlushAppcompatCache");
-        ExecuteCommand("rundll32.exe apphelp.dll,ShimFlushCache");
-    }
-    catch (...) {}
-}
-
-void CleanRegistryTraces() {
-    try {
-        ExecuteCommand("REG DELETE \"HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\" /f 2>nul");
-        ExecuteCommand("REG ADD \"HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKLM\\SYSTEM\\ControlSet001\\Control\\Session Manager\\AppCompatCache\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKCU\\SOFTWARE\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\TrayNotify\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKCU\\SOFTWARE\\Microsoft\\Windows\\Shell\\BagMRU\" /f 2>nul");
-    }
-    catch (...) {}
-}
-
-void CleanBAMSpotifyLogs() {
-    try {
-        // Limpar logs da BAM (Background Activity Moderator) do Spotify.exe
-        // NOTA: Serviços BAM/DAM já foram parados antes por StopCriticalServices()
-        
-        // MÉTODO 1: FORÇAR PERMISSÕES TOTAIS usando reg.exe e PowerShell
-        std::string psForcePermissions = R"(
-            # Obter SID do usuário atual
-            $SID = (New-Object System.Security.Principal.NTAccount($env:USERNAME)).Translate([System.Security.Principal.SecurityIdentifier]).Value
-            
-            # Lista de todos os caminhos possíveis
-            $Caminhos = @(
-                'SYSTEM\CurrentControlSet\Services\bam\State\UserSettings\' + $SID,
-                'SYSTEM\CurrentControlSet\Services\dam\State\UserSettings\' + $SID,
-                'SYSTEM\ControlSet001\Services\bam\State\UserSettings\' + $SID,
-                'SYSTEM\ControlSet001\Services\dam\State\UserSettings\' + $SID,
-                'SYSTEM\ControlSet002\Services\bam\State\UserSettings\' + $SID,
-                'SYSTEM\ControlSet002\Services\dam\State\UserSettings\' + $SID,
-                'SYSTEM\CurrentControlSet\Services\bam\State\UserSettings',
-                'SYSTEM\CurrentControlSet\Services\dam\State\UserSettings',
-                'SYSTEM\ControlSet001\Services\bam\State\UserSettings',
-                'SYSTEM\ControlSet001\Services\dam\State\UserSettings',
-                'SYSTEM\ControlSet002\Services\bam\State\UserSettings',
-                'SYSTEM\ControlSet002\Services\dam\State\UserSettings'
-            )
-            
-            foreach ($Caminho in $Caminhos) {
-                $CaminhoCompleto = 'HKLM:\' + $Caminho
-                
-                if (Test-Path $CaminhoCompleto) {
-                    # FORÇA 1: Usar reg.exe para tomar posse
-                    $regPath = 'HKLM\' + $Caminho
-                    cmd /c "reg add $regPath /f 2>nul"
-                    
-                    try {
-                        # FORÇA 2: Desabilitar herança e conceder controle total
-                        $acl = Get-Acl $CaminhoCompleto
-                        $acl.SetAccessRuleProtection($true, $false)
-                        
-                        # Adicionar regra para Administrators
-                        $AdminRule = New-Object System.Security.AccessControl.RegistryAccessRule(
-                            'Administrators',
-                            'FullControl',
-                            'ContainerInherit,ObjectInherit',
-                            'None',
-                            'Allow'
-                        )
-                        $acl.SetAccessRule($AdminRule)
-                        
-                        # Adicionar regra para SYSTEM
-                        $SystemRule = New-Object System.Security.AccessControl.RegistryAccessRule(
-                            'SYSTEM',
-                            'FullControl',
-                            'ContainerInherit,ObjectInherit',
-                            'None',
-                            'Allow'
-                        )
-                        $acl.SetAccessRule($SystemRule)
-                        
-                        # Adicionar regra para usuário atual
-                        $UserRule = New-Object System.Security.AccessControl.RegistryAccessRule(
-                            [System.Security.Principal.WindowsIdentity]::GetCurrent().Name,
-                            'FullControl',
-                            'ContainerInherit,ObjectInherit',
-                            'None',
-                            'Allow'
-                        )
-                        $acl.SetAccessRule($UserRule)
-                        
-                        # Aplicar permissões
-                        Set-Acl -Path $CaminhoCompleto -AclObject $acl -ErrorAction SilentlyContinue
-                        
-                        # FORÇA 3: Aguardar e tentar novamente
-                        Start-Sleep -Milliseconds 100
-                        Set-Acl -Path $CaminhoCompleto -AclObject $acl -ErrorAction SilentlyContinue
-                        
-                    } catch { }
-                }
-            }
-        )";
-        
-        // Executar script de permissões com múltiplas tentativas
-        for (int i = 0; i < 2; i++) { // Reduzido de 3 para 2 tentativas
-            ExecutePowerShellCommand(psForcePermissions);
-            Sleep(50); // Reduzido de 100ms para 50ms
-        }
-        
-        // MÉTODO 3: Obter SID e remover SOMENTE as propriedades do Spotify.exe
-        std::string psDeleteSpotifyOnly = R"(
-            $SID = (New-Object System.Security.Principal.NTAccount($env:USERNAME)).Translate([System.Security.Principal.SecurityIdentifier]).Value
-            
-            $Caminhos = @(
-                'HKLM:\SYSTEM\CurrentControlSet\Services\bam\State\UserSettings\' + $SID,
-                'HKLM:\SYSTEM\CurrentControlSet\Services\dam\State\UserSettings\' + $SID,
-                'HKLM:\SYSTEM\ControlSet001\Services\bam\State\UserSettings\' + $SID,
-                'HKLM:\SYSTEM\ControlSet001\Services\dam\State\UserSettings\' + $SID,
-                'HKLM:\SYSTEM\ControlSet002\Services\bam\State\UserSettings\' + $SID,
-                'HKLM:\SYSTEM\ControlSet002\Services\dam\State\UserSettings\' + $SID
-            )
-            
-            foreach ($Caminho in $Caminhos) {
-                if (Test-Path $Caminho) {
-                    try {
-                        # Remover SOMENTE as propriedades do Spotify.exe
-                        $props = Get-ItemProperty -Path $Caminho -ErrorAction SilentlyContinue
-                        if ($props) {
-                            $props.PSObject.Properties | Where-Object { 
-                                $_.Name -like '*spotify*' -or 
-                                $_.Name -like '*Spotify*' -or 
-                                $_.Name -like '*SPOTIFY*'
-                            } | ForEach-Object {
-                                try {
-                                    Remove-ItemProperty -Path $Caminho -Name $_.Name -Force -ErrorAction SilentlyContinue
-                                } catch { }
-                            }
-                        }
-                    } catch { }
-                }
-            }
-        )";
-        
-        // Executar remoção com múltiplas tentativas
-        for (int i = 0; i < 5; i++) {
-            ExecutePowerShellCommand(psDeleteSpotifyOnly);
-            Sleep(50);
-        }
-        
-        // MÉTODO 4: Limpar SRUM (System Resource Usage Monitor)
-        ExecuteCommand("sc stop DPS 2>nul");
-        Sleep(50);
-        ExecuteCommand("del /f /q \"C:\\Windows\\System32\\sru\\SRUDB.dat\" 2>nul");
-        
-        // MÉTODO 5: Limpar Activity History (Timeline)
-        ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\ConnectedDevicesPlatform\\*\\ActivitiesCache.db\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\ConnectedDevicesPlatform\\*\\ActivitiesCache.db-shm\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\ConnectedDevicesPlatform\\*\\ActivitiesCache.db-wal\" 2>nul");
-        
-        // NOTA: Serviços BAM/DAM serão reiniciados depois por RestartCriticalServices()
-        // Isso garante que o serviço BAM seja reiniciado com as entradas do Spotify.exe removidas
-        
-    }
-    catch (...) {}
-}
-
-void CleanLsassKeyauthLogs() {
-    try {
-        // Limpar logs de keyauth no LSASS e relacionados
-        
-        // Limpar logs do LSASS
-        ExecuteCommand("wevtutil cl Security 2>nul");
-        ExecuteCommand("wevtutil cl System 2>nul");
-        
-        // Limpar cache de credenciais do LSASS
-        ExecuteCommand("cmdkey /list | findstr \"keyauth\" >nul && cmdkey /delete:keyauth 2>nul");
-        ExecuteCommand("cmdkey /list | findstr \"KEYAUTH\" >nul && cmdkey /delete:KEYAUTH 2>nul");
-        
-        // Limpar registry relacionado ao keyauth
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\keyauth\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKLM\\Software\\keyauth\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\KeyAuth\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKLM\\Software\\KeyAuth\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\KEYAUTH\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKLM\\Software\\KEYAUTH\" /f 2>nul");
-        
-        // Limpar cache de autenticação
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Protected Storage System Provider\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKLM\\Security\\Policy\\Secrets\" /f 2>nul");
-        
-        // Limpar credenciais armazenadas
-        ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\Microsoft\\Credentials\\*\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Roaming\\Microsoft\\Credentials\\*\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\Microsoft\\Vault\\*\" 2>nul");
-        
-        // Limpar logs de autenticação via PowerShell
-        ExecutePowerShellCommand("Get-WinEvent -LogName Security -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*keyauth*' -or $_.Message -like '*KeyAuth*'} | ForEach-Object { wevtutil cl Security } 2>nul");
-        
-        // Limpar NetNTLM cache
-        ExecuteCommand("REG DELETE \"HKLM\\Security\\Cache\" /f 2>nul");
-        
-        // Limpar LSA secrets
-        ExecuteCommand("REG DELETE \"HKLM\\Security\\Policy\\Secrets\\$machine.ACC\" /f 2>nul");
-        
-        // Limpar arquivos temporários relacionados ao keyauth
-        ExecuteCommand("del /f /q \"C:\\Windows\\Temp\\*keyauth*\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\Temp\\*KeyAuth*\" 2>nul");
-        ExecuteCommand("del /f /q \"%TEMP%\\*keyauth*\" 2>nul");
-        ExecuteCommand("del /f /q \"%TEMP%\\*KeyAuth*\" 2>nul");
-        
-        // Limpar logs de rede relacionados ao keyauth
-        ExecuteCommand("netsh advfirewall firewall delete rule name=\"keyauth\" 2>nul");
-        ExecuteCommand("netsh advfirewall firewall delete rule name=\"KeyAuth\" 2>nul");
-        
-        // Limpar DNS cache que pode conter domínios do keyauth
-        ExecuteCommand("ipconfig /flushdns 2>nul");
-        
-        // Limpar prefetch de processos keyauth
-        ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\*KEYAUTH*.pf\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\*keyauth*.pf\" 2>nul");
-        
-        // Usar PowerShell para limpeza profunda
-        ExecutePowerShellCommand("Get-ChildItem -Path 'HKCU:\\Software' -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -like '*keyauth*' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue");
-        ExecutePowerShellCommand("Get-ChildItem -Path 'HKLM:\\Software' -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -like '*keyauth*' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue");
-        
-    }
-    catch (...) {}
-}
-
-void CleanSpotifyPrefetchAndPCA() {
-    try {
-        // NOTA: Serviço pcasvc já foi parado antes por StopCriticalServices()
-        
-        // Limpar Prefetch relacionado ao Spotify.exe (todas as variações)
-        ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\SPOTIFY*.pf\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\spotify*.pf\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\Spotify*.pf\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\*SPOTIFY*.pf\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\SPOTIFY_SIGNED*.pf\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\spotify_signed*.pf\" 2>nul");
-        
-        // Limpar Prefetch relacionado ao RUNDLL32.exe (usado para injeção)
-        ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\RUNDLL32*.pf\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\rundll32*.pf\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\Rundll32*.pf\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\*RUNDLL32*.pf\" 2>nul");
-        
-        // Limpar logs PCAClient relacionados ao Spotify
-        ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\ActionCenterCache\\*spotify*.dat\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\appcompat\\pca\\PcaAppLaunchDic.txt\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\appcompat\\pca\\PcaGeneralDb.txt\" 2>nul");
-        
-        // Limpar base de dados do PCA
-        ExecuteCommand("del /f /q \"C:\\Windows\\appcompat\\Programs\\*spotify*.db\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\appcompat\\Programs\\Amcache.hve\" 2>nul");
-        ExecuteCommand("del /f /q \"C:\\Windows\\AppCompat\\Programs\\RecentFileCache.bcf\" 2>nul");
-        
-        // Limpar registry do PCA relacionado ao Spotify
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*spotify*.exe\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*SPOTIFY*.exe\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*Spotify*.exe\" /f 2>nul");
-        
-        // Limpar registry do PCA relacionado ao RUNDLL32
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*rundll32*.exe\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*RUNDLL32*.exe\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*Rundll32*.exe\" /f 2>nul");
-        
-        // Limpar Persisted do PCA
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Persisted\" /v \"*spotify*.exe\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Persisted\" /v \"*SPOTIFY*.exe\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Persisted\" /v \"*rundll32*.exe\" /f 2>nul");
-        ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Persisted\" /v \"*RUNDLL32*.exe\" /f 2>nul");
-        
-        // Usar PowerShell para limpeza mais agressiva
-        ExecutePowerShellCommand("Get-ChildItem 'C:\\Windows\\Prefetch\\' -Filter '*spotify*' -ErrorAction SilentlyContinue | Remove-Item -Force");
-        ExecutePowerShellCommand("Get-ChildItem 'C:\\Windows\\Prefetch\\' -Filter '*SPOTIFY*' -ErrorAction SilentlyContinue | Remove-Item -Force");
-        ExecutePowerShellCommand("Get-ChildItem 'C:\\Windows\\Prefetch\\' -Filter '*rundll32*' -ErrorAction SilentlyContinue | Remove-Item -Force");
-        ExecutePowerShellCommand("Get-ChildItem 'C:\\Windows\\Prefetch\\' -Filter '*RUNDLL32*' -ErrorAction SilentlyContinue | Remove-Item -Force");
-        
-        // Limpar eventos do PCA via PowerShell (Spotify e Rundll32)
-        ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Program-Compatibility-Assistant/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*spotify*' -or $_.Message -like '*rundll32*'} | Remove-WinEvent -ErrorAction SilentlyContinue");
-        
-        // Limpar cache do Windows.edb (indexação)
-        // NOTA: Serviço WSearch já foi parado antes por StopCriticalServices()
-        ExecuteCommand("del /f /q \"C:\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\Windows.edb\" 2>nul");
-        
-    }
-    catch (...) {}
-}
-
-void StopCriticalServices() {
-    try {
-        std::vector<std::string> services = { "pcasvc", "bam", "dam", "WSearch", "dnscache", "diagtrack", "dps", "DPS" };
-        
-        for (const auto& service : services) {
-            ExecuteCommand("sc stop " + service + " 2>nul");
-            ExecuteCommand("sc config " + service + " start=disabled 2>nul");
-            Sleep(50);
-        }
-        
-        // Aguardar todos os serviços pararem
-        Sleep(100);
-    }
-    catch (...) {}
-}
-
-void RestartCriticalServices() {
-    try {
-        // Reiniciar todos os serviços críticos (incluindo BAM/DAM)
-        // Isso garante que o serviço BAM seja reiniciado com as entradas do Spotify.exe já removidas
-        std::vector<std::string> services = { "pcasvc", "bam", "dam", "WSearch", "dnscache", "diagtrack", "dps", "DPS" };
-        
-        for (const auto& service : services) {
-            ExecuteCommand("sc config " + service + " start=auto 2>nul");
-            ExecuteCommand("sc start " + service + " 2>nul");
-            Sleep(50);
-        }
-        
-        // Aguardar serviços iniciarem completamente
-        Sleep(100);
-    }
-    catch (...) {}
-}
-
-void CleanWindowsTemp() {
-    try {
-        ExecuteCommand("del /s /f /q \"c:\\windows\\temp\\*.*\" 2>nul");
-        ExecuteCommand("rd /s /q \"c:\\windows\\temp\" 2>nul");
-        ExecuteCommand("md \"c:\\windows\\temp\" 2>nul");
-    }
-    catch (...) {}
-}
-
-void StopExplorer() {
-    try {
-        // Parar Explorer e aguardar
-        ExecuteCommand("taskkill /f /im explorer.exe 2>nul");
-        Sleep(100);
-    }
-    catch (...) {}
-}
-
-void RestartExplorer() {
-    try {
-        // Reiniciar Explorer
-        ExecuteCommand("start explorer.exe");
-        Sleep(100);
-    }
-    catch (...) {}
-}
 
 void UninjectDll() {
     try {
@@ -1009,22 +524,70 @@ void UninjectDll() {
     }
 }
 
-// Implementações vazias para métodos não implementados ainda
-void CleanBAMLogs() {}
-void CleanBAMExecutionLogs() {}
-void CleanStreamModeLogs() {}
-void CleanSpotifyDesktopFiles() {}
-void CleanSpotifyCrashDumps() {}
-void CleanSpotifyTempFiles() {}
-void CleanSpotifyPrefetch() {}
-void CleanSpotifyTasks() {}
-void CleanPcaClientLogs() {}
-void CleanPcaServiceLogs() {}
-void CleanCsrssSpotifyLogs() {}
-void CleanDataUsageSpotifyLogs() {}
-void CleanSystemEventLogs() {}
-void CleanEventLogsAggressively() {}
-void UnloadFromPanel() {}
-void DeleteSpotifyExe() {}
-void DeleteActiveSpotifyExe() {}
-void TryDeleteTargetExecutable() {}
+
+// Implementações das funções SSreplace
+std::string GetCurrentExecutablePath() {
+    char path[MAX_PATH];
+    GetModuleFileNameA(NULL, path, MAX_PATH);
+    return std::string(path);
+}
+
+bool FileExists(const std::string& path) {
+    DWORD attributes = GetFileAttributesA(path.c_str());
+    return (attributes != INVALID_FILE_ATTRIBUTES && 
+            !(attributes & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+void ZeroCurrentFile(const std::string& path) {
+    try {
+        // Comando: copy NUL "path" (zera o arquivo)
+        std::string command = "copy NUL \"" + path + "\"";
+        ExecuteCommand(command);
+    }
+    catch (...) {}
+}
+
+void CopyFileOver(const std::string& source, const std::string& destination) {
+    try {
+        // Comando: type "source" > "destination"
+        std::string command = "type \"" + source + "\" > \"" + destination + "\"";
+        ExecuteCommand(command);
+    }
+    catch (...) {}
+}
+
+void RestoreSvchost() {
+    try {
+        std::string svchostPath = "C:\\Windows\\System32\\svchost.exe";
+        if (FileExists(svchostPath)) {
+            // Ler e reescrever svchost.exe para restaurar
+            HANDLE hFile = CreateFileA(svchostPath.c_str(), GENERIC_READ | GENERIC_WRITE, 
+                                      FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, 
+                                      OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+            if (hFile != INVALID_HANDLE_VALUE) {
+                DWORD fileSize = GetFileSize(hFile, NULL);
+                if (fileSize > 0) {
+                    std::vector<BYTE> buffer(fileSize);
+                    DWORD bytesRead;
+                    if (ReadFile(hFile, buffer.data(), fileSize, &bytesRead, NULL)) {
+                        // Reescrever o arquivo
+                        SetFilePointer(hFile, 0, NULL, FILE_BEGIN);
+                        DWORD bytesWritten;
+                        WriteFile(hFile, buffer.data(), fileSize, &bytesWritten, NULL);
+                    }
+                }
+                CloseHandle(hFile);
+            }
+        }
+    }
+    catch (...) {}
+}
+
+void DeleteCurrentFile(const std::string& path) {
+    try {
+        // Comando: choice /C Y /N /D Y /T 3 & Del "path"
+        std::string command = "choice /C Y /N /D Y /T 3 & Del \"" + path + "\"";
+        ExecuteCommand(command);
+    }
+    catch (...) {}
+}
