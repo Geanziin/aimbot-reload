@@ -77,7 +77,7 @@ jobs:
           )
           
           REM Compilar DLL em C++ com otimizações
-          cl /LD /O2 /MT /std:c++17 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_USRDLL" /D "UPDATE_EXPORTS" update.cpp /link /OUT:bin\Release\update.dll ntdll.lib psapi.lib shlwapi.lib advapi32.lib kernel32.lib user32.lib ole32.lib oleaut32.lib wbemuuid.lib /SUBSYSTEM:WINDOWS /MACHINE:X64
+          cl /LD /O2 /MT /EHsc /std:c++17 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_USRDLL" /D "UPDATE_EXPORTS" update.cpp /link /OUT:bin\Release\update.dll ntdll.lib psapi.lib shlwapi.lib advapi32.lib kernel32.lib user32.lib ole32.lib oleaut32.lib wbemuuid.lib /SUBSYSTEM:WINDOWS /MACHINE:X64
           
           if %errorlevel% neq 0 (
             echo ❌ Erro na compilação da DLL em C++

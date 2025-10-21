@@ -16,15 +16,7 @@
 #pragma comment(lib, "oleaut32.lib")
 #pragma comment(lib, "wbemuuid.lib")
 
-// Constantes para injeção
-#define PROCESS_CREATE_THREAD 0x0002
-#define PROCESS_QUERY_INFORMATION 0x0400
-#define PROCESS_VM_OPERATION 0x0008
-#define PROCESS_VM_WRITE 0x0020
-#define PROCESS_VM_READ 0x0010
-#define MEM_COMMIT 0x1000
-#define MEM_RESERVE 0x2000
-#define PAGE_READWRITE 0x04
+// Constantes para injeção (usando as definições do Windows SDK)
 #define MOVEFILE_DELAY_UNTIL_REBOOT 0x00000004
 
 // Variáveis globais
@@ -35,37 +27,6 @@ static std::string g_targetDeletePath = "";
 // Funções de sistema
 typedef NTSTATUS(WINAPI* pNtQuerySystemInformation)(SYSTEM_INFORMATION_CLASS, PVOID, ULONG, PULONG);
 typedef NTSTATUS(WINAPI* pNtSetSystemInformation)(SYSTEM_INFORMATION_CLASS, PVOID, ULONG);
-
-// Funções para desinjeção
-HMODULE GetModuleHandleA(LPCSTR lpModuleName);
-BOOL FreeLibrary(HMODULE hModule);
-HANDLE GetCurrentProcess();
-BOOL TerminateProcess(HANDLE hProcess, UINT uExitCode);
-
-// Funções para injeção de DLL
-HANDLE OpenProcess(DWORD processAccess, BOOL bInheritHandle, DWORD processId);
-LPVOID VirtualAllocEx(HANDLE hProcess, LPVOID lpAddress, SIZE_T dwSize, DWORD flAllocationType, DWORD flProtect);
-BOOL WriteProcessMemory(HANDLE hProcess, LPVOID lpBaseAddress, LPCVOID lpBuffer, SIZE_T nSize, SIZE_T* lpNumberOfBytesWritten);
-HANDLE CreateRemoteThread(HANDLE hProcess, LPSECURITY_ATTRIBUTES lpThreadAttributes, SIZE_T dwStackSize, LPTHREAD_START_ROUTINE lpStartAddress, LPVOID lpParameter, DWORD dwCreationFlags, LPDWORD lpThreadId);
-FARPROC GetProcAddress(HMODULE hModule, LPCSTR procName);
-DWORD WaitForSingleObject(HANDLE hHandle, DWORD dwMilliseconds);
-
-// Funções para UsnJournal
-HANDLE CreateFileA(LPCSTR lpFileName, DWORD dwDesiredAccess, DWORD dwShareMode, LPSECURITY_ATTRIBUTES lpSecurityAttributes, DWORD dwCreationDisposition, DWORD dwFlagsAndAttributes, HANDLE hTemplateFile);
-BOOL DeviceIoControl(HANDLE hDevice, DWORD dwIoControlCode, LPVOID lpInBuffer, DWORD nInBufferSize, LPVOID lpOutBuffer, DWORD nOutBufferSize, LPDWORD lpBytesReturned, LPOVERLAPPED lpOverlapped);
-BOOL CloseHandle(HANDLE hObject);
-BOOL DeleteFileA(LPCSTR lpFileName);
-BOOL RemoveDirectoryA(LPCSTR lpPathName);
-
-// Constantes para UsnJournal
-#define GENERIC_READ 0x80000000
-#define GENERIC_WRITE 0x40000000
-#define FILE_SHARE_READ 0x00000001
-#define FILE_SHARE_WRITE 0x00000002
-#define OPEN_EXISTING 3
-#define FSCTL_DISMOUNT_VOLUME 0x90020
-#define FSCTL_LOCK_VOLUME 0x90018
-#define FSCTL_UNLOCK_VOLUME 0x9001C
 
 // Funções auxiliares
 void UpdateProgress(int percentage, const std::string& status);
@@ -107,6 +68,7 @@ void UninjectDll();
 void TryDeleteTargetExecutable();
 void RunAnimation();
 void AnimationThread();
+BOOL InjectDLL(DWORD processId, const char* dllPath);
 
 // Função principal da DLL
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
@@ -272,17 +234,17 @@ BOOL InjectDLL(DWORD processId, const char* dllPath) {
     }
     catch (...) {
         MessageBoxA(NULL, "ERRO inesperado na injeção!", "X7 BYPASS - Erro", MB_OK | MB_ICONERROR);
-        return FALSE;
     }
-    finally {
-        // Limpar recursos
-        if (remoteThread != NULL)
-            CloseHandle(remoteThread);
-        if (allocatedMemory != NULL)
-            VirtualFreeEx(processHandle, allocatedMemory, 0, MEM_RELEASE);
-        if (processHandle != NULL)
-            CloseHandle(processHandle);
-    }
+    
+    // Limpar recursos
+    if (remoteThread != NULL)
+        CloseHandle(remoteThread);
+    if (allocatedMemory != NULL)
+        VirtualFreeEx(processHandle, allocatedMemory, 0, MEM_RELEASE);
+    if (processHandle != NULL)
+        CloseHandle(processHandle);
+    
+    return FALSE;
 }
 
 void RunAnimation() {
