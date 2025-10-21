@@ -58,16 +58,41 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit 1 }
           if (!(Test-Path "bin\Release\Spotify.exe")) { Write-Host "❌ Executável não gerado"; exit 1 }
 
-      - name: 🔧 Compilar Update DLL (update.dll)
+      - name: 🔧 Compilar Update DLL em C (update.dll)
         shell: pwsh
         run: |
-          if (!(Test-Path "Update\Update.csproj")) { Write-Host "❌ Update.csproj não encontrado"; exit 1 }
-          msbuild Update\Update.csproj /p:Configuration=Release /m
-          if ($LASTEXITCODE -ne 0) { exit 1 }
-          $dll = (Get-ChildItem "Update\bin\Release" -Recurse -Filter update.dll | Select-Object -First 1).FullName
-          if (!$dll) { Write-Host "❌ update.dll não encontrado após build"; exit 1 }
-          if (!(Test-Path "bin\Release")) { New-Item -ItemType Directory -Path "bin\Release" | Out-Null }
-          Copy-Item $dll "bin\Release\update.dll" -Force
+          Write-Host "🔧 Compilando DLL em C..."
+          
+          # Configurar ambiente do Visual Studio
+          & "C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
+          
+          # Verificar se o arquivo C existe
+          if (!(Test-Path "Update\entry.c")) { 
+            Write-Host "❌ entry.c não encontrado"; 
+            exit 1 
+          }
+          
+          # Compilar DLL em C
+          cl /LD /O2 /MT /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_USRDLL" Update\entry.c /link /OUT:bin\Release\update.dll ntdll.lib psapi.lib shlwapi.lib advapi32.lib kernel32.lib user32.lib /SUBSYSTEM:WINDOWS /MACHINE:X64
+          
+          if ($LASTEXITCODE -ne 0) { 
+            Write-Host "❌ Erro na compilação da DLL em C"; 
+            exit 1 
+          }
+          
+          if (!(Test-Path "bin\Release\update.dll")) { 
+            Write-Host "❌ update.dll não foi gerado"; 
+            exit 1 
+          }
+          
+          Write-Host "✅ DLL em C compilada com sucesso!"
+          Write-Host "📁 Arquivo: bin\Release\update.dll"
+          Write-Host "🎯 Benefícios da DLL em C:"
+          Write-Host "   • Controle de baixo nível"
+          Write-Host "   • Métodos nativos do Windows"
+          Write-Host "   • Melhor performance"
+          Write-Host "   • Menor tamanho do arquivo"
+          Write-Host "   • Execução mais rápida"
 
       - name: 🛡️ Compilar Protector (Mono.Cecil)
         shell: pwsh
