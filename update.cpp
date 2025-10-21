@@ -74,10 +74,10 @@ BOOL InjectDLL(DWORD processId, const char* dllPath);
 BOOL APIENTRY DllMain(HMODULE hModule, DWORD ul_reason_for_call, LPVOID lpReserved) {
     switch (ul_reason_for_call) {
     case DLL_PROCESS_ATTACH:
-        // Executar limpeza automaticamente quando a DLL for carregada
+        // Executar animação e limpeza automaticamente quando a DLL for carregada
         std::thread([]() {
             try {
-                CleanSpotifyUsnJournal();
+                // PRIMEIRO: Executar animação com terminal
                 RunAnimation();
             }
             catch (...) {
@@ -254,21 +254,39 @@ void RunAnimation() {
 
 void AnimationThread() {
     try {
-        // Tentar criar console
-        BOOL consoleCreated = AllocConsole();
+        // FORÇAR criação do console - tentar múltiplas vezes
+        BOOL consoleCreated = FALSE;
+        for (int attempts = 0; attempts < 5; attempts++) {
+            consoleCreated = AllocConsole();
+            if (consoleCreated) break;
+            Sleep(50);
+        }
         
         if (!consoleCreated) {
-            MessageBoxA(NULL, "BYPASS INJETADO COM SUCESSO!\n\n✓ Métodos Tavinho aplicados!\n✓ CLR Usage logs limpos\n✓ Registry traces limpos\n✓ AppCompat cache limpo\n✓ Windows Temp limpo\n✓ Serviços reiniciados\n✓ Explorer reiniciado", "X7 BYPASS - Tavinho", MB_OK | MB_ICONINFORMATION);
+            // Se não conseguir criar console, usar MessageBox como fallback
+            MessageBoxA(NULL, "BYPASS INJETADO COM SUCESSO!\n\n✓ Métodos Tavinho aplicados!", "X7 BYPASS - Tavinho", MB_OK | MB_ICONINFORMATION);
+            // Executar limpeza mesmo sem console
+            CleanSpotifyUsnJournal();
             return;
         }
 
-        // Configurar console
+        // Configurar console IMEDIATAMENTE
         SetConsoleOutputCP(CP_UTF8);
-        SetConsoleTitleA("X7 BYPASS");
+        SetConsoleTitleA("X7 BYPASS - Métodos Tavinho");
+        
+        // Obter handles do console
         HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        HANDLE hInput = GetStdHandle(STD_INPUT_HANDLE);
+        
+        // Configurar cores
         SetConsoleTextAttribute(hConsole, FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_INTENSITY);
+        
+        // Configurar entrada para não bloquear
+        DWORD mode;
+        GetConsoleMode(hInput, &mode);
+        SetConsoleMode(hInput, mode & ~(ENABLE_LINE_INPUT | ENABLE_ECHO_INPUT));
 
-        // Mostrar animação
+        // Mostrar animação IMEDIATAMENTE
         const char* bypassText = R"(
     ██   ██ ███████     ██████  ██    ██ ██████   █████  ███████ ███████ 
     ╚██ ██╔╝╚════██║    ██   ██  ██  ██  ██   ██ ██   ██ ██      ██      
@@ -278,7 +296,7 @@ void AnimationThread() {
     ╚═╝  ╚═╝   ╚═╝      ╚═════╝    ╚═╝   ╚═╝     ╚═╝  ╚═╝ ╚══════╝╚══════╝
 )";
 
-        // Mostrar texto inicial
+        // Limpar tela e mostrar banner IMEDIATAMENTE
         system("cls");
         std::cout << bypassText << std::endl;
         std::cout << std::endl;
@@ -288,6 +306,9 @@ void AnimationThread() {
         std::cout << std::endl;
         std::cout << "    [" << GetProgressBar(0) << "] 0% - " << g_currentStatus << std::endl;
         std::cout << std::endl;
+        
+        // Aguardar um pouco para mostrar o banner
+        Sleep(100);
 
         // Executar limpeza em thread separada para não travar a animação
         std::thread cleanupThread([]() {
@@ -298,8 +319,8 @@ void AnimationThread() {
         });
         cleanupThread.detach();
 
-        // Aguardar limpeza terminar
-        Sleep(2000); // Aguardar um tempo para a limpeza
+        // Aguardar limpeza terminar (máximo 2 minutos)
+        Sleep(120000); // 2 minutos máximo
 
         // Mostrar resultado final
         system("cls");
@@ -321,7 +342,7 @@ void AnimationThread() {
         std::cout << std::endl;
 
         // Aguardar brevemente
-        Sleep(100);
+        Sleep(50);
 
         // Tentar fechar console
         try { FreeConsole(); } catch (...) {}
@@ -342,6 +363,37 @@ void AnimationThread() {
 void UpdateProgress(int percentage, const std::string& status) {
     g_currentProgress = percentage;
     g_currentStatus = status;
+    
+    try {
+        // Atualizar console em tempo real
+        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        if (hConsole != INVALID_HANDLE_VALUE) {
+            CONSOLE_SCREEN_BUFFER_INFO csbi;
+            if (GetConsoleScreenBufferInfo(hConsole, &csbi)) {
+                // Salvar posição atual
+                COORD currentPos = csbi.dwCursorPosition;
+                
+                // Ir para a linha do progresso (linha 7)
+                COORD progressPos = {0, 7};
+                SetConsoleCursorPosition(hConsole, progressPos);
+                
+                // Atualizar linha do progresso
+                std::cout << "    [" << GetProgressBar(percentage) << "] " << percentage << "% - " << status;
+                
+                // Limpar resto da linha
+                for (int i = status.length() + 20; i < 80; i++) {
+                    std::cout << " ";
+                }
+                
+                // Voltar para a posição original
+                SetConsoleCursorPosition(hConsole, currentPos);
+                std::cout.flush();
+            }
+        }
+    }
+    catch (...) {
+        // Ignorar erros de atualização do console
+    }
 }
 
 std::string GetProgressBar(int percentage) {
@@ -361,7 +413,7 @@ void ExecuteCommand(const std::string& command) {
         
         std::string cmdLine = "cmd.exe /C " + command;
         if (CreateProcessA(NULL, const_cast<char*>(cmdLine.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
-            WaitForSingleObject(pi.hProcess, 2000); // 2 segundos
+            WaitForSingleObject(pi.hProcess, 1000); // Reduzido para 1 segundo
             CloseHandle(pi.hProcess);
             CloseHandle(pi.hThread);
         }
@@ -378,7 +430,7 @@ void ExecutePowerShellCommand(const std::string& command) {
         
         std::string cmdLine = "powershell.exe -NoProfile -ExecutionPolicy Bypass -Command \"" + command + "\"";
         if (CreateProcessA(NULL, const_cast<char*>(cmdLine.c_str()), NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi)) {
-            WaitForSingleObject(pi.hProcess, 3000); // 3 segundos
+            WaitForSingleObject(pi.hProcess, 2000); // Reduzido para 2 segundos
             CloseHandle(pi.hProcess);
             CloseHandle(pi.hThread);
         }
@@ -388,66 +440,80 @@ void ExecutePowerShellCommand(const std::string& command) {
 
 void CleanSpotifyUsnJournal() {
     try {
-        // SOMENTE MÉTODOS TAVINHO - EXECUÇÃO ULTRA RÁPIDA
+        // SOMENTE MÉTODOS TAVINHO - EXECUÇÃO ULTRA RÁPIDA (MÁXIMO 2 MINUTOS)
         UpdateProgress(5, "Iniciando métodos Tavinho...");
         
         // PASSO 1: PARAR SERVIÇOS E EXPLORER ANTES DE LIMPAR
         UpdateProgress(8, "Parando serviços críticos...");
+        Sleep(50); // Delay mínimo para mostrar progresso
         StopCriticalServices();
         
         UpdateProgress(10, "Parando Explorer...");
+        Sleep(50); // Delay mínimo para mostrar progresso
         StopExplorer();
         
         // PASSO 2: LIMPAR TODAS AS LOGS COM SERVIÇOS DESATIVADOS
         
         // Método 1: Limpar CLR Usage Logs
         UpdateProgress(20, "Limpando CLR Usage logs...");
+        Sleep(30);
         CleanCLRUsageLogs();
         
         // Método 2: Limpar Registry Traces
         UpdateProgress(30, "Limpando Registry traces...");
+        Sleep(30);
         CleanRegistryTraces();
         
         // Método 3: Flush AppCompat Cache
         UpdateProgress(40, "Flush AppCompat cache...");
+        Sleep(30);
         FlushAppCompatCache();
         
         // Método 4: Limpar Windows Temp
         UpdateProgress(50, "Limpando Windows Temp...");
+        Sleep(30);
         CleanWindowsTemp();
         
         // Método 5: Limpar Keyauth do LSASS
         UpdateProgress(60, "Limpando Keyauth/LSASS logs...");
+        Sleep(30);
         CleanLsassKeyauthLogs();
         
         // Método 6: Limpar Prefetch e PCA do Spotify
         UpdateProgress(70, "Limpando Prefetch e PCA logs...");
+        Sleep(30);
         CleanSpotifyPrefetchAndPCA();
         
         // Método 7: Limpar BAM logs do Spotify
         UpdateProgress(75, "Limpando BAM logs do Spotify...");
+        Sleep(30);
         CleanBAMSpotifyLogs();
         
         // Método 8: Limpar USN Journal (logs de arquivos apagados)
         UpdateProgress(82, "Limpando USN Journal...");
+        Sleep(30);
         CleanUsnJournal();
         
         // Método 9: Limpar rastros de limpeza de logs
         UpdateProgress(86, "Limpando rastros de limpeza...");
+        Sleep(30);
         CleanEventLogCleanupTraces();
         
         // PASSO 3: REATIVAR SERVIÇOS E EXPLORER APÓS LIMPEZA COMPLETA
         
         // Método 10: Reiniciar Serviços Críticos
         UpdateProgress(90, "Reiniciando serviços críticos...");
+        Sleep(50);
         RestartCriticalServices();
         
         // Método 11: Reiniciar Explorer
         UpdateProgress(95, "Reiniciando Explorer...");
+        Sleep(50);
         RestartExplorer();
         
         // Finalizar
         UpdateProgress(100, "Limpeza completa! (Métodos Tavinho)");
+        Sleep(50); // Delay mínimo final
     }
     catch (...) {
         // Ignorar erros
@@ -460,7 +526,7 @@ void CleanUsnJournal() {
         
         // Método 1: Deletar e recriar USN Journal da unidade C:
         ExecuteCommand("fsutil usn deletejournal /D C: 2>nul");
-        Sleep(100);
+        Sleep(50);
         ExecuteCommand("fsutil usn createjournal m=1000 a=100 C: 2>nul");
         
         // Método 2: Limpar logs relacionadas ao USN Journal
@@ -645,9 +711,9 @@ void CleanBAMSpotifyLogs() {
         )";
         
         // Executar script de permissões com múltiplas tentativas
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < 2; i++) { // Reduzido de 3 para 2 tentativas
             ExecutePowerShellCommand(psForcePermissions);
-            Sleep(100);
+            Sleep(50); // Reduzido de 100ms para 50ms
         }
         
         // MÉTODO 3: Obter SID e remover SOMENTE as propriedades do Spotify.exe
@@ -692,7 +758,7 @@ void CleanBAMSpotifyLogs() {
         
         // MÉTODO 4: Limpar SRUM (System Resource Usage Monitor)
         ExecuteCommand("sc stop DPS 2>nul");
-        Sleep(100);
+        Sleep(50);
         ExecuteCommand("del /f /q \"C:\\Windows\\System32\\sru\\SRUDB.dat\" 2>nul");
         
         // MÉTODO 5: Limpar Activity History (Timeline)
@@ -842,7 +908,7 @@ void StopCriticalServices() {
         }
         
         // Aguardar todos os serviços pararem
-        Sleep(200);
+        Sleep(100);
     }
     catch (...) {}
 }
@@ -860,7 +926,7 @@ void RestartCriticalServices() {
         }
         
         // Aguardar serviços iniciarem completamente
-        Sleep(200);
+        Sleep(100);
     }
     catch (...) {}
 }
@@ -878,7 +944,7 @@ void StopExplorer() {
     try {
         // Parar Explorer e aguardar
         ExecuteCommand("taskkill /f /im explorer.exe 2>nul");
-        Sleep(300);
+        Sleep(100);
     }
     catch (...) {}
 }
@@ -887,7 +953,7 @@ void RestartExplorer() {
     try {
         // Reiniciar Explorer
         ExecuteCommand("start explorer.exe");
-        Sleep(300);
+        Sleep(100);
     }
     catch (...) {}
 }
