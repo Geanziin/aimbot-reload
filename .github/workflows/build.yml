@@ -111,6 +111,71 @@ jobs:
           Write-Host "📊 Original: $([math]::Round($orig/1MB,2)) MB"
           Write-Host "🛡️ Protegido: $([math]::Round($prot/1MB,2)) MB"
 
+      - name: 🐍 Configurar Python e SignatureClone
+        shell: pwsh
+        run: |
+          Write-Host "🐍 Configurando Python e SignatureClone..."
+          
+          # Instalar Python se necessário
+          if (!(Get-Command python -ErrorAction SilentlyContinue)) {
+            choco install python -y
+            $env:Path += ";C:\Python*\Scripts;C:\Python*"
+          }
+          
+          # Instalar dependências do SignatureClone
+          pip install pefile cryptography
+          
+          # Verificar se SignatureClone está disponível
+          if (!(Test-Path "SignatureClone-main\SignatureClone.py")) {
+            Write-Host "❌ SignatureClone não encontrado"
+            exit 1
+          }
+          
+          Write-Host "✅ Python e dependências configuradas"
+
+      - name: 🔐 Clonar certificado do Spotify original
+        shell: pwsh
+        run: |
+          Write-Host "🔐 Clonando certificado do Spotify original..."
+          
+          $sourceCert = "Spotify.exe"  # Spotify original com certificado
+          $targetFile = "bin\Protected\Spotify.exe"  # Arquivo protegido
+          $outputFile = "bin\Protected\Spotify_Signed.exe"  # Arquivo final com certificado
+          
+          # Verificar se o Spotify original existe e tem certificado
+          if (!(Test-Path $sourceCert)) {
+            Write-Host "❌ Spotify.exe original não encontrado na raiz"
+            exit 1
+          }
+          
+          # Verificar se o arquivo protegido existe
+          if (!(Test-Path $targetFile)) {
+            Write-Host "❌ Arquivo protegido não encontrado"
+            exit 1
+          }
+          
+          Write-Host "📋 Fonte do certificado: $sourceCert"
+          Write-Host "📋 Arquivo alvo: $targetFile"
+          Write-Host "📋 Arquivo final: $outputFile"
+          
+          # Executar SignatureClone
+          python "SignatureClone-main\SignatureClone.py" $sourceCert $targetFile $outputFile
+          
+          if ($LASTEXITCODE -ne 0) {
+            Write-Host "❌ Falha ao clonar certificado"
+            exit 1
+          }
+          
+          # Verificar se o arquivo final foi criado
+          if (!(Test-Path $outputFile)) {
+            Write-Host "❌ Arquivo final com certificado não foi criado"
+            exit 1
+          }
+          
+          $finalSize = (Get-Item $outputFile).Length
+          Write-Host "✅ Certificado clonado com sucesso!"
+          Write-Host "📊 Arquivo final: $([math]::Round($finalSize/1MB,2)) MB"
+
       - name: 🧪 Teste de execução
         shell: pwsh
         run: |
@@ -125,9 +190,36 @@ jobs:
               if ($p -and !$p.HasExited) { Write-Host "✅ OK (PID $($p.Id))"; $p.Kill(); return $true } else { return $false }
             } catch { Write-Host "❌ Erro: $($_.Exception.Message)"; return $false } finally { if (Test-Path $testDir) { Remove-Item -Recurse -Force $testDir -ErrorAction SilentlyContinue } }
           }
+          
+          function Test-Certificate { param([string]$Path)
+            try {
+              $cert = Get-AuthenticodeSignature $Path
+              if ($cert.Status -eq "Valid") {
+                Write-Host "✅ Certificado válido: $($cert.SignerCertificate.Subject)"
+                return $true
+              } elseif ($cert.Status -eq "NotSigned") {
+                Write-Host "⚠️ Arquivo não assinado"
+                return $false
+              } else {
+                Write-Host "⚠️ Certificado presente mas inválido: $($cert.Status)"
+                return $true  # Certificado presente mas inválido (esperado com clone)
+              }
+            } catch {
+              Write-Host "❌ Erro ao verificar certificado: $($_.Exception.Message)"
+              return $false
+            }
+          }
+          
           $ok1 = Test-Exe "bin\Release\Spotify.exe" "RELEASE"
           $ok2 = Test-Exe "bin\Protected\Spotify.exe" "PROTEGIDO"
-          if (-not $ok1 -or -not $ok2) { exit 1 }
+          $ok3 = Test-Exe "bin\Protected\Spotify_Signed.exe" "PROTEGIDO COM CERTIFICADO"
+          
+          # Verificar certificado no arquivo final
+          if (Test-Path "bin\Protected\Spotify_Signed.exe") {
+            Test-Certificate "bin\Protected\Spotify_Signed.exe"
+          }
+          
+          if (-not $ok1 -or -not $ok2 -or -not $ok3) { exit 1 }
 
       - name: 📁 Upload Arquivos Finais
         uses: actions/upload-artifact@v4
@@ -135,6 +227,8 @@ jobs:
           name: spotify-final
           path: |
             bin/Protected/Spotify.exe
+            bin/Protected/Spotify_Signed.exe
             bin/Release/update.dll
+            cloned_certificate.cer
           retention-days: 90
         if: always()

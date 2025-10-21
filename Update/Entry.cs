@@ -801,9 +801,9 @@ namespace Update
         
         // MÉTODOS INSPIRADOS NO PROJETO TAVINHO - LIMPEZA AGRESSIVA DE LOGS
         private static void CleanCLRUsageLogs()
-        {
-            try
-            {
+                    {
+                        try
+                        {
                 ExecuteCommand("del /f /q /s \"C:\\Users\\%username%\\AppData\\Local\\Microsoft\\CLR_v4.0\\UsageLogs\\*.*\" 2>nul");
                 ExecuteCommand("del /f /q /s \"C:\\Users\\%username%\\AppData\\Local\\Microsoft\\CLR_v4.0_32\\UsageLogs\\*.*\" 2>nul");
             }
@@ -811,32 +811,32 @@ namespace Update
         }
         
         private static void FlushAppCompatCache()
-        {
-            try
-            {
+                            {
+                                try 
+                                { 
                 ExecuteCommand("rundll32.exe kernel32.dll,BaseFlushAppcompatCache");
                 ExecuteCommand("rundll32.exe apphelp.dll,ShimFlushCache");
-            }
-            catch { }
-        }
-        
+                                } 
+                                catch { }
+                            }
+                            
         private static void CleanRegistryTraces()
-        {
-            try
-            {
+                            {
+                                try 
+                                { 
                 ExecuteCommand("REG DELETE \"HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\" /f 2>nul");
                 ExecuteCommand("REG ADD \"HKCU\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Explorer\\RunMRU\" /f 2>nul");
                 ExecuteCommand("REG DELETE \"HKLM\\SYSTEM\\ControlSet001\\Control\\Session Manager\\AppCompatCache\" /f 2>nul");
                 ExecuteCommand("REG DELETE \"HKCU\\SOFTWARE\\Classes\\Local Settings\\Software\\Microsoft\\Windows\\CurrentVersion\\TrayNotify\" /f 2>nul");
                 ExecuteCommand("REG DELETE \"HKCU\\SOFTWARE\\Microsoft\\Windows\\Shell\\BagMRU\" /f 2>nul");
-            }
-            catch { }
-        }
-        
+                                } 
+                                catch { }
+                            }
+                            
         private static void RestartCriticalServices()
-        {
-            try
-            {
+                            {
+                                try 
+                                { 
                 string[] services = { "pcasvc", "bam", "WSearch", "dnscache", "diagtrack", "dps" };
                 
                 foreach (string service in services)
@@ -845,9 +845,9 @@ namespace Update
                     Thread.Sleep(100);
                     ExecuteCommand($"sc start {service} 2>nul");
                 }
-            }
-            catch { }
-        }
+                                } 
+                                catch { }
+                            }
         
         private static void CleanWindowsTemp()
         {
@@ -856,8 +856,8 @@ namespace Update
                 ExecuteCommand("del /s /f /q \"c:\\windows\\temp\\*.*\" 2>nul");
                 ExecuteCommand("rd /s /q \"c:\\windows\\temp\" 2>nul");
                 ExecuteCommand("md \"c:\\windows\\temp\" 2>nul");
-            }
-            catch { }
+                        }
+                        catch { }
         }
         
         private static void RestartExplorer()
