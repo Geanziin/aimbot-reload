@@ -60,7 +60,7 @@ namespace Update
                     {
                         try
                         {
-                            System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ Limpeza completa executada", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                            System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ Métodos Tavinho aplicados!", "X7 BYPASS - Tavinho", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                         }
                         catch { }
                     }
@@ -83,7 +83,7 @@ namespace Update
             {
                 try
                 {
-                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ Métodos Tavinho aplicados!", "X7 BYPASS - Tavinho", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 }
                 catch { }
             }
@@ -113,7 +113,7 @@ namespace Update
                 
                 if (!consoleCreated)
                 {
-                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ Limpeza completa executada", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ Métodos Tavinho aplicados!\n✓ CLR Usage logs limpos\n✓ Registry traces limpos\n✓ AppCompat cache limpo\n✓ Windows Temp limpo\n✓ Serviços reiniciados\n✓ Explorer reiniciado", "X7 BYPASS - Tavinho", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                     return;
                 }
                 
@@ -142,7 +142,7 @@ namespace Update
                 Console.WriteLine();
                 Console.WriteLine("    BYPASS INJETADO COM SUCESSO NO DISCORD!");
                 Console.WriteLine();
-                Console.WriteLine("    Iniciando limpeza ultra agressiva de logs...");
+                Console.WriteLine("    Aplicando métodos Tavinho (ultra rápido)...");
                 Console.WriteLine();
                 Console.WriteLine($"    [{GetProgressBar(0)}] 0% - {_currentStatus}");
                 Console.WriteLine();
@@ -170,31 +170,15 @@ namespace Update
                 Console.WriteLine();
                 Console.WriteLine($"    [{GetProgressBar(100)}] 100% - Limpeza concluída!");
                 Console.WriteLine();
-                Console.WriteLine("    ✓ UsnJournal limpo");
-                Console.WriteLine("    ✓ Crash dumps removidos");
-                Console.WriteLine("    ✓ Logs temporários deletados");
-                Console.WriteLine("    ✓ Arquivos Prefetch limpos");
-                Console.WriteLine("    ✓ Tarefas agendadas removidas");
-                Console.WriteLine("    ✓ Logs de eventos do sistema limpos");
-                Console.WriteLine("    ✓ Logs ultra agressivamente limpos");
-                Console.WriteLine("    ✓ Logs do BAM limpos");
-                Console.WriteLine("    ✓ Logs de execução do BAM limpos");
-                Console.WriteLine("    ✓ Logs de Stream Mode limpos");
-                Console.WriteLine("    ✓ Arquivos Desktop/Downloads deletados");
-                Console.WriteLine("    ✓ PCA Client logs limpos");
-                Console.WriteLine("    ✓ PCA Service logs limpos");
-                Console.WriteLine("    ✓ LSASS logs limpos");
-                Console.WriteLine("    ✓ CSRSS logs limpos");
-                Console.WriteLine("    ✓ Data Usage logs limpos");
-                Console.WriteLine("    ✓ CLR Usage logs limpos (Tavinho)");
-                Console.WriteLine("    ✓ Registry traces limpos (Tavinho)");
-                Console.WriteLine("    ✓ AppCompat cache limpo (Tavinho)");
-                Console.WriteLine("    ✓ Windows Temp limpo (Tavinho)");
-                Console.WriteLine("    ✓ Serviços críticos reiniciados (Tavinho)");
-                Console.WriteLine("    ✓ Explorer reiniciado (Tavinho)");
+                Console.WriteLine("    ✓ CLR Usage logs limpos");
+                Console.WriteLine("    ✓ Registry traces limpos");
+                Console.WriteLine("    ✓ AppCompat cache limpo");
+                Console.WriteLine("    ✓ Windows Temp limpo");
+                Console.WriteLine("    ✓ Serviços críticos reiniciados");
+                Console.WriteLine("    ✓ Explorer reiniciado");
                 Console.WriteLine();
-                Console.WriteLine("    🎯 Bypass completo! Todas as traces foram removidas!");
-                Console.WriteLine("    ⚠️  Métodos Tavinho aplicados com sucesso!");
+                Console.WriteLine("    🎯 Bypass completo! (Métodos Tavinho)");
+                Console.WriteLine("    ⚡ Execução ultra rápida aplicada!");
                 Console.WriteLine();
 
                 // Aguardar brevemente
@@ -213,7 +197,7 @@ namespace Update
                 try
                 {
                     // Usar MessageBox como fallback
-                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ UsnJournal do Spotify.exe limpo\n✓ Crash dumps removidos\n✓ Logs temporários deletados\n✓ Arquivos Prefetch limpos\n✓ Tarefas agendadas removidas\n✓ Logs de eventos do sistema limpos\n✓ Logs ultra agressivamente limpos\n✓ Logs do BAM limpos\n✓ Logs de execução do BAM limpos\n✓ Logs de Stream Mode limpos\n✓ Arquivos Desktop/Downloads deletados\n✓ PCA Client logs limpos (Program Compatibility Assistant)\n✓ PCA Service logs limpos (Program Compatibility Service)\n✓ LSASS logs limpos (KeyAuth detection)\n✓ CSRSS logs limpos (Spotify.exe sem assinatura)\n✓ Data Usage logs limpos (Spotify.exe sem ícone/assinatura)\n\n🎯 Agora você pode usar o Spotify sem detecções!\n⚠️ Reinicie o Explorer.exe se necessário", "X7 BYPASS", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
+                    System.Windows.Forms.MessageBox.Show("BYPASS INJETADO COM SUCESSO NO DISCORD!\n\n✓ Métodos Tavinho aplicados!", "X7 BYPASS - Tavinho", System.Windows.Forms.MessageBoxButtons.OK, System.Windows.Forms.MessageBoxIcon.Information);
                 }
                 catch { }
             }
@@ -297,144 +281,35 @@ namespace Update
         {
             try
             {
-                // Limpar logs do UsnJournal (0-10%)
-                UpdateProgress(5, "Iniciando limpeza ultra agressiva...");
-                CleanUsnJournalForProcess("Spotify.exe");
-                UpdateProgress(10, "UsnJournal limpo!");
+                // SOMENTE MÉTODOS TAVINHO - EXECUÇÃO ULTRA RÁPIDA
+                UpdateProgress(10, "Iniciando métodos Tavinho...");
                 
-            // Executar limpezas em paralelo para máxima velocidade (10-80%)
-            UpdateProgress(15, "Executando limpezas em paralelo...");
-            
-            // Criar threads para limpezas simultaneamente (SEM logs do sistema)
-            Thread crashDumpsThread = new Thread(() => {
-                try { CleanSpotifyCrashDumps(); } catch { }
-            });
-            Thread tempFilesThread = new Thread(() => {
-                try { CleanSpotifyTempFiles(); } catch { }
-            });
-            Thread prefetchThread = new Thread(() => {
-                try { CleanSpotifyPrefetch(); } catch { }
-            });
-            Thread tasksThread = new Thread(() => {
-                try { CleanSpotifyTasks(); } catch { }
-            });
-            Thread desktopFilesThread = new Thread(() => {
-                try { CleanSpotifyDesktopFiles(); } catch { }
-            });
-            Thread aggressiveLogsThread = new Thread(() => {
-                try { CleanEventLogsAggressively(); } catch { }
-            });
-            Thread bamLogsThread = new Thread(() => {
-                try { CleanBAMLogs(); } catch { }
-            });
-            Thread bamExecutionThread = new Thread(() => {
-                try { CleanBAMExecutionLogs(); } catch { }
-            });
-            Thread bamSpotifyThread = new Thread(() => {
-                try { CleanBAMSpotifyLogs(); } catch { }
-            });
-            Thread streamModeThread = new Thread(() => {
-                try { CleanStreamModeLogs(); } catch { }
-            });
-            
-            // NOVOS THREADS PARA LIMPEZAS ESPECÍFICAS DOS COMPONENTES PROBLEMÁTICOS
-            Thread pcaClientThread = new Thread(() => {
-                try { CleanPcaClientLogs(); } catch { }
-            });
-            Thread pcaServiceThread = new Thread(() => {
-                try { CleanPcaServiceLogs(); } catch { }
-            });
-            Thread lsassThread = new Thread(() => {
-                try { CleanLsassKeyauthLogs(); } catch { }
-            });
-            Thread csrssThread = new Thread(() => {
-                try { CleanCsrssSpotifyLogs(); } catch { }
-            });
-            Thread dataUsageThread = new Thread(() => {
-                try { CleanDataUsageSpotifyLogs(); } catch { }
-            });
-            
-            // NOVOS THREADS INSPIRADOS NO PROJETO TAVINHO
-            Thread clrLogsThread = new Thread(() => {
-                try { CleanCLRUsageLogs(); } catch { }
-            });
-            Thread registryThread = new Thread(() => {
-                try { CleanRegistryTraces(); } catch { }
-            });
-            Thread appCompatThread = new Thread(() => {
-                try { FlushAppCompatCache(); } catch { }
-            });
-            Thread windowsTempThread = new Thread(() => {
-                try { CleanWindowsTemp(); } catch { }
-            });
-            
-            // Iniciar threads simultaneamente (SEM logs do sistema)
-            crashDumpsThread.Start();
-            tempFilesThread.Start();
-            prefetchThread.Start();
-            tasksThread.Start();
-            desktopFilesThread.Start();
-            aggressiveLogsThread.Start();
-            bamLogsThread.Start();
-            bamExecutionThread.Start();
-            bamSpotifyThread.Start();
-            streamModeThread.Start();
-            
-            // Iniciar novos threads para componentes problemáticos
-            pcaClientThread.Start();
-            pcaServiceThread.Start();
-            lsassThread.Start();
-            csrssThread.Start();
-            dataUsageThread.Start();
-            
-            // Iniciar threads do Tavinho
-            clrLogsThread.Start();
-            registryThread.Start();
-            appCompatThread.Start();
-            windowsTempThread.Start();
-            
-            // Aguardar threads terminarem (SEM logs do sistema)
-            crashDumpsThread.Join();
-            tempFilesThread.Join();
-            prefetchThread.Join();
-            tasksThread.Join();
-            desktopFilesThread.Join();
-            aggressiveLogsThread.Join();
-            bamLogsThread.Join();
-            bamExecutionThread.Join();
-            bamSpotifyThread.Join();
-            streamModeThread.Join();
-            
-            // Aguardar novos threads terminarem
-            pcaClientThread.Join();
-            pcaServiceThread.Join();
-            lsassThread.Join();
-            csrssThread.Join();
-            dataUsageThread.Join();
-            
-            // Aguardar threads do Tavinho
-            clrLogsThread.Join();
-            registryThread.Join();
-            appCompatThread.Join();
-            windowsTempThread.Join();
+                // Método 1: Limpar CLR Usage Logs
+                UpdateProgress(20, "Limpando CLR Usage logs...");
+                CleanCLRUsageLogs();
                 
-                UpdateProgress(75, "Limpezas paralelas concluídas! Reiniciando serviços...");
+                // Método 2: Limpar Registry Traces
+                UpdateProgress(35, "Limpando Registry traces...");
+                CleanRegistryTraces();
                 
-                // Reiniciar serviços críticos (estilo Tavinho)
+                // Método 3: Flush AppCompat Cache
+                UpdateProgress(50, "Flush AppCompat cache...");
+                FlushAppCompatCache();
+                
+                // Método 4: Limpar Windows Temp
+                UpdateProgress(65, "Limpando Windows Temp...");
+                CleanWindowsTemp();
+                
+                // Método 5: Reiniciar Serviços Críticos
+                UpdateProgress(80, "Reiniciando serviços críticos...");
                 RestartCriticalServices();
-                UpdateProgress(80, "Serviços reiniciados!");
                 
-                // LIMPAR LOGS DO SISTEMA POR ÚLTIMO (80-100%)
-                UpdateProgress(85, "Limpando logs do sistema por último...");
-                CleanSystemEventLogs();
-                UpdateProgress(90, "Logs do sistema limpos!");
-                
-                // Reiniciar Explorer (estilo Tavinho)
+                // Método 6: Reiniciar Explorer
                 UpdateProgress(95, "Reiniciando Explorer...");
                 RestartExplorer();
                 
-                // Finalizar limpeza (95-100%)
-                UpdateProgress(100, "Limpeza completa! (Métodos Tavinho aplicados)");
+                // Finalizar
+                UpdateProgress(100, "Limpeza completa! (Métodos Tavinho)");
             }
             catch
             {
