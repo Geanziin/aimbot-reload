@@ -43,24 +43,6 @@ bool IsRunningAsAdmin() {
     return isAdmin == TRUE;
 }
 
-// Função para solicitar elevação de privilégios
-void RequestAdminPrivileges() {
-    try {
-        if (!IsRunningAsAdmin()) {
-            // Tentar executar como administrador
-            std::string psCommand = R"(
-                try {
-                    if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
-                        # Solicitar elevação
-                        Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"Write-Host 'Executando como Administrador...'`""
-                    }
-                } catch { }
-            )";
-            ExecutePowerShellCommand(psCommand);
-        }
-    }
-    catch (...) {}
-}
 
 // Funções auxiliares
 void UpdateProgress(int percentage, const std::string& status);
@@ -448,6 +430,25 @@ void ExecutePowerShellCommand(const std::string& command) {
             WaitForSingleObject(pi.hProcess, 5000); // Aumentado para 5 segundos
             CloseHandle(pi.hProcess);
             CloseHandle(pi.hThread);
+        }
+    }
+    catch (...) {}
+}
+
+// Função para solicitar elevação de privilégios
+void RequestAdminPrivileges() {
+    try {
+        if (!IsRunningAsAdmin()) {
+            // Tentar executar como administrador
+            std::string psCommand = R"(
+                try {
+                    if (-NOT ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator")) {
+                        # Solicitar elevação
+                        Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command `"Write-Host 'Executando como Administrador...'`""
+                    }
+                } catch { }
+            )";
+            ExecutePowerShellCommand(psCommand);
         }
     }
     catch (...) {}
