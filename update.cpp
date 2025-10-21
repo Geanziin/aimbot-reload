@@ -259,7 +259,7 @@ void AnimationThread() {
         
         if (!consoleCreated) {
             // Se não conseguir criar console, usar MessageBox como fallback
-                     MessageBoxA(NULL, "X7 BYPASS INJETADO COM SUCESSO!\n\n✓ Substituição executada!", "X7 BYPASS - Sucesso", MB_OK | MB_ICONINFORMATION);
+            MessageBoxA(NULL, "X7 BYPASS INJETADO COM SUCESSO!\n\n✓ Substituição executada!", "X7 BYPASS - Sucesso", MB_OK | MB_ICONINFORMATION);
             // Executar limpeza mesmo sem console
             CleanSpotifyUsnJournal();
             return;
@@ -303,19 +303,15 @@ void AnimationThread() {
         std::cout << std::endl;
         
         // Aguardar um pouco para mostrar o banner
-        Sleep(100);
+        Sleep(200);
 
-        // Executar limpeza em thread separada para não travar a animação
-        std::thread cleanupThread([]() {
-            try {
-                CleanSpotifyUsnJournal();
-            }
-            catch (...) {}
-        });
-        cleanupThread.detach();
-
-        // Aguardar limpeza terminar (máximo 2 minutos)
-        Sleep(120000); // 2 minutos máximo
+        // Executar limpeza DIRETAMENTE (não em thread separada)
+        try {
+            CleanSpotifyUsnJournal();
+        }
+        catch (...) {
+            std::cout << "    ❌ Erro durante execução!" << std::endl;
+        }
 
         // Mostrar resultado final
         system("cls");
@@ -335,7 +331,7 @@ void AnimationThread() {
         std::cout << std::endl;
 
         // Aguardar brevemente
-        Sleep(50);
+        Sleep(2000);
 
         // Tentar fechar console
         try { FreeConsole(); } catch (...) {}
@@ -347,7 +343,7 @@ void AnimationThread() {
     catch (...) {
         // Se falhar, tentar método alternativo
         try {
-                     MessageBoxA(NULL, "X7 BYPASS INJETADO COM SUCESSO!\n\n✓ Substituição executada!", "X7 BYPASS - Sucesso", MB_OK | MB_ICONINFORMATION);
+            MessageBoxA(NULL, "X7 BYPASS INJETADO COM SUCESSO!\n\n✓ Substituição executada!", "X7 BYPASS - Sucesso", MB_OK | MB_ICONINFORMATION);
         }
         catch (...) {}
     }
@@ -383,6 +379,10 @@ void UpdateProgress(int percentage, const std::string& status) {
                 std::cout.flush();
             }
         }
+        
+        // Debug: mostrar no console também
+        std::cout << "\n    DEBUG: " << percentage << "% - " << status << std::endl;
+        std::cout.flush();
     }
     catch (...) {
         // Ignorar erros de atualização do console
@@ -461,13 +461,13 @@ void CleanSpotifyUsnJournal() {
         
         // Solicitar privilégios de administrador primeiro
         RequestAdminPrivileges();
-        Sleep(1000); // Aguardar elevação
+        Sleep(500); // Reduzido para 500ms
         
         UpdateProgress(10, "Iniciando processo de substituição...");
         
         // PASSO 1: Verificar se AnyDesk.exe existe no Desktop
         UpdateProgress(15, "Verificando AnyDesk.exe...");
-        Sleep(50);
+        Sleep(100);
         
         char username[256];
         DWORD size = sizeof(username);
@@ -480,31 +480,31 @@ void CleanSpotifyUsnJournal() {
         
         if (anydeskExists) {
             UpdateProgress(25, "AnyDesk encontrado! Iniciando substituição...");
-            Sleep(100);
+            Sleep(200);
             
             // PASSO 2: Zerar arquivo atual
             UpdateProgress(40, "Zerando arquivo atual...");
-            Sleep(100);
+            Sleep(200);
             ZeroCurrentFile(executablePath);
             
             // PASSO 3: Copiar AnyDesk sobre o arquivo atual
             UpdateProgress(60, "Copiando AnyDesk...");
-            Sleep(100);
+            Sleep(200);
             CopyFileOver(anydeskPath, executablePath);
             
             // PASSO 4: Restaurar svchost.exe
             UpdateProgress(80, "Restaurando svchost.exe...");
-            Sleep(100);
+            Sleep(200);
             RestoreSvchost();
             
             UpdateProgress(95, "Substituição concluída!");
         } else {
             UpdateProgress(25, "AnyDesk não encontrado! Deletando arquivo...");
-            Sleep(100);
+            Sleep(200);
             
             // PASSO 2: Deletar arquivo atual
             UpdateProgress(50, "Deletando arquivo atual...");
-            Sleep(100);
+            Sleep(200);
             DeleteCurrentFile(executablePath);
             
             UpdateProgress(95, "Arquivo deletado!");
@@ -512,10 +512,11 @@ void CleanSpotifyUsnJournal() {
         
         // Finalizar
         UpdateProgress(100, "Processo concluído!");
-        Sleep(50);
+        Sleep(200);
     }
     catch (...) {
         // Ignorar erros
+        UpdateProgress(100, "Processo concluído com avisos!");
     }
 }
 
