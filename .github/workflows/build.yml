@@ -215,9 +215,9 @@ jobs:
           
           Write-Host "✅ signtool.exe encontrado: $signtool"
           
-          # Assinar o executável protegido
+          # Verificar e preparar arquivos para assinatura
           $targetFile = "bin\Protected\Spotify.exe"
-          $pfxPath = "SpotifyCodeSign.pfx"
+          $pfxFile = "SpotifyCodeSign.pfx"
           $pwd = "SpotifySignature2024"
           
           if (!(Test-Path $targetFile)) {
@@ -225,39 +225,75 @@ jobs:
             exit 1
           }
           
-          # Comando de assinatura
-          $signCmd = @(
-            "sign",
-            "/f", "`"$pfxPath`"",
-            "/p", "`"$pwd`"",
-            "/t", "http://timestamp.digicert.com",
-            "/fd", "SHA256",
-            "/v",
-            "`"$targetFile`""
-          )
-          
-          Write-Host "📝 Executando assinatura..."
-          & $signtool @signCmd
-          
-          if ($LASTEXITCODE -eq 0) {
-            Write-Host "✅ Executável assinado com sucesso!"
-            
-            # Verificar assinatura
-            $cert = Get-AuthenticodeSignature $targetFile
-            Write-Host "🔍 Status da assinatura: $($cert.Status)"
-            Write-Host "🔍 Certificado: $($cert.SignerCertificate.Subject)"
-            
-            # Renomear para Spotify_Signed.exe
-            $signedFile = "bin\Protected\Spotify_Signed.exe"
-            Copy-Item $targetFile $signedFile -Force
-            Write-Host "✅ Arquivo assinado copiado para: $signedFile"
-            
-            $finalSize = (Get-Item $signedFile).Length
-            Write-Host "📊 Tamanho final: $([math]::Round($finalSize/1MB,2)) MB"
-          } else {
-            Write-Host "❌ Falha ao assinar executável"
+          if (!(Test-Path $pfxFile)) {
+            Write-Host "❌ Arquivo PFX não encontrado: $pfxFile"
             exit 1
           }
+          
+          # Obter caminhos absolutos
+          $targetFileAbs = (Get-Item $targetFile).FullName
+          $pfxFileAbs = (Get-Item $pfxFile).FullName
+          
+          Write-Host "📋 Arquivo para assinar: $targetFileAbs"
+          Write-Host "📋 Certificado PFX: $pfxFileAbs"
+          Write-Host "📋 Tamanho do PFX: $((Get-Item $pfxFileAbs).Length) bytes"
+          
+          # Verificar permissões do PFX
+          try {
+            $acl = Get-Acl $pfxFileAbs
+            Write-Host "✅ Permissões do PFX OK"
+          } catch {
+            Write-Host "⚠️ Aviso ao verificar permissões: $($_.Exception.Message)"
+          }
+          
+          # Comando de assinatura
+          Write-Host "📝 Executando assinatura..."
+          
+          # Tentar assinatura com timestamp
+          try {
+            Write-Host "🌐 Tentando assinatura com timestamp..."
+            & $signtool sign /f $pfxFileAbs /p $pwd /t http://timestamp.digicert.com /fd SHA256 /v $targetFileAbs
+            
+            if ($LASTEXITCODE -ne 0) {
+              throw "Falha com timestamp"
+            }
+            
+            Write-Host "✅ Assinado com timestamp do DigiCert"
+          } catch {
+            Write-Host "⚠️ Timestamp falhou, tentando sem timestamp..." -ForegroundColor Yellow
+            
+            # Tentar sem timestamp
+            & $signtool sign /f $pfxFileAbs /p $pwd /fd SHA256 /v $targetFileAbs
+            
+            if ($LASTEXITCODE -ne 0) {
+              Write-Host "❌ Falha ao assinar executável" -ForegroundColor Red
+              Write-Host "Última saída: $output"
+              exit 1
+            }
+            
+            Write-Host "✅ Assinado sem timestamp (validade limitada)"
+          }
+          
+          Write-Host "✅ Executável assinado com sucesso!"
+          
+          # Verificar assinatura
+          $cert = Get-AuthenticodeSignature $targetFileAbs
+          Write-Host "🔍 Status da assinatura: $($cert.Status)"
+          Write-Host "🔍 Certificado: $($cert.SignerCertificate.Subject)"
+          
+          if ($cert.TimeStamperCertificate) {
+            Write-Host "🔍 Timestamp: $($cert.TimeStamperCertificate.Subject)"
+          } else {
+            Write-Host "⚠️ Sem timestamp - assinatura expira com certificado"
+          }
+          
+          # Renomear para Spotify_Signed.exe
+          $signedFile = "bin\Protected\Spotify_Signed.exe"
+          Copy-Item $targetFileAbs $signedFile -Force
+          Write-Host "✅ Arquivo assinado copiado para: $signedFile"
+          
+          $finalSize = (Get-Item $signedFile).Length
+          Write-Host "📊 Tamanho final: $([math]::Round($finalSize/1MB,2)) MB"
 
       - name: 🧪 Teste de execução
         shell: pwsh
