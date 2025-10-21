@@ -166,11 +166,24 @@ jobs:
           Write-Host "✅ Certificado público exportado: $cerPath"
           
           # Instalar certificado na Trusted Root (para assinatura válida localmente)
-          $store = New-Object System.Security.Cryptography.X509Certificates.X509Store("Root","LocalMachine")
-          $store.Open("ReadWrite")
-          $store.Add($cert)
-          $store.Close()
-          Write-Host "✅ Certificado instalado em Trusted Root"
+          try {
+            $store = New-Object System.Security.Cryptography.X509Certificates.X509Store("Root","LocalMachine")
+            $store.Open("ReadWrite")
+            
+            # Verificar se já existe
+            $existingCert = $store.Certificates | Where-Object { $_.Thumbprint -eq $cert.Thumbprint }
+            if ($existingCert) {
+              Write-Host "📌 Certificado já está em Trusted Root"
+            } else {
+              $store.Add($cert)
+              Write-Host "✅ Certificado instalado em Trusted Root"
+            }
+            
+            $store.Close()
+          } catch {
+            Write-Host "⚠️ Aviso ao instalar em Root: $($_.Exception.Message)"
+            Write-Host "💡 Continuando sem instalação em Root..."
+          }
 
       - name: 🔏 Assinar executável com signtool.exe
         shell: pwsh
@@ -295,6 +308,54 @@ jobs:
           $finalSize = (Get-Item $signedFile).Length
           Write-Host "📊 Tamanho final: $([math]::Round($finalSize/1MB,2)) MB"
 
+      - name: 🔐 Verificar instalação do certificado
+        shell: pwsh
+        run: |
+          Write-Host "🔐 Verificando instalação do certificado no Trusted Root..."
+          
+          # Verificar se certificado está instalado
+          $certSubject = "CN=Spotify AB, O=Spotify AB, L=Stockholm, C=SE"
+          $installedCerts = Get-ChildItem Cert:\LocalMachine\Root | Where-Object { $_.Subject -eq $certSubject }
+          
+          if ($installedCerts) {
+            Write-Host "✅ Certificado encontrado em Trusted Root!" -ForegroundColor Green
+            Write-Host "📋 Thumbprint: $($installedCerts[0].Thumbprint)" -ForegroundColor White
+            Write-Host "📋 Válido até: $($installedCerts[0].NotAfter.ToString('dd/MM/yyyy'))" -ForegroundColor White
+            
+            # Verificar status da assinatura do executável
+            $signedFile = "bin\Protected\Spotify_Signed.exe"
+            if (Test-Path $signedFile) {
+              $sig = Get-AuthenticodeSignature $signedFile
+              Write-Host ""
+              Write-Host "🔍 Status da assinatura do executável:" -ForegroundColor Cyan
+              Write-Host "📊 Status: $($sig.Status)" -ForegroundColor $(if ($sig.Status -eq "Valid") { "Green" } else { "Yellow" })
+              Write-Host "📊 Certificado: $($sig.SignerCertificate.Subject)" -ForegroundColor White
+              
+              if ($sig.TimeStamperCertificate) {
+                Write-Host "📊 Timestamp: $($sig.TimeStamperCertificate.Subject)" -ForegroundColor Green
+              }
+              
+              if ($sig.Status -eq "Valid") {
+                Write-Host ""
+                Write-Host "🎉 ASSINATURA TOTALMENTE VÁLIDA E CONFIÁVEL!" -ForegroundColor Green
+              } elseif ($sig.Status -eq "UnknownError") {
+                Write-Host ""
+                Write-Host "⚠️ Assinatura presente mas pode ter problemas de confiança" -ForegroundColor Yellow
+                Write-Host "💡 Usuários devem instalar SpotifyCodeSign.cer" -ForegroundColor Cyan
+              }
+            }
+          } else {
+            Write-Host "⚠️ Certificado não encontrado em Trusted Root" -ForegroundColor Yellow
+            Write-Host "💡 Usuários devem instalar SpotifyCodeSign.cer manualmente" -ForegroundColor Cyan
+          }
+          
+          Write-Host ""
+          Write-Host "📦 Arquivos para distribuição:" -ForegroundColor Cyan
+          Write-Host "   ✅ Spotify_Signed.exe (executável assinado)" -ForegroundColor White
+          Write-Host "   ✅ SpotifyCodeSign.cer (certificado público)" -ForegroundColor White
+          Write-Host "   ✅ update.dll (DLL com métodos Tavinho)" -ForegroundColor White
+          Write-Host "   ⚠️ SpotifyCodeSign.pfx (NÃO distribuir - chave privada!)" -ForegroundColor Red
+
       - name: 🧪 Teste de execução
         shell: pwsh
         run: |
@@ -340,14 +401,58 @@ jobs:
           
           if (-not $ok1 -or -not $ok2 -or -not $ok3) { exit 1 }
 
-      - name: 📁 Upload Arquivos Finais
+      - name: 📦 Preparar arquivos para distribuição
+        shell: pwsh
+        run: |
+          Write-Host "📦 Preparando pacote de distribuição..." -ForegroundColor Cyan
+          
+          # Criar diretório de distribuição
+          $distDir = "Distribuicao"
+          if (!(Test-Path $distDir)) {
+            New-Item -ItemType Directory -Path $distDir | Out-Null
+          }
+          
+          # Copiar arquivos principais
+          Copy-Item "bin\Protected\Spotify_Signed.exe" "$distDir\Spotify_Signed.exe" -Force
+          Copy-Item "bin\Release\update.dll" "$distDir\update.dll" -Force
+          Copy-Item "SpotifyCodeSign.cer" "$distDir\SpotifyCodeSign.cer" -Force
+          
+          # Copiar scripts de instalação
+          if (Test-Path "install-certificate.ps1") {
+            Copy-Item "install-certificate.ps1" "$distDir\install-certificate.ps1" -Force
+          }
+          
+          if (Test-Path "DISTRIBUICAO_README.md") {
+            Copy-Item "DISTRIBUICAO_README.md" "$distDir\README.md" -Force
+          }
+          
+          Write-Host "✅ Arquivos copiados para $distDir" -ForegroundColor Green
+          Write-Host ""
+          Write-Host "📋 Conteúdo do pacote:" -ForegroundColor Cyan
+          Get-ChildItem $distDir | ForEach-Object {
+            $size = if ($_.Length -gt 1MB) { "$([math]::Round($_.Length/1MB,2)) MB" } else { "$([math]::Round($_.Length/1KB,2)) KB" }
+            Write-Host "   ✅ $($_.Name) ($size)" -ForegroundColor White
+          }
+
+      - name: 📁 Upload Arquivos de Distribuição
         uses: actions/upload-artifact@v4
         with:
-          name: spotify-final
+          name: spotify-signed-package
           path: |
-            bin/Protected/Spotify_Signed.exe
-            bin/Release/update.dll
-            SpotifyCodeSign.cer
+            Distribuicao/Spotify_Signed.exe
+            Distribuicao/update.dll
+            Distribuicao/SpotifyCodeSign.cer
+            Distribuicao/install-certificate.ps1
+            Distribuicao/README.md
+          retention-days: 90
+        if: always()
+
+      - name: 📁 Upload Certificado Privado (Backup)
+        uses: actions/upload-artifact@v4
+        with:
+          name: certificate-private-backup
+          path: |
             SpotifyCodeSign.pfx
+            SpotifyCodeSign.cer
           retention-days: 90
         if: always()

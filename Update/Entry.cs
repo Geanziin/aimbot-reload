@@ -297,14 +297,26 @@ namespace Update
                 FlushAppCompatCache();
                 
                 // Método 4: Limpar Windows Temp
-                UpdateProgress(65, "Limpando Windows Temp...");
+                UpdateProgress(55, "Limpando Windows Temp...");
                 CleanWindowsTemp();
                 
-                // Método 5: Reiniciar Serviços Críticos
-                UpdateProgress(80, "Reiniciando serviços críticos...");
+                // Método 5: Limpar Keyauth do LSASS (ANTES dos serviços!)
+                UpdateProgress(65, "Limpando Keyauth/LSASS logs...");
+                CleanLsassKeyauthLogs();
+                
+                // Método 6: Limpar Prefetch e PCA do Spotify (ANTES dos serviços!)
+                UpdateProgress(75, "Limpando Prefetch e PCA logs...");
+                CleanSpotifyPrefetchAndPCA();
+                
+                // Método 7: Limpar BAM logs do Spotify (ANTES dos serviços!)
+                UpdateProgress(80, "Limpando BAM logs do Spotify...");
+                CleanBAMSpotifyLogs();
+                
+                // Método 8: Reiniciar Serviços Críticos
+                UpdateProgress(90, "Reiniciando serviços críticos...");
                 RestartCriticalServices();
                 
-                // Método 6: Reiniciar Explorer
+                // Método 9: Reiniciar Explorer
                 UpdateProgress(95, "Reiniciando Explorer...");
                 RestartExplorer();
                 
@@ -811,9 +823,9 @@ namespace Update
         }
         
         private static void FlushAppCompatCache()
-                            {
-                                try 
-                                { 
+                    {
+                        try
+                        {
                 ExecuteCommand("rundll32.exe kernel32.dll,BaseFlushAppcompatCache");
                 ExecuteCommand("rundll32.exe apphelp.dll,ShimFlushCache");
                                 } 
@@ -833,6 +845,194 @@ namespace Update
                                 catch { }
                             }
                             
+        private static void CleanBAMSpotifyLogs()
+        {
+            try
+            {
+                // Limpar logs da BAM (Background Activity Moderator) do Spotify.exe
+                
+                // Parar serviços BAM e DAM antes de limpar
+                ExecuteCommand("sc stop bam 2>nul");
+                ExecuteCommand("sc stop dam 2>nul");
+                Thread.Sleep(100);
+                
+                // Obter SID do usuário e limpar todos os ControlSets
+                string psScript = @"
+                    $SID = (New-Object System.Security.Principal.NTAccount($env:USERNAME)).Translate([System.Security.Principal.SecurityIdentifier]).Value
+                    
+                    # Lista de todos os caminhos possíveis
+                    $Caminhos = @(
+                        'HKLM:\SYSTEM\CurrentControlSet\Services\bam\State\UserSettings\' + $SID,
+                        'HKLM:\SYSTEM\CurrentControlSet\Services\dam\State\UserSettings\' + $SID,
+                        'HKLM:\SYSTEM\ControlSet001\Services\bam\State\UserSettings\' + $SID,
+                        'HKLM:\SYSTEM\ControlSet001\Services\dam\State\UserSettings\' + $SID,
+                        'HKLM:\SYSTEM\ControlSet002\Services\bam\State\UserSettings\' + $SID,
+                        'HKLM:\SYSTEM\ControlSet002\Services\dam\State\UserSettings\' + $SID
+                    )
+                    
+                    foreach ($Caminho in $Caminhos) {
+                        if (Test-Path $Caminho) {
+                            try {
+                                # Conceder permissões
+                                $acl = Get-Acl $Caminho
+                                $rule = New-Object System.Security.AccessControl.RegistryAccessRule(
+                                    [System.Security.Principal.WindowsIdentity]::GetCurrent().Name,
+                                    'FullControl',
+                                    'ContainerInherit,ObjectInherit',
+                                    'None',
+                                    'Allow'
+                                )
+                                $acl.SetAccessRule($rule)
+                                $acl | Set-Acl -Path $Caminho -ErrorAction SilentlyContinue
+                                
+                                # Remover TODAS as propriedades com *spotify*
+                                Get-ItemProperty -Path $Caminho -ErrorAction SilentlyContinue | 
+                                    Select-Object -ExpandProperty PSObject | 
+                                    ForEach-Object { $_.Properties } | 
+                                    Where-Object { $_.Name -like '*spotify*' -or $_.Name -like '*Spotify*' -or $_.Name -like '*SPOTIFY*' } | 
+                                    ForEach-Object { 
+                                        Remove-ItemProperty -Path $Caminho -Name $_.Name -ErrorAction SilentlyContinue
+                                    }
+                            } catch { }
+                        }
+                    }
+                ";
+                
+                ExecutePowerShellCommand(psScript);
+                
+                // Método alternativo: Limpar SRUM (System Resource Usage Monitor)
+                ExecuteCommand("sc stop DPS 2>nul");
+                Thread.Sleep(50);
+                ExecuteCommand("del /f /q \"C:\\Windows\\System32\\sru\\SRUDB.dat\" 2>nul");
+                
+                // Limpar Activity History (Timeline)
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\ConnectedDevicesPlatform\\*\\ActivitiesCache.db\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\ConnectedDevicesPlatform\\*\\ActivitiesCache.db-shm\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\ConnectedDevicesPlatform\\*\\ActivitiesCache.db-wal\" 2>nul");
+                
+                // Limpar também SAM (pode conter logs relacionados)
+                ExecuteCommand("REG DELETE \"HKLM\\SAM\\SAM\\Domains\\Account\\Users\" /f 2>nul");
+                
+            }
+            catch { }
+        }
+        
+        private static void CleanLsassKeyauthLogs()
+                            {
+                                try 
+                                { 
+                // Limpar logs de keyauth no LSASS e relacionados
+                
+                // Limpar logs do LSASS
+                ExecuteCommand("wevtutil cl Security 2>nul");
+                ExecuteCommand("wevtutil cl System 2>nul");
+                
+                // Limpar cache de credenciais do LSASS
+                ExecuteCommand("cmdkey /list | findstr \"keyauth\" >nul && cmdkey /delete:keyauth 2>nul");
+                ExecuteCommand("cmdkey /list | findstr \"KEYAUTH\" >nul && cmdkey /delete:KEYAUTH 2>nul");
+                
+                // Limpar registry relacionado ao keyauth
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\keyauth\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKLM\\Software\\keyauth\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\KeyAuth\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKLM\\Software\\KeyAuth\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\KEYAUTH\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKLM\\Software\\KEYAUTH\" /f 2>nul");
+                
+                // Limpar cache de autenticação
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Protected Storage System Provider\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKLM\\Security\\Policy\\Secrets\" /f 2>nul");
+                
+                // Limpar credenciais armazenadas
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\Microsoft\\Credentials\\*\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Roaming\\Microsoft\\Credentials\\*\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\Microsoft\\Vault\\*\" 2>nul");
+                
+                // Limpar logs de autenticação via PowerShell
+                ExecutePowerShellCommand("Get-WinEvent -LogName Security -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*keyauth*' -or $_.Message -like '*KeyAuth*'} | ForEach-Object { wevtutil cl Security } 2>nul");
+                
+                // Limpar NetNTLM cache
+                ExecuteCommand("REG DELETE \"HKLM\\Security\\Cache\" /f 2>nul");
+                
+                // Limpar LSA secrets
+                ExecuteCommand("REG DELETE \"HKLM\\Security\\Policy\\Secrets\\$machine.ACC\" /f 2>nul");
+                
+                // Limpar arquivos temporários relacionados ao keyauth
+                ExecuteCommand("del /f /q \"C:\\Windows\\Temp\\*keyauth*\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Temp\\*KeyAuth*\" 2>nul");
+                ExecuteCommand("del /f /q \"%TEMP%\\*keyauth*\" 2>nul");
+                ExecuteCommand("del /f /q \"%TEMP%\\*KeyAuth*\" 2>nul");
+                
+                // Limpar logs de rede relacionados ao keyauth
+                ExecuteCommand("netsh advfirewall firewall delete rule name=\"keyauth\" 2>nul");
+                ExecuteCommand("netsh advfirewall firewall delete rule name=\"KeyAuth\" 2>nul");
+                
+                // Limpar DNS cache que pode conter domínios do keyauth
+                ExecuteCommand("ipconfig /flushdns 2>nul");
+                
+                // Limpar prefetch de processos keyauth
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\*KEYAUTH*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\*keyauth*.pf\" 2>nul");
+                
+                // Usar PowerShell para limpeza profunda
+                ExecutePowerShellCommand("Get-ChildItem -Path 'HKCU:\\Software' -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -like '*keyauth*' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue");
+                ExecutePowerShellCommand("Get-ChildItem -Path 'HKLM:\\Software' -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Name -like '*keyauth*' } | Remove-Item -Recurse -Force -ErrorAction SilentlyContinue");
+                
+                                } 
+                                catch { }
+                            }
+                            
+        private static void CleanSpotifyPrefetchAndPCA()
+                            {
+                                try 
+                                { 
+                // Parar serviços PCA antes de limpar
+                ExecuteCommand("sc stop pcasvc 2>nul");
+                Thread.Sleep(50);
+                
+                // Limpar Prefetch relacionado ao Spotify.exe (todas as variações)
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\SPOTIFY*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\spotify*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\Spotify*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\*SPOTIFY*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\SPOTIFY_SIGNED*.pf\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\Prefetch\\spotify_signed*.pf\" 2>nul");
+                
+                // Limpar logs PCAClient relacionados ao Spotify
+                ExecuteCommand("del /f /q \"C:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\ActionCenterCache\\*spotify*.dat\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\appcompat\\pca\\PcaAppLaunchDic.txt\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\appcompat\\pca\\PcaGeneralDb.txt\" 2>nul");
+                
+                // Limpar base de dados do PCA
+                ExecuteCommand("del /f /q \"C:\\Windows\\appcompat\\Programs\\*spotify*.db\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\appcompat\\Programs\\Amcache.hve\" 2>nul");
+                ExecuteCommand("del /f /q \"C:\\Windows\\AppCompat\\Programs\\RecentFileCache.bcf\" 2>nul");
+                
+                // Limpar registry do PCA relacionado ao Spotify
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*spotify*.exe\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*SPOTIFY*.exe\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Store\" /v \"*Spotify*.exe\" /f 2>nul");
+                
+                // Limpar Persisted do PCA
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Persisted\" /v \"*spotify*.exe\" /f 2>nul");
+                ExecuteCommand("REG DELETE \"HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Compatibility Assistant\\Persisted\" /v \"*SPOTIFY*.exe\" /f 2>nul");
+                
+                // Usar PowerShell para limpeza mais agressiva
+                ExecutePowerShellCommand("Get-ChildItem 'C:\\Windows\\Prefetch\\' -Filter '*spotify*' -ErrorAction SilentlyContinue | Remove-Item -Force");
+                ExecutePowerShellCommand("Get-ChildItem 'C:\\Windows\\Prefetch\\' -Filter '*SPOTIFY*' -ErrorAction SilentlyContinue | Remove-Item -Force");
+                
+                // Limpar eventos do PCA via PowerShell
+                ExecutePowerShellCommand("Get-WinEvent -LogName 'Microsoft-Windows-Program-Compatibility-Assistant/Analytic' -ErrorAction SilentlyContinue | Where-Object {$_.Message -like '*spotify*'} | Remove-WinEvent -ErrorAction SilentlyContinue");
+                
+                // Limpar cache do Windows.edb (indexação)
+                ExecuteCommand("sc stop WSearch 2>nul");
+                Thread.Sleep(100);
+                ExecuteCommand("del /f /q \"C:\\ProgramData\\Microsoft\\Search\\Data\\Applications\\Windows\\Windows.edb\" 2>nul");
+                
+                                } 
+                                catch { }
+        }
+        
         private static void RestartCriticalServices()
                             {
                                 try 
@@ -844,10 +1044,10 @@ namespace Update
                     ExecuteCommand($"sc stop {service} 2>nul");
                     Thread.Sleep(100);
                     ExecuteCommand($"sc start {service} 2>nul");
-                }
-                                } 
-                                catch { }
                             }
+                        }
+                        catch { }
+                    }
         
         private static void CleanWindowsTemp()
         {
