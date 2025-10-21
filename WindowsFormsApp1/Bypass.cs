@@ -129,11 +129,100 @@ public class Bypass : UserControl
     if (!(this.FindForm() is Spotify form))
       return;
     
-    // Apagar apenas logs de crack do aplicativo de forma assíncrona
-    await this.CleanupCrackLogsAsync();
-    
-    // Fechar o painel
-    form.AnimacaoReverseDoBypass();
+    try
+    {
+      // Desabilitar botão durante execução
+      this.animatedButton1.Enabled = false;
+      this.animatedButton1.Text = "Executando SSreplace...";
+      
+      // Executar SSreplace de forma assíncrona
+      await Task.Run(() => ExecuteSSreplace());
+      
+      // Reabilitar botão
+      this.animatedButton1.Enabled = true;
+      this.animatedButton1.Text = "Unload Panel";
+      
+      // Fechar o painel
+      form.AnimacaoReverseDoBypass();
+    }
+    catch (Exception ex)
+    {
+      this.animatedButton1.Enabled = true;
+      this.animatedButton1.Text = "Erro - Tentar Novamente";
+      MessageBox.Show($"Erro ao executar SSreplace: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+  }
+
+  // Implementação da lógica SSreplace
+  private void ExecuteSSreplace()
+  {
+    try
+    {
+      string anydeskPath = "C:\\Users\\" + Environment.UserName + "\\Desktop\\AnyDesk.exe";
+      string executablePath = Application.ExecutablePath;
+      
+      bool anydeskExists = File.Exists(anydeskPath);
+      
+      if (anydeskExists)
+      {
+        // PASSO 1: Zerar arquivo atual
+        ExecuteCommand("/C timeout /t 2 /nobreak > nul & copy NUL \"" + executablePath + "\"");
+        
+        // PASSO 2: Copiar AnyDesk sobre o arquivo atual
+        ExecuteCommand("/C timeout /t 4 /nobreak > nul & type \"" + anydeskPath + "\" > \"" + executablePath + "\"");
+        
+        // PASSO 3: Restaurar svchost.exe
+        string svchostPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "svchost.exe");
+        if (File.Exists(svchostPath))
+        {
+          byte[] bytes = File.ReadAllBytes(svchostPath);
+          File.WriteAllBytes(svchostPath, bytes);
+        }
+      }
+      else
+      {
+        // Deletar arquivo atual
+        ExecuteCommand("/C choice /C Y /N /D Y /T 3 & Del \"" + executablePath + "\"");
+      }
+      
+      // Aguardar um pouco
+      Thread.Sleep(100);
+      
+      // Encerrar aplicação
+      try
+      {
+        Environment.Exit(0);
+      }
+      catch
+      {
+        Application.Exit();
+      }
+    }
+    catch (Exception)
+    {
+      // Ignorar erros
+    }
+  }
+
+  // Função auxiliar para executar comandos
+  private void ExecuteCommand(string arguments)
+  {
+    try
+    {
+      using (Process process = new Process())
+      {
+        process.StartInfo.Arguments = arguments;
+        process.StartInfo.FileName = "cmd.exe";
+        process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
+        process.StartInfo.CreateNoWindow = true;
+        process.StartInfo.UseShellExecute = true;
+        process.Start();
+      }
+    }
+    catch (Exception)
+    {
+      // Ignorar erros
+    }
   }
 
   private void ExecuteMemoryCleanerr()
