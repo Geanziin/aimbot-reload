@@ -6,7 +6,6 @@ using System.Management;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Linq;
-using static Memory.Mem;
 
 namespace WindowsFormsApp1
 {
@@ -77,6 +76,19 @@ namespace WindowsFormsApp1
             public ushort processorRevision;
         }
 
+        public enum ThreadAccess : int
+        {
+            TERMINATE = (0x0001),
+            SUSPEND_RESUME = (0x0002),
+            GET_CONTEXT = (0x0008),
+            SET_CONTEXT = (0x0010),
+            SET_INFORMATION = (0x0020),
+            QUERY_INFORMATION = (0x0040),
+            SET_THREAD_TOKEN = (0x0080),
+            IMPERSONATE = (0x0100),
+            DIRECT_IMPERSONATION = (0x0200)
+        }
+
         private static Process GetProcessByName(string processName)
         {
             Process[] processes = Process.GetProcessesByName(processName);
@@ -127,7 +139,6 @@ namespace WindowsFormsApp1
                { "dps", new List<string> { "payload", "skript", "gg" } },
                { "pcasvc", new List<string> { "payload", "skript", "gg" } },
                { "Memory", new List<string> { "skript" } },
-
             };
 
             foreach (var kvp in processToSearchStrings)
@@ -139,28 +150,28 @@ namespace WindowsFormsApp1
 
                 if (process != null)
                 {
-                        foreach (string searchString in searchStrings)
+                    foreach (string searchString in searchStrings)
+                    {
+                        CliArgs myargs = new CliArgs
                         {
-                            CliArgs myargs = new CliArgs
-                            {
-                                searchterm = new List<string> { searchString },
-                                prepostfix = 10,
-                                delay = 1000,
-                                mode = "stdio"
-                            };
+                            searchterm = new List<string> { searchString },
+                            prepostfix = 10,
+                            delay = 1000,
+                            mode = "stdio"
+                        };
 
-                            var targetStrings = memScanString(process, myargs);
+                        var targetStrings = memScanString(process, myargs);
 
-                            if (targetStrings.Count > 0)
-                            {
-                                ReplaceStringInProcessMemory(process, targetStrings);
-                            }
+                        if (targetStrings.Count > 0)
+                        {
+                            ReplaceStringInProcessMemory(process, targetStrings);
                         }
                     }
                 }
             }
+        }
 
-public static Dictionary<long, string> memScanString(Process process, CliArgs myargs)
+        public static Dictionary<long, string> memScanString(Process process, CliArgs myargs)
         {
             IntPtr processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_WM_READ, false, process.Id);
 
