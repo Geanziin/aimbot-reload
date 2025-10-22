@@ -218,7 +218,7 @@ public class Aimbot : UserControl
 
 
   // Método ultra-silencioso para injeção de hex com evasão de detecção
-  private bool InjectHexStealth(Process targetProcess, string hexPattern, string replacementHex)
+  private static bool InjectHexStealth(Process targetProcess, string hexPattern, string replacementHex)
   {
     try
     {
@@ -263,7 +263,7 @@ public class Aimbot : UserControl
 
           // Alterar proteção de memória silenciosamente
           MysteriousMem.Mysterious.MemoryProtection oldProtect;
-          if (!VirtualProtectEx(processHandle, new IntPtr((long)address), new IntPtr(currentBytes.Length), MysteriousMem.Mysterious.MemoryProtection.ExecuteReadWrite, out oldProtect))
+          if (!VirtualProtectEx(processHandle, new UIntPtr((ulong)address), new UIntPtr((ulong)currentBytes.Length), MysteriousMem.Mysterious.MemoryProtection.ExecuteReadWrite, out oldProtect))
             continue;
 
           // Delay para evasão
@@ -280,7 +280,7 @@ public class Aimbot : UserControl
 
           // Restaurar proteção original silenciosamente
           Sleep(5);
-          VirtualProtectEx(processHandle, new IntPtr((long)address), new IntPtr(currentBytes.Length), oldProtect, out oldProtect);
+          VirtualProtectEx(processHandle, new UIntPtr((ulong)address), new UIntPtr((ulong)currentBytes.Length), oldProtect, out oldProtect);
         }
         catch { }
       }
@@ -299,7 +299,7 @@ public class Aimbot : UserControl
   }
 
   // Busca de padrão furtiva com evasão
-  private List<long> FindPatternStealth(IntPtr processHandle, string pattern)
+  private static List<long> FindPatternStealth(IntPtr processHandle, string pattern)
   {
     var addresses = new List<long>();
     

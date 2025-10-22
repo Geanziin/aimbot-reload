@@ -89,7 +89,7 @@ namespace WindowsFormsApp1
             DIRECT_IMPERSONATION = (0x0200)
         }
 
-        private static Process GetProcessByName(string processName)
+        private static Process? GetProcessByName(string processName)
         {
             Process[] processes = Process.GetProcessesByName(processName);
 
