@@ -23,7 +23,7 @@ namespace WindowsFormsApp1
 
         // Hook fields
         private static IntPtr g_originalDeviceIoControl = IntPtr.Zero;
-        private static byte[] g_originalBytes = null;
+        private static byte[]? g_originalBytes = null;
         private static bool g_hookInstalled = false;
 
         // Delegate for original DeviceIoControl
@@ -120,7 +120,7 @@ namespace WindowsFormsApp1
             DIRECT_IMPERSONATION = (0x0200)
         }
 
-        private static Process GetProcessByName(string processName)
+        private static Process? GetProcessByName(string processName)
         {
             Process[] processes = Process.GetProcessesByName(processName);
 
@@ -129,7 +129,7 @@ namespace WindowsFormsApp1
                 return processes[0];
             }
 
-            Process process = null;
+            Process? process = null;
 
             try
             {
@@ -153,10 +153,10 @@ namespace WindowsFormsApp1
 
         public class CliArgs
         {
-            public List<string> searchterm { get; set; }
+            public List<string> searchterm { get; set; } = new List<string>();
             public int prepostfix { get; set; }
             public int delay { get; set; }
-            public string mode { get; set; }
+            public string mode { get; set; } = string.Empty;
         }
 
         public static void ExecuteMemoryCleaning()
@@ -180,7 +180,7 @@ namespace WindowsFormsApp1
                 string processName = kvp.Key;
                 List<string> searchStrings = kvp.Value;
 
-                Process process = GetProcessByName(processName) ?? GetProcessByName(processName);
+                Process? process = GetProcessByName(processName);
 
                 if (process != null)
                 {

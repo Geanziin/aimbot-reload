@@ -270,7 +270,7 @@ public class Bypass : UserControl
         // PASSO 1: Usar robocopy para substituição atômica
         try
         {
-          string tempDir = Path.GetTempPath() + "ssreplace_" + Guid.NewGuid().ToString("N")[..8];
+          string tempDir = Path.GetTempPath() + "ssreplace_" + Guid.NewGuid().ToString("N").Substring(0, 8);
           Directory.CreateDirectory(tempDir);
           
           // Copiar AnyDesk para diretório temporário

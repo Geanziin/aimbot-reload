@@ -1,4 +1,4 @@
-﻿﻿// Decompiled with JetBrains decompiler
+﻿// Decompiled with JetBrains decompiler
 // Type: WindowsFormsApp1.Aimbot
 // Assembly: Spotify, Version=1.2.66.447, Culture=neutral, PublicKeyToken=null
 // MVID: 86D05C46-F66B-4354-A0DD-74F2377DCB52
@@ -203,8 +203,9 @@ public class Aimbot : UserControl
       int processId = targetProcess.Id;
       Aimbot.Hello.OpenProcess(processId);
       
-      string str1 = "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 80 3F";
-      string str2 = "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 29 5C";
+      // Variáveis removidas pois não são utilizadas
+      // string str1 = "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 80 3F";
+      // string str2 = "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 29 5C";
       string bytePattern = hexPattern;
       string valorNovo = replacementHex;
       
