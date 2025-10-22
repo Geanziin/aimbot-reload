@@ -200,48 +200,67 @@ public class Aimbot : UserControl
   {
     try
     {
-      // Abrir processo com acesso completo
-      IntPtr processHandle = OpenProcess(PROCESS_ALL_ACCESS, false, targetProcess.Id);
-      if (processHandle == IntPtr.Zero)
-        return false;
-
-      try
+      int processId = targetProcess.Id;
+      Aimbot.Hello.OpenProcess(processId);
+      
+      string str1 = "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 80 3F";
+      string str2 = "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 29 5C";
+      string bytePattern = hexPattern;
+      string valorNovo = replacementHex;
+      
+      IEnumerable<long> source = Aimbot.Hello.AoBScan(bytePattern, true, true).Result;
+      if (source == null || !source.Any<long>())
       {
-        // Converter hex para bytes
-        byte[] searchBytes = HexStringToByteArray(hexPattern);
-        byte[] replaceBytes = HexStringToByteArray(replacementHex);
-
-        // Buscar padrão na memória
-        var addresses = FindPatternInMemory(processHandle, searchBytes);
+        string wildcardPattern = "A0 42 ?? ?? C0 3F 33 33 13 40 ?? ?? F0 3F ?? ?? ?? ??";
+        source = Aimbot.Hello.AoBScan(wildcardPattern, true, true).Result;
         
-        if (addresses.Count == 0)
-          return false;
-
-        int successCount = 0;
-        foreach (long address in addresses)
+        if (source == null || !source.Any<long>())
         {
-          // Alterar proteção da página para escrita
-          uint oldProtect;
-          if (!VirtualProtectEx(processHandle, new IntPtr(address), new UIntPtr((uint)searchBytes.Length), PAGE_EXECUTE_READWRITE, out oldProtect))
-            continue;
-
-          // Escrever bytes diretamente na memória
-          IntPtr bytesWritten = IntPtr.Zero;
-          if (WriteProcessMemory(processHandle, new UIntPtr((ulong)address), replaceBytes, new UIntPtr((uint)replaceBytes.Length), bytesWritten))
-          {
-            successCount++;
-          }
-
-          // Restaurar proteção original
-          VirtualProtectEx(processHandle, new IntPtr(address), new UIntPtr((uint)searchBytes.Length), oldProtect, out _);
+          return false;
         }
-
-        return successCount > 0;
       }
-      finally
+      
+      int successCount = 0;
+      foreach (long address in source)
       {
-        CloseHandle(processHandle);
+        try
+        {
+          int patternLength = valorNovo.Split(' ').Length;
+          byte[] readTest = new byte[patternLength];
+          IntPtr bytesRead;
+          bool readSuccess = ReadProcessMemory(
+            Aimbot.Hello.pHandle,
+            new UIntPtr((ulong)address),
+            readTest,
+            new UIntPtr((ulong)patternLength),
+            out bytesRead
+          );
+          
+          if (readSuccess && bytesRead.ToInt32() == patternLength)
+          {
+            byte[] writeBytes = HexStringToByteArray(valorNovo);
+            
+            IntPtr bytesWritten = IntPtr.Zero;
+            bool writeOk = WriteProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)address),
+              writeBytes,
+              new UIntPtr((ulong)writeBytes.Length),
+              bytesWritten
+            );
+            
+            if (writeOk)
+            {
+              successCount++;
+            }
+          }
+        }
+        catch
+        {
+        }
       }
+      
+      return successCount > 0;
     }
     catch
     {
@@ -393,77 +412,164 @@ public class Aimbot : UserControl
   {
     try
     {
-      // Abrir processo com acesso completo
-      IntPtr processHandle = OpenProcess(PROCESS_ALL_ACCESS, false, targetProcess.Id);
-      if (processHandle == IntPtr.Zero)
-        return false;
-
-      try
-      {
-        // Converter offsets hex para long
-        long readOffset = Convert.ToInt64(readOffsetHex, 16);
-        long writeOffset = Convert.ToInt64(writeOffsetHex, 16);
-
-        // Buscar padrão na memória
-        byte[] searchBytes = HexStringToByteArray(hexPattern);
-        var addresses = FindPatternInMemory(processHandle, searchBytes);
-        
-        if (addresses.Count == 0)
-          return false;
+      int processId = targetProcess.Id;
+      Aimbot.Hello.OpenProcess(processId);
       
-      int successCount = 0;
-        foreach (long baseAddress in addresses)
+      long readOffset = Convert.ToInt64(readOffsetHex, 16);
+      long writeOffset = Convert.ToInt64(writeOffsetHex, 16);
+      
+      IEnumerable<long> source = Aimbot.Hello.AoBScan(hexPattern, true, true).Result;
+      if (source.Count<long>() != 0)
       {
-        try
+        foreach (long num1 in source)
         {
-            // Calcular endereços com offsets
-            long readAddress = baseAddress + readOffset;
-            long writeAddress = baseAddress + writeOffset;
-
-            // Ler valores atuais dos endereços
-            byte[] readBytes = new byte[4];
-            byte[] writeBytes = new byte[4];
-            IntPtr bytesRead1, bytesRead2;
-
-            bool read1Success = ReadProcessMemory(processHandle, new UIntPtr((ulong)readAddress), readBytes, new UIntPtr(4), out bytesRead1);
-            bool read2Success = ReadProcessMemory(processHandle, new UIntPtr((ulong)writeAddress), writeBytes, new UIntPtr(4), out bytesRead2);
-
-            if (!read1Success || !read2Success || bytesRead1.ToInt32() != 4 || bytesRead2.ToInt32() != 4)
+          try
+          {
+            long key1 = num1 + writeOffset;
+            byte[] bytes1 = new byte[4];
+            IntPtr bytesRead1;
+            bool read1Success = ReadProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)key1),
+              bytes1,
+              new UIntPtr(4),
+              out bytesRead1
+            );
+            
+            if (!read1Success || bytesRead1.ToInt32() != 4)
               continue;
-
-            // Alterar proteção das páginas para escrita
-            uint oldProtect1, oldProtect2;
-            bool prot1Changed = VirtualProtectEx(processHandle, new IntPtr(readAddress), new UIntPtr(4), PAGE_EXECUTE_READWRITE, out oldProtect1);
-            bool prot2Changed = VirtualProtectEx(processHandle, new IntPtr(writeAddress), new UIntPtr(4), PAGE_EXECUTE_READWRITE, out oldProtect2);
-
-            // Trocar valores entre os endereços
+            int int32_1 = BitConverter.ToInt32(bytes1, 0);
+            this.OrginalValues1[key1] = int32_1;
+            
+            long key2 = num1 + readOffset;
+            byte[] bytes2 = new byte[4];
+            IntPtr bytesRead2;
+            bool read2Success = ReadProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)key2),
+              bytes2,
+              new UIntPtr(4),
+              out bytesRead2
+            );
+            
+            if (!read2Success || bytesRead2.ToInt32() != 4)
+              continue;
+            int int32_2 = BitConverter.ToInt32(bytes2, 0);
+            this.OrginalValues2[key2] = int32_2;
+            
+            long num2 = num1 + readOffset;
+            long num3 = num1 + writeOffset;
+            
+            byte[] bytes3 = new byte[4];
+            byte[] bytes4 = new byte[4];
+            IntPtr bytesRead3, bytesRead4;
+            
+            bool read3Success = ReadProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)num2),
+              bytes3,
+              new UIntPtr(4),
+              out bytesRead3
+            );
+            
+            bool read4Success = ReadProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)num3),
+              bytes4,
+              new UIntPtr(4),
+              out bytesRead4
+            );
+            
+            if (!read3Success || !read4Success || bytesRead3.ToInt32() != 4 || bytesRead4.ToInt32() != 4)
+              continue;
+            
+            int int32_3 = BitConverter.ToInt32(bytes3, 0);
+            int int32_4 = BitConverter.ToInt32(bytes4, 0);
+            
+            byte[] writeBytes3 = BitConverter.GetBytes(int32_3);
+            byte[] writeBytes4 = BitConverter.GetBytes(int32_4);
+            
             IntPtr bytesWritten1 = IntPtr.Zero;
             IntPtr bytesWritten2 = IntPtr.Zero;
-            bool write1Success = WriteProcessMemory(processHandle, new UIntPtr((ulong)writeAddress), readBytes, new UIntPtr(4), bytesWritten1);
-            bool write2Success = WriteProcessMemory(processHandle, new UIntPtr((ulong)readAddress), writeBytes, new UIntPtr(4), bytesWritten2);
-
-            if (write1Success && write2Success)
+            bool write1 = WriteProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)num3),
+              writeBytes3,
+              new UIntPtr(4),
+              bytesWritten1
+            );
+            
+            bool write2 = WriteProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)num2),
+              writeBytes4,
+              new UIntPtr(4),
+              bytesWritten2
+            );
+            
+            if (!write1 || !write2)
+              continue;
+            
+            byte[] bytes5 = new byte[4];
+            byte[] bytes6 = new byte[4];
+            IntPtr bytesRead5, bytesRead6;
+            
+            bool read5Success = ReadProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)key1),
+              bytes5,
+              new UIntPtr(4),
+              out bytesRead5
+            );
+            
+            bool read6Success = ReadProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)key2),
+              bytes6,
+              new UIntPtr(4),
+              out bytesRead6
+            );
+            
+            if (read5Success && bytesRead5.ToInt32() == 4)
             {
-              successCount++;
+              int int32_5 = BitConverter.ToInt32(bytes5, 0);
+              this.OrginalValues3[key1] = int32_5;
             }
-
-            // Restaurar proteções originais
-            if (prot1Changed)
-              VirtualProtectEx(processHandle, new IntPtr(readAddress), new UIntPtr(4), oldProtect1, out _);
-            if (prot2Changed)
-              VirtualProtectEx(processHandle, new IntPtr(writeAddress), new UIntPtr(4), oldProtect2, out _);
+            if (read6Success && bytesRead6.ToInt32() == 4)
+            {
+              int int32_6 = BitConverter.ToInt32(bytes6, 0);
+              this.OrginalValues4[key2] = int32_6;
+            }
           }
           catch
           {
-            // Erro silencioso
           }
         }
-
-        return successCount > 0;
+        return true;
       }
-      finally
+      else
       {
-        CloseHandle(processHandle);
+        foreach (KeyValuePair<long, int> keyValuePair in this.OrginalValues1)
+        {
+          try
+          {
+            Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
+          }
+          catch
+          {
+          }
+        }
+        foreach (KeyValuePair<long, int> keyValuePair in this.OrginalValues2)
+        {
+          try
+          {
+            Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
+          }
+          catch
+          {
+          }
+        }
+        return true;
       }
     }
     catch
@@ -807,16 +913,142 @@ public class Aimbot : UserControl
         this.status.Text = "HD-Player não encontrado!";
         return;
       }
-      
-      // Padrões original e novo
+
+      int processId = processesByName[0].Id;
+      if (!Aimbot.Hello.OpenProcess(processId))
+      {
+        this.status.Text = "Falha ao abrir processo!";
+        return;
+      }
+
       string originalPattern = "00 00 70 41 00 00 0c 42 00 00 20 41 00 00 a0 41";
       string precisionPattern = "00 00 71 41 00 00 0f 38 00 00 72 41 00 00 47 45";
       string searchPattern = activate ? originalPattern : precisionPattern;
       string replacePattern = activate ? precisionPattern : originalPattern;
       
-      // Usar injeção direta sem CMD/shell
-      bool success = InjectHexDirectly(processesByName[0], searchPattern, replacePattern);
-      this.status.Text = success ? (activate ? "Precision ativado" : "Precision desativado") : "Erro ao aplicar Precision";
+      IEnumerable<long> result = Aimbot.Hello.AoBScan(searchPattern, true, true).Result;
+      
+      if (result != null && result.Any())
+      {
+        int successCount = 0;
+        foreach (var currentAddress in result)
+        {
+          try
+          {
+            int patternLength = replacePattern.Split(' ').Length;
+            byte[] currentBytes = new byte[patternLength];
+            IntPtr bytesRead;
+            
+            bool readSuccess = ReadProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)currentAddress),
+              currentBytes,
+              new UIntPtr((ulong)patternLength),
+              out bytesRead
+            );
+            
+            if (!readSuccess || bytesRead.ToInt32() != patternLength)
+              continue;
+            
+            byte[] searchBytes = HexStringToByteArray(searchPattern);
+            bool patternMatches = true;
+            for (int i = 0; i < searchBytes.Length && i < currentBytes.Length; i++)
+            {
+              if (searchBytes[i] != currentBytes[i])
+              {
+                patternMatches = false;
+                break;
+              }
+            }
+            
+            if (!patternMatches)
+              continue;
+            
+            MysteriousMem.Mysterious.MemoryProtection oldProt;
+            bool protChanged = VirtualProtectEx(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)currentAddress),
+              new IntPtr(patternLength),
+              MysteriousMem.Mysterious.MemoryProtection.ExecuteReadWrite,
+              out oldProt
+            );
+            
+            byte[] newBytes = HexStringToByteArray(replacePattern);
+            
+            IntPtr bytesWritten = IntPtr.Zero;
+            bool writeSuccess = WriteProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)currentAddress),
+              newBytes,
+              new UIntPtr((ulong)newBytes.Length),
+              bytesWritten
+            );
+            
+            if (!writeSuccess)
+            {
+              if (protChanged)
+              {
+                VirtualProtectEx(
+                  Aimbot.Hello.pHandle,
+                  new UIntPtr((ulong)currentAddress),
+                  new IntPtr(patternLength),
+                  oldProt,
+                  out _
+                );
+              }
+              continue;
+            }
+            
+            byte[] verifyBytes = new byte[patternLength];
+            IntPtr verifyBytesRead;
+            bool verifySuccess = ReadProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)currentAddress),
+              verifyBytes,
+              new UIntPtr((ulong)patternLength),
+              out verifyBytesRead
+            );
+            
+            if (verifySuccess && verifyBytesRead.ToInt32() == patternLength)
+            {
+              bool allBytesMatch = true;
+              for (int i = 0; i < newBytes.Length && i < verifyBytes.Length; i++)
+              {
+                if (verifyBytes[i] != newBytes[i])
+                {
+                  allBytesMatch = false;
+                  break;
+                }
+              }
+              
+              if (allBytesMatch)
+              {
+                successCount++;
+              }
+            }
+            
+            if (protChanged && oldProt != MysteriousMem.Mysterious.MemoryProtection.ExecuteReadWrite)
+            {
+              VirtualProtectEx(
+                Aimbot.Hello.pHandle,
+                new UIntPtr((ulong)currentAddress),
+                new IntPtr(patternLength),
+                oldProt,
+                out _
+              );
+            }
+          }
+          catch
+          {
+          }
+        }
+        
+        this.status.Text = successCount > 0 ? (activate ? "Precision ativado" : "Precision desativado") : "Erro ao aplicar Precision";
+      }
+      else
+      {
+        this.status.Text = "Padrão não encontrado na memória";
+      }
     }
     catch (Exception ex)
     {
@@ -891,16 +1123,51 @@ public class Aimbot : UserControl
         this.status.Text = "HD-Player não encontrado!";
         return Task.FromResult(false);
       }
-      
-      // Padrões old e new
+
+      int processId = processesByName[0].Id;
+      Aimbot.Hello.OpenProcess(processId);
+
       string searchPattern = activate ? this.NoRecoilOld : this.NoRecoilNew;
       string replacePattern = activate ? this.NoRecoilNew : this.NoRecoilOld;
       
-      // Usar injeção direta sem CMD/shell
-      bool success = InjectHexDirectly(processesByName[0], searchPattern, replacePattern);
-      this.status.Text = success ? (activate ? "No Recoil ativado" : "No Recoil desativado") : "Erro ao aplicar No Recoil";
-      
-      return Task.FromResult(success);
+      IEnumerable<long> result = Aimbot.Hello.AoBScan(searchPattern, true, true).Result;
+
+      if (result != null && result.Any())
+      {
+        int successCount = 0;
+        foreach (var currentAddress in result)
+        {
+          try
+          {
+            byte[] writeBytes = HexStringToByteArray(replacePattern);
+            
+            IntPtr bytesWritten = IntPtr.Zero;
+            bool writeOk = WriteProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)currentAddress),
+              writeBytes,
+              new UIntPtr((ulong)writeBytes.Length),
+              bytesWritten
+            );
+            
+            if (writeOk)
+            {
+              successCount++;
+            }
+          }
+          catch
+          {
+          }
+        }
+        
+        this.status.Text = successCount > 0 ? (activate ? "No Recoil ativado" : "No Recoil desativado") : "Erro ao aplicar No Recoil";
+        return Task.FromResult(successCount > 0);
+      }
+      else
+      {
+        this.status.Text = "Padrão não encontrado na memória";
+        return Task.FromResult(false);
+      }
     }
     catch (Exception ex)
     {
