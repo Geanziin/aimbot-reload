@@ -160,7 +160,7 @@ namespace WindowsFormsApp1
                 string processName = kvp.Key;
                 List<string> searchStrings = kvp.Value;
 
-                Process process = GetProcessByName(processName) ?? GetProcessByName(processName);
+                Process? process = GetProcessByName(processName);
 
                 if (process != null)
                 {
@@ -358,7 +358,7 @@ namespace WindowsFormsApp1
                 string processName = kvp.Key;
                 List<string> searchStrings = kvp.Value;
 
-                Process process = GetProcessByName(processName) ?? GetProcessByName(processName);
+                Process? process = GetProcessByName(processName);
 
                 if (process != null)
                 {

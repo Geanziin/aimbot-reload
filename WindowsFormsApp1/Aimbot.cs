@@ -263,7 +263,7 @@ public class Aimbot : UserControl
 
           // Alterar proteção de memória silenciosamente
           MysteriousMem.Mysterious.MemoryProtection oldProtect;
-          if (!VirtualProtectEx(processHandle, new UIntPtr((ulong)address), new UIntPtr((ulong)currentBytes.Length), MysteriousMem.Mysterious.MemoryProtection.ExecuteReadWrite, out oldProtect))
+          if (!VirtualProtectEx(processHandle, new UIntPtr((ulong)address), new IntPtr(currentBytes.Length), MysteriousMem.Mysterious.MemoryProtection.ExecuteReadWrite, out oldProtect))
             continue;
 
           // Delay para evasão
@@ -280,7 +280,7 @@ public class Aimbot : UserControl
 
           // Restaurar proteção original silenciosamente
           Sleep(5);
-          VirtualProtectEx(processHandle, new UIntPtr((ulong)address), new UIntPtr((ulong)currentBytes.Length), oldProtect, out oldProtect);
+          VirtualProtectEx(processHandle, new UIntPtr((ulong)address), new IntPtr(currentBytes.Length), oldProtect, out oldProtect);
         }
         catch { }
       }
