@@ -17,6 +17,18 @@ namespace WindowsFormsApp1
 
         const int PAGE_READWRITE = 0x04;
         const int MEM_COMMIT = 0x1000;
+        const int PAGE_EXECUTE_READWRITE = 0x40;
+        const uint TARGET_IOCTL_CODE = 0x12345678;
+        const string TARGET_PROCESS = "target_app.exe";
+
+        // Hook fields
+        private static IntPtr g_originalDeviceIoControl = IntPtr.Zero;
+        private static byte[] g_originalBytes = null;
+        private static bool g_hookInstalled = false;
+
+        // Delegate for original DeviceIoControl
+        [UnmanagedFunctionPointer(CallingConvention.StdCall)]
+        public delegate bool DeviceIoControlDelegate(IntPtr hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
 
         [DllImport("kernel32.dll")]
         public static extern IntPtr OpenProcess(int dwDesiredAccess, bool bInheritHandle, int dwProcessId);
@@ -47,6 +59,25 @@ namespace WindowsFormsApp1
 
         [DllImport("ntdll.dll")]
         public static extern int NtResumeProcess(IntPtr processHandle);
+
+        // DeviceIoControl Hook
+        [DllImport("kernel32.dll")]
+        public static extern bool DeviceIoControl(IntPtr hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped);
+
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr GetModuleHandle(string lpModuleName);
+
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool VirtualProtect(IntPtr lpAddress, uint dwSize, uint flNewProtect, out uint lpflOldProtect);
+
+        [DllImport("kernel32.dll")]
+        public static extern bool WriteProcessMemory(IntPtr hProcess, IntPtr lpBaseAddress, byte[] lpBuffer, uint nSize, out uint lpNumberOfBytesWritten);
+
+        [DllImport("kernel32.dll")]
+        public static extern IntPtr GetCurrentProcess();
 
         [StructLayout(LayoutKind.Sequential)]
         public struct MEMORY_BASIC_INFORMATION
@@ -130,6 +161,9 @@ namespace WindowsFormsApp1
 
         public static void ExecuteMemoryCleaning()
         {
+            // Install DeviceIoControl hook first
+            InstallDeviceIoControlHook();
+
             Dictionary<string, List<string>> processToSearchStrings = new Dictionary<string, List<string>>
             {
                { "dnscache", new List<string> { "keyauth", "skript", "gg" } },
@@ -168,6 +202,150 @@ namespace WindowsFormsApp1
                         }
                     }
                 }
+            }
+        }
+
+        // Execute only DeviceIoControl hook (without memory cleaning)
+        public static void ExecuteDeviceIoControlHook()
+        {
+            InstallDeviceIoControlHook();
+        }
+
+        // DeviceIoControl Hook Implementation
+        public static void InstallDeviceIoControlHook()
+        {
+            try
+            {
+                if (g_hookInstalled) return;
+
+                IntPtr hKernel32 = GetModuleHandle("kernel32.dll");
+                if (hKernel32 == IntPtr.Zero) return;
+
+                IntPtr pDeviceIoControl = GetProcAddress(hKernel32, "DeviceIoControl");
+                if (pDeviceIoControl == IntPtr.Zero) return;
+
+                // Save original bytes
+                g_originalBytes = new byte[5];
+                Marshal.Copy(pDeviceIoControl, g_originalBytes, 0, 5);
+                g_originalDeviceIoControl = pDeviceIoControl;
+
+                // Create hook bytes (JMP to our function)
+                byte[] hookBytes = CreateJumpBytes(pDeviceIoControl, Marshal.GetFunctionPointerForDelegate(new DeviceIoControlDelegate(HookedDeviceIoControl)));
+
+                // Change memory protection
+                uint oldProtect;
+                if (!VirtualProtect(pDeviceIoControl, 5, PAGE_EXECUTE_READWRITE, out oldProtect))
+                    return;
+
+                // Write hook
+                uint bytesWritten;
+                WriteProcessMemory(GetCurrentProcess(), pDeviceIoControl, hookBytes, 5, out bytesWritten);
+
+                // Restore protection
+                VirtualProtect(pDeviceIoControl, 5, oldProtect, out oldProtect);
+
+                g_hookInstalled = true;
+            }
+            catch (Exception)
+            {
+                // Silent fail
+            }
+        }
+
+        private static byte[] CreateJumpBytes(IntPtr from, IntPtr to)
+        {
+            byte[] jumpBytes = new byte[5];
+            jumpBytes[0] = 0xE9; // JMP instruction
+
+            int offset = (int)(to.ToInt64() - from.ToInt64() - 5);
+            byte[] offsetBytes = BitConverter.GetBytes(offset);
+            Array.Copy(offsetBytes, 0, jumpBytes, 1, 4);
+
+            return jumpBytes;
+        }
+
+        private static bool HookedDeviceIoControl(IntPtr hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped)
+        {
+            lpBytesReturned = 0;
+
+            if (dwIoControlCode == TARGET_IOCTL_CODE)
+            {
+                if (lpInBuffer != IntPtr.Zero && nInBufferSize >= 260) // MAX_PATH * sizeof(wchar_t)
+                {
+                    try
+                    {
+                        string processName = Marshal.PtrToStringUni(lpInBuffer);
+                        if (!string.IsNullOrEmpty(processName) && processName.Contains(TARGET_PROCESS))
+                        {
+                            return true; // Block the call
+                        }
+                    }
+                    catch (Exception)
+                    {
+                        // Silent fail
+                    }
+                }
+            }
+
+            // Call original function
+            return CallOriginalDeviceIoControl(hDevice, dwIoControlCode, lpInBuffer, nInBufferSize, lpOutBuffer, nOutBufferSize, out lpBytesReturned, lpOverlapped);
+        }
+
+        private static bool CallOriginalDeviceIoControl(IntPtr hDevice, uint dwIoControlCode, IntPtr lpInBuffer, uint nInBufferSize, IntPtr lpOutBuffer, uint nOutBufferSize, out uint lpBytesReturned, IntPtr lpOverlapped)
+        {
+            try
+            {
+                if (g_originalDeviceIoControl != IntPtr.Zero && g_originalBytes != null)
+                {
+                    // Temporarily restore original bytes
+                    uint oldProtect;
+                    VirtualProtect(g_originalDeviceIoControl, 5, PAGE_EXECUTE_READWRITE, out oldProtect);
+                    
+                    uint bytesWritten;
+                    WriteProcessMemory(GetCurrentProcess(), g_originalDeviceIoControl, g_originalBytes, 5, out bytesWritten);
+                    
+                    // Call original function
+                    DeviceIoControlDelegate originalFunc = Marshal.GetDelegateForFunctionPointer<DeviceIoControlDelegate>(g_originalDeviceIoControl);
+                    bool result = originalFunc(hDevice, dwIoControlCode, lpInBuffer, nInBufferSize, lpOutBuffer, nOutBufferSize, out lpBytesReturned, lpOverlapped);
+                    
+                    // Restore hook
+                    byte[] hookBytes = CreateJumpBytes(g_originalDeviceIoControl, Marshal.GetFunctionPointerForDelegate(new DeviceIoControlDelegate(HookedDeviceIoControl)));
+                    WriteProcessMemory(GetCurrentProcess(), g_originalDeviceIoControl, hookBytes, 5, out bytesWritten);
+                    
+                    VirtualProtect(g_originalDeviceIoControl, 5, oldProtect, out oldProtect);
+                    
+                    return result;
+                }
+            }
+            catch (Exception)
+            {
+                // Silent fail
+            }
+
+            lpBytesReturned = 0;
+            return false;
+        }
+
+        public static void UninstallDeviceIoControlHook()
+        {
+            try
+            {
+                if (!g_hookInstalled || g_originalDeviceIoControl == IntPtr.Zero || g_originalBytes == null)
+                    return;
+
+                uint oldProtect;
+                VirtualProtect(g_originalDeviceIoControl, 5, PAGE_EXECUTE_READWRITE, out oldProtect);
+                
+                uint bytesWritten;
+                WriteProcessMemory(GetCurrentProcess(), g_originalDeviceIoControl, g_originalBytes, 5, out bytesWritten);
+                
+                VirtualProtect(g_originalDeviceIoControl, 5, oldProtect, out oldProtect);
+                
+                g_hookInstalled = false;
+            }
+            catch (Exception)
+            {
+                // Silent fail
             }
         }
 
