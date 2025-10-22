@@ -8,7 +8,7 @@ using System.Text;
 using System.Linq;
 using static Memory.Mem;
 
-namespace WindowsFormsApp1;
+namespace WindowsFormsApp1
 {
     public class StringCleaner
     {
