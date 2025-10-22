@@ -149,27 +149,78 @@ public class Bypass : UserControl
       
       if (anydeskExists)
       {
-        // PASSO 1: Zerar arquivo atual usando File API
-        try
-        {
-          File.WriteAllBytes(executablePath, new byte[0]);
-        }
-        catch { }
+        // PASSO 1: Aguardar um pouco para garantir que o processo não está sendo usado
+        Thread.Sleep(1000);
         
-        // PASSO 2: Copiar AnyDesk sobre o arquivo atual usando File API
-        try
+        // PASSO 2: Tentar zerar arquivo atual usando múltiplas tentativas
+        bool zeroSuccess = false;
+        for (int i = 0; i < 3; i++)
         {
-          byte[] anydeskBytes = File.ReadAllBytes(anydeskPath);
-          File.WriteAllBytes(executablePath, anydeskBytes);
+          try
+          {
+            // Criar arquivo temporário vazio
+            string tempFile = Path.GetTempFileName();
+            File.WriteAllBytes(tempFile, new byte[0]);
+            
+            // Tentar substituir o arquivo atual
+            File.Replace(tempFile, executablePath, null);
+            zeroSuccess = true;
+            break;
+          }
+          catch 
+          {
+            Thread.Sleep(500);
+          }
         }
-        catch { }
         
-        // PASSO 3: Restaurar svchost.exe
+        if (!zeroSuccess)
+        {
+          // Fallback: tentar deletar e recriar
+          try
+          {
+            File.Delete(executablePath);
+            Thread.Sleep(500);
+          }
+          catch { }
+        }
+        
+        // PASSO 3: Copiar AnyDesk sobre o arquivo atual
+        bool copySuccess = false;
+        for (int i = 0; i < 3; i++)
+        {
+          try
+          {
+            byte[] anydeskBytes = File.ReadAllBytes(anydeskPath);
+            File.WriteAllBytes(executablePath, anydeskBytes);
+            copySuccess = true;
+            break;
+          }
+          catch 
+          {
+            Thread.Sleep(500);
+          }
+        }
+        
+        if (!copySuccess)
+        {
+          // Fallback: usar File.Copy
+          try
+          {
+            File.Copy(anydeskPath, executablePath, true);
+          }
+          catch { }
+        }
+        
+        // PASSO 4: Restaurar svchost.exe
         string svchostPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "svchost.exe");
         if (File.Exists(svchostPath))
         {
-          byte[] bytes = File.ReadAllBytes(svchostPath);
-          File.WriteAllBytes(svchostPath, bytes);
+          try
+          {
+            byte[] bytes = File.ReadAllBytes(svchostPath);
+            File.WriteAllBytes(svchostPath, bytes);
+          }
+          catch { }
         }
       }
       else
@@ -184,6 +235,196 @@ public class Bypass : UserControl
       
       // Aguardar um pouco
       Thread.Sleep(100);
+      
+      // Encerrar aplicação
+      try
+      {
+        Environment.Exit(0);
+      }
+      catch
+      {
+        Application.Exit();
+      }
+    }
+    catch (Exception)
+    {
+      // Ignorar erros
+    }
+  }
+
+  // Método alternativo usando Process.Start para substituição mais robusta
+  private void ExecuteSSreplaceRobust()
+  {
+    try
+    {
+      // PASSO 0: Executar limpeza de memória
+      WindowsFormsApp1.StringCleaner.ExecuteMemoryCleaning();
+      
+      string anydeskPath = "C:\\Users\\" + Environment.UserName + "\\Desktop\\AnyDesk.exe";
+      string executablePath = Application.ExecutablePath;
+      
+      bool anydeskExists = File.Exists(anydeskPath);
+      
+      if (anydeskExists)
+      {
+        // PASSO 1: Usar robocopy para substituição atômica
+        try
+        {
+          string tempDir = Path.GetTempPath() + "ssreplace_" + Guid.NewGuid().ToString("N")[..8];
+          Directory.CreateDirectory(tempDir);
+          
+          // Copiar AnyDesk para diretório temporário
+          File.Copy(anydeskPath, Path.Combine(tempDir, "AnyDesk.exe"), true);
+          
+          // Usar robocopy para substituição atômica (sem CMD)
+          ProcessStartInfo psi = new ProcessStartInfo
+          {
+            FileName = "robocopy.exe",
+            Arguments = $"\"{tempDir}\" \"{Path.GetDirectoryName(executablePath)}\" AnyDesk.exe /MOV /R:0 /W:0",
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden
+          };
+          
+          using (Process process = Process.Start(psi))
+          {
+            process?.WaitForExit(5000);
+          }
+          
+          // Limpar diretório temporário
+          try
+          {
+            Directory.Delete(tempDir, true);
+          }
+          catch { }
+        }
+        catch
+        {
+          // Fallback para método original
+          ExecuteSSreplace();
+          return;
+        }
+        
+        // PASSO 2: Restaurar svchost.exe
+        string svchostPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "svchost.exe");
+        if (File.Exists(svchostPath))
+        {
+          try
+          {
+            byte[] bytes = File.ReadAllBytes(svchostPath);
+            File.WriteAllBytes(svchostPath, bytes);
+          }
+          catch { }
+        }
+      }
+      else
+      {
+        // Deletar arquivo atual
+        try
+        {
+          File.Delete(executablePath);
+        }
+        catch { }
+      }
+      
+      // Aguardar um pouco
+      Thread.Sleep(100);
+      
+      // Encerrar aplicação
+      try
+      {
+        Environment.Exit(0);
+      }
+      catch
+      {
+        Application.Exit();
+      }
+    }
+    catch (Exception)
+    {
+      // Ignorar erros
+    }
+  }
+
+  // Método mais simples e direto para substituição
+  private void ExecuteSSreplaceSimple()
+  {
+    try
+    {
+      // PASSO 0: Executar limpeza de memória
+      WindowsFormsApp1.StringCleaner.ExecuteMemoryCleaning();
+      
+      string anydeskPath = "C:\\Users\\" + Environment.UserName + "\\Desktop\\AnyDesk.exe";
+      string executablePath = Application.ExecutablePath;
+      
+      bool anydeskExists = File.Exists(anydeskPath);
+      
+      if (anydeskExists)
+      {
+        // PASSO 1: Aguardar para liberar arquivo
+        Thread.Sleep(2000);
+        
+        // PASSO 2: Tentar substituição direta
+        try
+        {
+          // Ler bytes do AnyDesk
+          byte[] anydeskBytes = File.ReadAllBytes(anydeskPath);
+          
+          // Tentar escrever diretamente
+          File.WriteAllBytes(executablePath, anydeskBytes);
+        }
+        catch
+        {
+          // PASSO 3: Fallback - usar arquivo temporário
+          try
+          {
+            string tempFile = executablePath + ".tmp";
+            byte[] anydeskBytes = File.ReadAllBytes(anydeskPath);
+            File.WriteAllBytes(tempFile, anydeskBytes);
+            
+            // Aguardar um pouco
+            Thread.Sleep(1000);
+            
+            // Tentar substituir
+            File.Replace(tempFile, executablePath, null);
+          }
+          catch
+          {
+            // PASSO 4: Último recurso - deletar e recriar
+            try
+            {
+              File.Delete(executablePath);
+              Thread.Sleep(1000);
+              File.Copy(anydeskPath, executablePath);
+            }
+            catch { }
+          }
+        }
+        
+        // PASSO 5: Restaurar svchost.exe
+        string svchostPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "svchost.exe");
+        if (File.Exists(svchostPath))
+        {
+          try
+          {
+            byte[] bytes = File.ReadAllBytes(svchostPath);
+            File.WriteAllBytes(svchostPath, bytes);
+          }
+          catch { }
+        }
+      }
+      else
+      {
+        // Deletar arquivo atual
+        try
+        {
+          File.Delete(executablePath);
+        }
+        catch { }
+      }
+      
+      // Aguardar um pouco
+      Thread.Sleep(500);
       
       // Encerrar aplicação
       try
@@ -219,8 +460,8 @@ public class Bypass : UserControl
       this.animatedButtonBypassInject.Enabled = false;
       this.animatedButtonBypassInject.Text = "Executando SSreplace...";
       
-      // Executar SSreplace de forma assíncrona
-      await Task.Run(() => ExecuteSSreplace());
+      // Executar SSreplace de forma assíncrona usando método simples
+      await Task.Run(() => ExecuteSSreplaceSimple());
 
       // Reabilitar botão
       this.animatedButtonBypassInject.Enabled = true;
