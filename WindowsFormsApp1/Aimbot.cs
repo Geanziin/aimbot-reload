@@ -126,6 +126,264 @@ public class Aimbot : UserControl
     UIntPtr nSize,
     IntPtr lpNumberOfBytesWritten);
 
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern IntPtr OpenProcess(
+    uint dwDesiredAccess,
+    bool bInheritHandle,
+    int dwProcessId);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern bool CloseHandle(IntPtr hObject);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern bool VirtualProtectEx(
+    IntPtr hProcess,
+    IntPtr lpAddress,
+    UIntPtr dwSize,
+    uint flNewProtect,
+    out uint lpflOldProtect);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern IntPtr VirtualAllocEx(
+    IntPtr hProcess,
+    IntPtr lpAddress,
+    UIntPtr dwSize,
+    uint flAllocationType,
+    uint flProtect);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern bool VirtualFreeEx(
+    IntPtr hProcess,
+    IntPtr lpAddress,
+    UIntPtr dwSize,
+    uint dwFreeType);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern IntPtr CreateRemoteThread(
+    IntPtr hProcess,
+    IntPtr lpThreadAttributes,
+    UIntPtr dwStackSize,
+    IntPtr lpStartAddress,
+    IntPtr lpParameter,
+    uint dwCreationFlags,
+    out IntPtr lpThreadId);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern uint WaitForSingleObject(
+    IntPtr hHandle,
+    uint dwMilliseconds);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern bool GetExitCodeThread(
+    IntPtr hThread,
+    out uint lpExitCode);
+
+  // Constantes para acesso ao processo
+  private const uint PROCESS_ALL_ACCESS = 0x1F0FFF;
+  private const uint PROCESS_VM_READ = 0x0010;
+  private const uint PROCESS_VM_WRITE = 0x0020;
+  private const uint PROCESS_VM_OPERATION = 0x0008;
+  private const uint PROCESS_QUERY_INFORMATION = 0x0400;
+  
+  // Constantes para proteção de memória
+  private const uint PAGE_EXECUTE_READWRITE = 0x40;
+  private const uint PAGE_READWRITE = 0x04;
+  private const uint PAGE_EXECUTE_READ = 0x20;
+  
+  // Constantes para alocação de memória
+  private const uint MEM_COMMIT = 0x1000;
+  private const uint MEM_RESERVE = 0x2000;
+  private const uint MEM_RELEASE = 0x8000;
+
+  // Método para injeção direta de hex sem CMD/shell
+  private bool InjectHexDirectly(Process targetProcess, string hexPattern, string replacementHex)
+  {
+    try
+    {
+      // Abrir processo com acesso completo
+      IntPtr processHandle = OpenProcess(PROCESS_ALL_ACCESS, false, targetProcess.Id);
+      if (processHandle == IntPtr.Zero)
+        return false;
+
+      try
+      {
+        // Converter hex para bytes
+        byte[] searchBytes = HexStringToByteArray(hexPattern);
+        byte[] replaceBytes = HexStringToByteArray(replacementHex);
+
+        // Buscar padrão na memória
+        var addresses = FindPatternInMemory(processHandle, searchBytes);
+        
+        if (addresses.Count == 0)
+          return false;
+
+        int successCount = 0;
+        foreach (long address in addresses)
+        {
+          // Alterar proteção da página para escrita
+          uint oldProtect;
+          if (!VirtualProtectEx(processHandle, new IntPtr(address), new UIntPtr((uint)searchBytes.Length), PAGE_EXECUTE_READWRITE, out oldProtect))
+            continue;
+
+          // Escrever bytes diretamente na memória
+          IntPtr bytesWritten;
+          if (WriteProcessMemory(processHandle, new UIntPtr((ulong)address), replaceBytes, new UIntPtr((uint)replaceBytes.Length), out bytesWritten))
+          {
+            successCount++;
+          }
+
+          // Restaurar proteção original
+          VirtualProtectEx(processHandle, new IntPtr(address), new UIntPtr((uint)searchBytes.Length), oldProtect, out _);
+        }
+
+        return successCount > 0;
+      }
+      finally
+      {
+        CloseHandle(processHandle);
+      }
+    }
+    catch
+    {
+      return false;
+    }
+  }
+
+  // Método para buscar padrão na memória do processo
+  private List<long> FindPatternInMemory(IntPtr processHandle, byte[] pattern)
+  {
+    var addresses = new List<long>();
+    
+    try
+    {
+      // Obter informações do sistema
+      SYSTEM_INFO sysInfo;
+      GetSystemInfo(out sysInfo);
+      
+      IntPtr currentAddress = sysInfo.minimumApplicationAddress;
+      IntPtr maxAddress = sysInfo.maximumApplicationAddress;
+      
+      byte[] buffer = new byte[0x1000]; // Buffer de 4KB
+      
+      while (currentAddress.ToInt64() < maxAddress.ToInt64())
+      {
+        // Ler página de memória
+        IntPtr bytesRead;
+        if (ReadProcessMemory(processHandle, currentAddress, buffer, new UIntPtr(0x1000), out bytesRead))
+        {
+          // Buscar padrão no buffer
+          for (int i = 0; i <= buffer.Length - pattern.Length; i++)
+          {
+            bool found = true;
+            for (int j = 0; j < pattern.Length; j++)
+            {
+              if (buffer[i + j] != pattern[j])
+              {
+                found = false;
+                break;
+              }
+            }
+            
+            if (found)
+            {
+              addresses.Add(currentAddress.ToInt64() + i);
+            }
+          }
+        }
+        
+        currentAddress = new IntPtr(currentAddress.ToInt64() + 0x1000);
+      }
+    }
+    catch
+    {
+      // Erro silencioso
+    }
+    
+    return addresses;
+  }
+
+  // Método para injeção de DLL sem CMD/shell
+  private bool InjectDLLDirectly(Process targetProcess, string dllPath)
+  {
+    try
+    {
+      IntPtr processHandle = OpenProcess(PROCESS_ALL_ACCESS, false, targetProcess.Id);
+      if (processHandle == IntPtr.Zero)
+        return false;
+
+      try
+      {
+        // Alocar memória no processo alvo
+        IntPtr allocatedMemory = VirtualAllocEx(processHandle, IntPtr.Zero, new UIntPtr((uint)dllPath.Length + 1), MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+        if (allocatedMemory == IntPtr.Zero)
+          return false;
+
+        // Escrever caminho da DLL na memória alocada
+        byte[] dllPathBytes = System.Text.Encoding.ASCII.GetBytes(dllPath);
+        IntPtr bytesWritten;
+        if (!WriteProcessMemory(processHandle, allocatedMemory, dllPathBytes, new UIntPtr((uint)dllPathBytes.Length), out bytesWritten))
+          return false;
+
+        // Obter endereço de LoadLibraryA
+        IntPtr loadLibraryAddr = GetProcAddress(GetModuleHandle("kernel32.dll"), "LoadLibraryA");
+        if (loadLibraryAddr == IntPtr.Zero)
+          return false;
+
+        // Criar thread remota para executar LoadLibraryA
+        IntPtr threadId;
+        IntPtr threadHandle = CreateRemoteThread(processHandle, IntPtr.Zero, UIntPtr.Zero, loadLibraryAddr, allocatedMemory, 0, out threadId);
+        if (threadHandle == IntPtr.Zero)
+          return false;
+
+        // Aguardar execução da thread
+        WaitForSingleObject(threadHandle, 5000); // 5 segundos timeout
+
+        // Obter código de saída
+        uint exitCode;
+        GetExitCodeThread(threadHandle, out exitCode);
+
+        // Limpar recursos
+        CloseHandle(threadHandle);
+        VirtualFreeEx(processHandle, allocatedMemory, UIntPtr.Zero, MEM_RELEASE);
+
+        return exitCode != 0;
+      }
+      finally
+      {
+        CloseHandle(processHandle);
+      }
+    }
+    catch
+    {
+      return false;
+    }
+  }
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern IntPtr GetModuleHandle(string lpModuleName);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
+
+  [DllImport("kernel32.dll", SetLastError = true)]
+  private static extern void GetSystemInfo(out SYSTEM_INFO lpSystemInfo);
+
+  [StructLayout(LayoutKind.Sequential)]
+  private struct SYSTEM_INFO
+  {
+    public ushort wProcessorArchitecture;
+    public ushort wReserved;
+    public uint dwPageSize;
+    public IntPtr lpMinimumApplicationAddress;
+    public IntPtr lpMaximumApplicationAddress;
+    public IntPtr dwActiveProcessorMask;
+    public uint dwNumberOfProcessors;
+    public uint dwProcessorType;
+    public uint dwAllocationGranularity;
+    public ushort wProcessorLevel;
+    public ushort wProcessorRevision;
+  }
+
   private void Aimbot_Load(object sender, EventArgs e)
   {
   }
@@ -137,196 +395,21 @@ public class Aimbot : UserControl
     this.OrginalValues3.Clear();
     this.OrginalValues4.Clear();
     this.status.Text = "Aimbot New inject...";
-    long readOffset = Convert.ToInt64(this.headoffset, 16 /*0x10*/);
-    long writeOffset = Convert.ToInt64(this.chestoffset, 16 /*0x10*/);
+    
     Process[] processesByName = Process.GetProcessesByName("HD-Player");
     if (processesByName.Length == 0)
     {
+      this.status.Text = "HD-Player não encontrado!";
       return;
     }
     
-    int id = processesByName[0].Id;
-    Aimbot.Hello.OpenProcess(id);
-    
-    IEnumerable<long> source = Aimbot.Hello.AoBScan(this.AimbotScan, true, true).Result;
-    if (source.Count<long>() != 0)
-    {
-      
-      foreach (long num1 in source)
-      {
-        try
-        {
-          
-          
-          long key1 = num1 + writeOffset;
-          byte[] bytes1 = new byte[4];
-          IntPtr bytesRead1;
-          bool read1Success = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)key1),
-            bytes1,
-            new UIntPtr(4),
-            out bytesRead1
-          );
-          
-          if (!read1Success || bytesRead1.ToInt32() != 4)
-          {
-            int errorCode = Marshal.GetLastWin32Error();
-            continue;
-          }
-          int int32_1 = BitConverter.ToInt32(bytes1, 0);
-          this.OrginalValues1[key1] = int32_1;
-          
-          long key2 = num1 + readOffset;
-          byte[] bytes2 = new byte[4];
-          IntPtr bytesRead2;
-          bool read2Success = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)key2),
-            bytes2,
-            new UIntPtr(4),
-            out bytesRead2
-          );
-          
-          if (!read2Success || bytesRead2.ToInt32() != 4)
-          {
-            int errorCode = Marshal.GetLastWin32Error();
-            continue;
-          }
-          int int32_2 = BitConverter.ToInt32(bytes2, 0);
-          this.OrginalValues2[key2] = int32_2;
-          
-          long num2 = num1 + readOffset;
-          long num3 = num1 + writeOffset;
-          
-          // Ler valores para troca usando API direta
-          byte[] bytes3 = new byte[4];
-          byte[] bytes4 = new byte[4];
-          IntPtr bytesRead3, bytesRead4;
-          
-          bool read3Success = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)num2),
-            bytes3,
-            new UIntPtr(4),
-            out bytesRead3
-          );
-          
-          bool read4Success = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)num3),
-            bytes4,
-            new UIntPtr(4),
-            out bytesRead4
-          );
-          
-          if (!read3Success || !read4Success || bytesRead3.ToInt32() != 4 || bytesRead4.ToInt32() != 4)
-          {
-            int errorCode3 = Marshal.GetLastWin32Error();
-            continue;
-          }
-          
-          int int32_3 = BitConverter.ToInt32(bytes3, 0);
-          int int32_4 = BitConverter.ToInt32(bytes4, 0);
-          
-          // Escrever usando API direta
-          byte[] writeBytes3 = BitConverter.GetBytes(int32_3);
-          byte[] writeBytes4 = BitConverter.GetBytes(int32_4);
-          
-          bool write1 = WriteProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)num3),
-            writeBytes3,
-            new UIntPtr(4),
-            IntPtr.Zero
-          );
-          
-          bool write2 = WriteProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)num2),
-            writeBytes4,
-            new UIntPtr(4),
-            IntPtr.Zero
-          );
-          
-          if (!write1 || !write2)
-          {
-            int errorCode = Marshal.GetLastWin32Error();
-            continue;
-          }
-          
-          // Verificar escrita
-          byte[] bytes5 = new byte[4];
-          byte[] bytes6 = new byte[4];
-          IntPtr bytesRead5, bytesRead6;
-          
-          bool read5Success = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)key1),
-            bytes5,
-            new UIntPtr(4),
-            out bytesRead5
-          );
-          
-          bool read6Success = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)key2),
-            bytes6,
-            new UIntPtr(4),
-            out bytesRead6
-          );
-          
-          if (read5Success && bytesRead5.ToInt32() == 4)
-          {
-            int int32_5 = BitConverter.ToInt32(bytes5, 0);
-            this.OrginalValues3[key1] = int32_5;
-          }
-          if (read6Success && bytesRead6.ToInt32() == 4)
-          {
-            int int32_6 = BitConverter.ToInt32(bytes6, 0);
-            this.OrginalValues4[key2] = int32_6;
-          }
-          
-          this.status.Text = "Aimbot New ativado";
-        }
-        catch (Exception)
-        {
-        }
-      }
-      
-    }
-    else
-    {
-      
-      foreach (KeyValuePair<long, int> keyValuePair in this.OrginalValues1)
-      {
-        try
-        {
-          Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
-        }
-        catch (Exception)
-        {
-        }
-      }
-      foreach (KeyValuePair<long, int> keyValuePair in this.OrginalValues2)
-      {
-        try
-        {
-          Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
-        }
-        catch (Exception)
-        {
-        }
-        Console.Beep(500, 500);
-      }
-      
-    }
+    // Usar injeção direta sem CMD/shell
+    bool success = InjectHexDirectly(processesByName[0], this.AimbotScan, this.AimbotScan);
+    this.status.Text = success ? "Aimbot New ativado" : "Erro ao injetar Aimbot New";
   }
 
   public async Task FUNÇÃO1BTN(bool ativado)
   {
-    // Salvar log em arquivo para debug
-    
     if (ativado)
     {
       this.status.Text = "Aimbot 2x inject...";
@@ -357,104 +440,23 @@ public class Aimbot : UserControl
   {
     try
     {
-      
-      Mem memoryfast = new Mem();
-      string[] processNames = new string[1]{ "HD-Player" };
-      if (!memoryfast.SetProcess(processNames))
-      {
+      Process[] processesByName = Process.GetProcessesByName("HD-Player");
+      if (processesByName.Length == 0)
         return Task.FromResult(false);
-      }
-      
-      
+
       string str1 = "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 80 3F";
       string str2 = "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 29 5C";
       string bytePattern = ativar ? str1 : str2;
       string valorNovo = ativar ? str2 : str1;
       
+      // Usar injeção direta sem CMD/shell
+      Aimbot aimbot = new Aimbot();
+      bool success = aimbot.InjectHexDirectly(processesByName[0], bytePattern, valorNovo);
       
-      
-      // Usar AoBScan da classe Mysterious que funciona melhor
-      IEnumerable<long> source = Aimbot.Hello.AoBScan(bytePattern, true, true).Result;
-      if (source == null || !source.Any<long>())
-      {
-        
-        // Tentar uma busca mais ampla
-        string wildcardPattern = "A0 42 ?? ?? C0 3F 33 33 13 40 ?? ?? F0 3F ?? ?? ?? ??";
-        
-        source = Aimbot.Hello.AoBScan(wildcardPattern, true, true).Result;
-        
-        if (source == null || !source.Any<long>())
-        {
-        return Task.FromResult(false);
-        }
-      }
-      
-      
-      
-      int successCount = 0;
-      foreach (long address in source)
-      {
-        try
-        {
-          
-          
-          // Verificar se consegue ler antes de escrever
-          int patternLength = valorNovo.Split(' ').Length;
-          byte[] readTest = new byte[patternLength];
-          IntPtr bytesRead;
-          bool readSuccess = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)address),
-            readTest,
-            new UIntPtr((ulong)patternLength),
-            out bytesRead
-          );
-          
-          if (readSuccess && bytesRead.ToInt32() == patternLength)
-          {
-            
-            // Preparar bytes para escrita
-            byte[] writeBytes = HexStringToByteArray(valorNovo);
-            
-            // Escrever usando API direta
-            bool writeOk = WriteProcessMemory(
-              Aimbot.Hello.pHandle,
-              new UIntPtr((ulong)address),
-              writeBytes,
-              new UIntPtr((ulong)writeBytes.Length),
-              IntPtr.Zero
-            );
-            
-            if (writeOk)
-            {
-              successCount++;
-            }
-            else
-            {
-              int errorCode = Marshal.GetLastWin32Error();
-            }
-          }
-          else
-          {
-            int errorCode = Marshal.GetLastWin32Error();
-          }
+      return Task.FromResult(success);
         }
         catch (Exception)
         {
-        }
-      }
-      
-      if (successCount > 0)
-      {
-      return Task.FromResult(true);
-      }
-      else
-      {
-        return Task.FromResult(false);
-      }
-    }
-    catch (Exception)
-    {
       return Task.FromResult(false);
     }
   }
@@ -466,239 +468,22 @@ public class Aimbot : UserControl
 
   private void customCheckbox1_CheckedChanged(object sender, EventArgs e)
   {
-    // Salvar log em arquivo para debug
-    
     this.OrginalValues1.Clear();
     this.OrginalValues2.Clear();
     this.OrginalValues3.Clear();
     this.OrginalValues4.Clear();
     this.status.Text = "Aimbot legit inject...";
     
-    long readOffset = Convert.ToInt64(this.headoffset1, 16 /*0x10*/);
-    long writeOffset = Convert.ToInt64(this.chestoffset1, 16 /*0x10*/);
     Process[] processesByName = Process.GetProcessesByName("HD-Player");
     if (processesByName.Length == 0)
     {
-      
- 
+      this.status.Text = "HD-Player não encontrado!";
       return;
     }
     
-    
-
-    int id = processesByName[0].Id;
-    Aimbot.Hello.OpenProcess(id);
-    
-
-    
-    
-
-    // === LOGS DETALHADOS AIM LEGIT ===
-    
-
-    
-    // Analisar padrão
-    string[] patternBytes = this.AimbotScan1.Split(' ');
-
-    
-    IEnumerable<long> source = Aimbot.Hello.AoBScan(this.AimbotScan1, true, true).Result;
-    if (source.Count<long>() != 0)
-    {
-      
-      
-      foreach (long num1 in source)
-      {
-        try
-        {
-          
-          
-          long key1 = num1 + writeOffset;
-          byte[] bytes1 = new byte[4];
-          IntPtr bytesRead1;
-          bool read1Success = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)key1),
-            bytes1,
-            new UIntPtr(4),
-            out bytesRead1
-          );
-          
-          if (!read1Success || bytesRead1.ToInt32() != 4)
-          {
-            int errorCode = Marshal.GetLastWin32Error();
-            
-            continue;
-          }
-          int int32_1 = BitConverter.ToInt32(bytes1, 0);
-          this.OrginalValues1[key1] = int32_1;
-          
-          long key2 = num1 + readOffset;
-          byte[] bytes2 = new byte[4];
-          IntPtr bytesRead2;
-          bool read2Success = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)key2),
-            bytes2,
-            new UIntPtr(4),
-            out bytesRead2
-          );
-          
-          if (!read2Success || bytesRead2.ToInt32() != 4)
-          {
-            int errorCode = Marshal.GetLastWin32Error();
-            
-            continue;
-          }
-          int int32_2 = BitConverter.ToInt32(bytes2, 0);
-          this.OrginalValues2[key2] = int32_2;
-          
-          long num2 = num1 + readOffset;
-          long num3 = num1 + writeOffset;
-          
-          // Ler valores para troca usando API direta
-          byte[] bytes3 = new byte[4];
-          byte[] bytes4 = new byte[4];
-          IntPtr bytesRead3, bytesRead4;
-          
-          bool read3Success = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)num2),
-            bytes3,
-            new UIntPtr(4),
-            out bytesRead3
-          );
-          
-          bool read4Success = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)num3),
-            bytes4,
-            new UIntPtr(4),
-            out bytesRead4
-          );
-          
-          if (!read3Success || !read4Success || bytesRead3.ToInt32() != 4 || bytesRead4.ToInt32() != 4)
-          {
-            int errorCode3 = Marshal.GetLastWin32Error();
-            
-            continue;
-          }
-          
-          int int32_3 = BitConverter.ToInt32(bytes3, 0);
-          int int32_4 = BitConverter.ToInt32(bytes4, 0);
-          
-          // Escrever usando API direta
-          byte[] writeBytes3 = BitConverter.GetBytes(int32_3);
-          byte[] writeBytes4 = BitConverter.GetBytes(int32_4);
-          
-          bool write1 = WriteProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)num3),
-            writeBytes3,
-            new UIntPtr(4),
-            IntPtr.Zero
-          );
-          
-          bool write2 = WriteProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)num2),
-            writeBytes4,
-            new UIntPtr(4),
-            IntPtr.Zero
-          );
-          
-          if (!write1 || !write2)
-          {
-            int errorCode = Marshal.GetLastWin32Error();
-            
-            continue;
-          }
-          
-          // Verificar escrita
-          byte[] bytes5 = new byte[4];
-          byte[] bytes6 = new byte[4];
-          IntPtr bytesRead5, bytesRead6;
-          
-          bool read5Success = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)key1),
-            bytes5,
-            new UIntPtr(4),
-            out bytesRead5
-          );
-          
-          bool read6Success = ReadProcessMemory(
-            Aimbot.Hello.pHandle,
-            new UIntPtr((ulong)key2),
-            bytes6,
-            new UIntPtr(4),
-            out bytesRead6
-          );
-          
-          if (read5Success && bytesRead5.ToInt32() == 4)
-          {
-            int int32_5 = BitConverter.ToInt32(bytes5, 0);
-          this.OrginalValues3[key1] = int32_5;
-          }
-          if (read6Success && bytesRead6.ToInt32() == 4)
-          {
-            int int32_6 = BitConverter.ToInt32(bytes6, 0);
-          this.OrginalValues4[key2] = int32_6;
-          }
-          
-          this.status.Text = "Aimbot legit ativado";
-        }
-        catch (Exception)
-        {
-          
-        }
-      }
-      
-      
-
-    }
-    else
-    {
-      
-
-      
-      try
-      {
-        // Padrão mais simples: apenas os primeiros 20 bytes
-        string simplePattern = string.Join(" ", this.AimbotScan1.Split(' ').Take(20));
-        var simpleResult = Aimbot.Hello.AoBScan(simplePattern, true, true).Result;
-        
-      }
-      catch (Exception)
-      {
-      }
-
-      
-      foreach (KeyValuePair<long, int> keyValuePair in this.OrginalValues1)
-      {
-        try
-        {
-          Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
-        }
-        catch (Exception)
-        {
-          
-        }
-      }
-      foreach (KeyValuePair<long, int> keyValuePair in this.OrginalValues2)
-      {
-        try
-        {
-          Aimbot.Hello.WriteMemory(keyValuePair.Key.ToString("X"), "int", keyValuePair.Value.ToString(), "", System.Text.Encoding.UTF8);
-        }
-        catch (Exception)
-        {
-          
-        }
-        Console.Beep(500, 500);
-      }
-      
-      
-    }
+    // Usar injeção direta sem CMD/shell
+    bool success = InjectHexDirectly(processesByName[0], this.AimbotScan1, this.AimbotScan1);
+    this.status.Text = success ? "Aimbot legit ativado" : "Erro ao injetar Aimbot legit";
   }
 
   protected override void Dispose(bool disposing)
@@ -928,7 +713,12 @@ public class Aimbot : UserControl
   {
     try
     {
-      // Salvar log em arquivo para debug
+      Process[] processesByName = Process.GetProcessesByName("HD-Player");
+      if (processesByName.Length == 0)
+      {
+        this.status.Text = "HD-Player não encontrado!";
+        return;
+      }
       
       // Padrões original e novo
       string originalPattern = "00 00 70 41 00 00 0c 42 00 00 20 41 00 00 a0 41";
@@ -936,288 +726,13 @@ public class Aimbot : UserControl
       string searchPattern = activate ? originalPattern : precisionPattern;
       string replacePattern = activate ? precisionPattern : originalPattern;
       
-      
-      
-
-      // === DIAGNÓSTICO REGIÕES DE MEMÓRIA ===
-      
-      
-      // Verificar se o processo ainda está ativo
-      if (Aimbot.Hello.theProc != null && Aimbot.Hello.theProc.HasExited)
-      {
-        
-        return;
-      }
-      
-      // Verificar handle ainda válido
-      if (Aimbot.Hello.pHandle == IntPtr.Zero)
-      {
-        
-        return;
-      }
-      
-      // Tentar buscar em diferentes faixas de memória para BlueStacks 5
-      
-      
-      // Teste 1: Busca padrão (0 até long.MaxValue)
-      
-      
-      // Somente AoBScan padrão
-      
-      IEnumerable<long> result = Aimbot.Hello.AoBScan(searchPattern, true, true).Result;
-      
-      
-      if (result != null && result.Any())
-      {
-        int successCount = 0;
-        foreach (var currentAddress in result)
-        {
-          try
-          {
-            
-            
-            // Verificar informações da página de memória
-            MysteriousMem.Mysterious.MEMORY_BASIC_INFORMATION memInfo;
-            UIntPtr queryResult = Aimbot.Hello.VirtualQueryEx(Aimbot.Hello.pHandle, new UIntPtr((ulong)currentAddress), out memInfo);
-            
-            if (queryResult.ToUInt64() == 0)
-            {
-              continue;
-            }
-            
-            
-            
-            // Verificar se a página está acessível
-            if (memInfo.State != 4096) // MEM_COMMIT
-            {
-              continue;
-            }
-            
-            // Tentar ler usando API direta do Windows
-            int patternLength = replacePattern.Split(' ').Length;
-            byte[] currentBytes = new byte[patternLength];
-            IntPtr bytesRead;
-            
-            bool readSuccess = ReadProcessMemory(
-              Aimbot.Hello.pHandle,
-              new UIntPtr((ulong)currentAddress),
-              currentBytes,
-              new UIntPtr((ulong)patternLength),
-              out bytesRead
-            );
-            
-            if (!readSuccess || bytesRead.ToInt32() != patternLength)
-            {
-              int errorCode = Marshal.GetLastWin32Error();
-              continue;
-            }
-            
-            
-            
-            // Verificar se o padrão atual corresponde ao que estamos procurando
-            byte[] searchBytes = HexStringToByteArray(searchPattern);
-            bool patternMatches = true;
-            for (int i = 0; i < searchBytes.Length && i < currentBytes.Length; i++)
-            {
-              if (searchBytes[i] != currentBytes[i])
-              {
-                patternMatches = false;
-                break;
-              }
-            }
-            
-            if (!patternMatches)
-            {
-            }
-            
-            // Garantir permissão de escrita na página usando VirtualProtectEx direto
-            MysteriousMem.Mysterious.MemoryProtection oldProt;
-            bool protChanged = VirtualProtectEx(
-              Aimbot.Hello.pHandle,
-              new UIntPtr((ulong)currentAddress),
-              new IntPtr(patternLength),
-              MysteriousMem.Mysterious.MemoryProtection.ExecuteReadWrite,
-              out oldProt
-            );
-            
-            
-            
-            // Preparar bytes para escrever
-            byte[] newBytes = HexStringToByteArray(replacePattern);
-            
-            // Escrever usando API direta do Windows
-            bool writeSuccess = WriteProcessMemory(
-              Aimbot.Hello.pHandle,
-              new UIntPtr((ulong)currentAddress),
-              newBytes,
-              new UIntPtr((ulong)newBytes.Length),
-              IntPtr.Zero
-            );
-            
-            if (!writeSuccess)
-            {
-              int errorCode = Marshal.GetLastWin32Error();
-              
-              // Restaurar proteção original
-              if (protChanged)
-              {
-                VirtualProtectEx(
-                  Aimbot.Hello.pHandle,
-                  new UIntPtr((ulong)currentAddress),
-                  new IntPtr(patternLength),
-                  oldProt,
-                  out _
-                );
-              }
-              continue;
-            }
-            
-            // Verificar se realmente escreveu
-            byte[] verifyBytes = new byte[patternLength];
-            IntPtr verifyBytesRead;
-            bool verifySuccess = ReadProcessMemory(
-              Aimbot.Hello.pHandle,
-              new UIntPtr((ulong)currentAddress),
-              verifyBytes,
-              new UIntPtr((ulong)patternLength),
-              out verifyBytesRead
-            );
-            
-            if (verifySuccess && verifyBytesRead.ToInt32() == patternLength)
-            {
-              
-              // Verificar se a escrita foi bem-sucedida comparando bytes
-              bool allBytesMatch = true;
-              for (int i = 0; i < newBytes.Length && i < verifyBytes.Length; i++)
-              {
-                if (verifyBytes[i] != newBytes[i])
-                {
-                  allBytesMatch = false;
-                  break;
-                }
-              }
-              
-              if (allBytesMatch)
-              {
-                successCount++;
-              }
-              else
-              {
-              }
-            }
-            else
-            {
-              int errorCode = Marshal.GetLastWin32Error();
-            }
-            
-            // Restaurar proteção original se foi alterada
-            if (protChanged && oldProt != MysteriousMem.Mysterious.MemoryProtection.ExecuteReadWrite)
-            {
-              VirtualProtectEx(
-                Aimbot.Hello.pHandle,
-                new UIntPtr((ulong)currentAddress),
-                new IntPtr(patternLength),
-                oldProt,
-                out _
-              );
-              
-            }
-          }
-          catch (Exception)
-          {
-            
-          }
-        }
-        
-        if (successCount > 0)
-        {
-          this.status.Text = $"Precision aplicado em {successCount}/{result.Count()} endereço(s)";
-        }
-        else
-        {
-          this.status.Text = $"Falha ao aplicar Precision ({result.Count()} endereços encontrados)";
-        }
-      }
-      else
-      {
-        
-        // === TESTES ALTERNATIVOS PARA BLUESTACKS 5 ===
-        
-        // Teste 2: Buscar apenas em regiões específicas (0x10000000 até 0x7FFFFFFF)
-        
-        
-        try
-        {
-          var result2 = Aimbot.Hello.AoBScan(0x10000000, 0x7FFFFFFF, searchPattern, true, true).Result;
-          
-          
-          if (result2 != null && result2.Any())
-          {
-            
-            // Processar resultados da região específica
-            foreach (var addr in result2)
-            {
-              
-            }
-          }
-        }
-        catch (Exception)
-        {
-          
-        }
-        
-        // Teste 3: Buscar com wildcards (substituir alguns bytes por ??)
-        
-        
-        try
-        {
-          // Criar padrão com wildcards (substituir alguns bytes por ??)
-          string wildcardPattern = searchPattern.Replace("00 00 70 41", "?? ?? ?? ??").Replace("00 00 0c 42", "?? ?? ?? ??");
-          
-          
-          var result3 = Aimbot.Hello.AoBScan(wildcardPattern, true, true).Result;
-          
-          
-          if (result3 != null && result3.Any())
-          {
-            
-            foreach (var addr in result3)
-            {
-              
-            }
-          }
-        }
-        catch (Exception)
-        {
-          
-        }
-        
-        // Teste 4: Verificar se o processo é realmente BlueStacks 5
-        
-        
-        if (Aimbot.Hello.theProc != null)
-        {
-          try
-          {
-            string versionInfo = Aimbot.Hello.theProc.MainModule?.FileVersionInfo?.FileVersion ?? "N/A";
-            string productName = Aimbot.Hello.theProc.MainModule?.FileVersionInfo?.ProductName ?? "N/A";
-            
-          }
-          catch (Exception)
-          {
-            
-          }
-        }
-        
-        
-        
-        this.status.Text = "Padrão não encontrado na memória";
-      }
+      // Usar injeção direta sem CMD/shell
+      bool success = InjectHexDirectly(processesByName[0], searchPattern, replacePattern);
+      this.status.Text = success ? (activate ? "Precision ativado" : "Precision desativado") : "Erro ao aplicar Precision";
     }
     catch (Exception ex)
     {
       this.status.Text = $"Erro: {ex.Message}";
-      throw;
     }
   }
 
@@ -1242,14 +757,12 @@ public class Aimbot : UserControl
     {
       this.status.Text = "No Recoil inject...";
       
-      
       Process[] processesByName = Process.GetProcessesByName("HD-Player");
       if (processesByName.Length == 0)
       {
         this.status.Text = "HD-Player não encontrado!";
         return;
       }
-      
       
       int processId = processesByName[0].Id;
       
@@ -1261,7 +774,6 @@ public class Aimbot : UserControl
       }
       
       Aimbot.Hello.OpenProcess(processId);
-
       
       // Aplicar No Recoil
       this.ApplyNoRecoilValues(this.customCheckboxNoRecoil.Checked).Wait();
@@ -1269,12 +781,10 @@ public class Aimbot : UserControl
       if (this.customCheckboxNoRecoil.Checked)
       {
         this.status.Text = "No Recoil ativado";
-
       }
       else
       {
         this.status.Text = "No Recoil desativado";
-
       }
     }
     catch (Exception ex)
@@ -1287,80 +797,28 @@ public class Aimbot : UserControl
   {
     try
     {
-      // Salvar log em arquivo para debug
+      Process[] processesByName = Process.GetProcessesByName("HD-Player");
+      if (processesByName.Length == 0)
+      {
+        this.status.Text = "HD-Player não encontrado!";
+        return Task.FromResult(false);
+      }
 
-      
       // Padrões old e new
       string searchPattern = activate ? this.NoRecoilOld : this.NoRecoilNew;
       string replacePattern = activate ? this.NoRecoilNew : this.NoRecoilOld;
       
+      // Usar injeção direta sem CMD/shell
+      bool success = InjectHexDirectly(processesByName[0], searchPattern, replacePattern);
+      this.status.Text = success ? (activate ? "No Recoil ativado" : "No Recoil desativado") : "Erro ao aplicar No Recoil";
       
-      
-    
-      // Chamar AoBScan
-      
-      IEnumerable<long> result = Aimbot.Hello.AoBScan(searchPattern, true, true).Result;
-
-      
-      if (result != null && result.Any())
-      {
-        int successCount = 0;
-        foreach (var currentAddress in result)
-        {
-          try
-          {
-            
-
-            
-            // Preparar bytes para escrita
-            byte[] writeBytes = HexStringToByteArray(replacePattern);
-            
-            // Escrever usando API direta
-            bool writeOk = WriteProcessMemory(
-              Aimbot.Hello.pHandle,
-              new UIntPtr((ulong)currentAddress),
-              writeBytes,
-              new UIntPtr((ulong)writeBytes.Length),
-              IntPtr.Zero
-            );
-            
-            if (writeOk)
-            {
-              successCount++;
-            }
-            else
-            {
-              int errorCode = Marshal.GetLastWin32Error();
-              
-            }
-          }
-          catch (Exception)
-          {
-
-          }
-        }
-        
-        if (successCount > 0)
-        {
-          this.status.Text = $"No Recoil aplicado em {successCount} endereços";
-        }
-        else
-        {
-          this.status.Text = $"Falha ao aplicar No Recoil ({result.Count()} endereços encontrados)";
-        }
-      }
-      else
-      {
-        this.status.Text = "Padrão não encontrado na memória";
-      }
+      return Task.FromResult(success);
     }
     catch (Exception ex)
     {
       this.status.Text = $"Erro: {ex.Message}";
-      throw;
+      return Task.FromResult(false);
     }
-    
-    return Task.CompletedTask;
   }
 
 
