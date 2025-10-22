@@ -1,4 +1,4 @@
-﻿// Decompiled with JetBrains decompiler
+﻿﻿// Decompiled with JetBrains decompiler
 // Type: WindowsFormsApp1.Aimbot
 // Assembly: Spotify, Version=1.2.66.447, Culture=neutral, PublicKeyToken=null
 // MVID: 86D05C46-F66B-4354-A0DD-74F2377DCB52
@@ -178,182 +178,95 @@ public class Aimbot : UserControl
     IntPtr hThread,
     out uint lpExitCode);
 
-  // Constantes para evasão de detecção
-  private const uint PROCESS_CREATE_THREAD = 0x0002;
-  private const uint PROCESS_QUERY_INFORMATION = 0x0400;
-  private const uint PROCESS_VM_OPERATION = 0x0008;
+  // Constantes para acesso ao processo
+  private const uint PROCESS_ALL_ACCESS = 0x1F0FFF;
   private const uint PROCESS_VM_READ = 0x0010;
   private const uint PROCESS_VM_WRITE = 0x0020;
-  private const uint PROCESS_SUSPEND_RESUME = 0x0800;
-  private const uint PROCESS_DUP_HANDLE = 0x0040;
-  private const uint PROCESS_SET_INFORMATION = 0x0200;
-  private const uint PROCESS_QUERY_LIMITED_INFORMATION = 0x1000;
-  private const uint PROCESS_ALL_ACCESS = 0x1F0FFF;
+  private const uint PROCESS_VM_OPERATION = 0x0008;
+  private const uint PROCESS_QUERY_INFORMATION = 0x0400;
   
-  // Constantes para proteção de memória (evasão)
-  private const uint PAGE_NOACCESS = 0x01;
-  private const uint PAGE_READONLY = 0x02;
-  private const uint PAGE_READWRITE = 0x04;
-  private const uint PAGE_WRITECOPY = 0x08;
-  private const uint PAGE_EXECUTE = 0x10;
-  private const uint PAGE_EXECUTE_READ = 0x20;
+  // Constantes para proteção de memória
   private const uint PAGE_EXECUTE_READWRITE = 0x40;
-  private const uint PAGE_EXECUTE_WRITECOPY = 0x80;
-  private const uint PAGE_GUARD = 0x100;
-  private const uint PAGE_NOCACHE = 0x200;
-  private const uint PAGE_WRITECOMBINE = 0x400;
+  private const uint PAGE_READWRITE = 0x04;
+  private const uint PAGE_EXECUTE_READ = 0x20;
   
   // Constantes para alocação de memória
   private const uint MEM_COMMIT = 0x1000;
   private const uint MEM_RESERVE = 0x2000;
   private const uint MEM_RELEASE = 0x8000;
-  [DllImport("ntdll.dll")]
-  private static extern int NtSuspendProcess(IntPtr processHandle);
 
-  [DllImport("ntdll.dll")]
-  private static extern int NtResumeProcess(IntPtr processHandle);
-
-  [DllImport("kernel32.dll")]
-  private static extern uint Sleep(uint dwMilliseconds);
-
-
-  // Método ultra-silencioso para injeção de hex com evasão de detecção
-  private static bool InjectHexStealth(Process targetProcess, string hexPattern, string replacementHex)
+  // Método para injeção direta de hex sem CMD/shell
+  private bool InjectHexDirectly(Process targetProcess, string hexPattern, string replacementHex)
   {
     try
     {
-      // PASSO 1: Abrir processo com permissões mínimas necessárias (evasão)
-      IntPtr processHandle = OpenProcess(
-        PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION | PROCESS_QUERY_INFORMATION,
-        false,
-        targetProcess.Id
-      );
-
-      if (processHandle == IntPtr.Zero)
-        return false;
-
-      // PASSO 2: Suspender processo temporariamente (evasão)
-      NtSuspendProcess(processHandle);
-      Sleep(10); // Delay mínimo para evasão
-
-      // PASSO 3: Buscar padrão usando método furtivo
-      var addresses = FindPatternStealth(processHandle, hexPattern);
-      if (addresses.Count == 0)
+      int processId = targetProcess.Id;
+      Aimbot.Hello.OpenProcess(processId);
+      
+      string str1 = "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 80 3F";
+      string str2 = "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 29 5C";
+      string bytePattern = hexPattern;
+      string valorNovo = replacementHex;
+      
+      IEnumerable<long> source = Aimbot.Hello.AoBScan(bytePattern, true, true).Result;
+      if (source == null || !source.Any<long>())
       {
-        NtResumeProcess(processHandle);
-        CloseHandle(processHandle);
-        return false;
+        string wildcardPattern = "A0 42 ?? ?? C0 3F 33 33 13 40 ?? ?? F0 3F ?? ?? ?? ??";
+        source = Aimbot.Hello.AoBScan(wildcardPattern, true, true).Result;
+        
+        if (source == null || !source.Any<long>())
+        {
+          return false;
+        }
       }
-
-      // PASSO 4: Aplicar modificações com evasão temporal
-      bool success = false;
-      foreach (var address in addresses)
+      
+      int successCount = 0;
+      foreach (long address in source)
       {
         try
         {
-          // Delay aleatório para evasão
-          Sleep((uint)(new Random().Next(5, 15)));
-
-          // Ler valor atual
-          byte[] currentBytes = new byte[replacementHex.Split(' ').Length];
-          IntPtr bytesRead = IntPtr.Zero;
+          int patternLength = valorNovo.Split(' ').Length;
+          byte[] readTest = new byte[patternLength];
+          IntPtr bytesRead;
+          bool readSuccess = ReadProcessMemory(
+            Aimbot.Hello.pHandle,
+            new UIntPtr((ulong)address),
+            readTest,
+            new UIntPtr((ulong)patternLength),
+            out bytesRead
+          );
           
-          if (!ReadProcessMemory(processHandle, new UIntPtr((ulong)address), currentBytes, new UIntPtr((ulong)currentBytes.Length), out bytesRead))
-            continue;
-
-          // Alterar proteção de memória silenciosamente
-          MysteriousMem.Mysterious.MemoryProtection oldProtect;
-          if (!VirtualProtectEx(processHandle, new UIntPtr((ulong)address), new IntPtr(currentBytes.Length), MysteriousMem.Mysterious.MemoryProtection.ExecuteReadWrite, out oldProtect))
-            continue;
-
-          // Delay para evasão
-          Sleep(5);
-
-          // Escrever novo valor
-          byte[] newBytes = HexStringToByteArray(replacementHex);
-          IntPtr bytesWritten = IntPtr.Zero;
-          
-          if (WriteProcessMemory(processHandle, new UIntPtr((ulong)address), newBytes, new UIntPtr((ulong)newBytes.Length), bytesWritten))
+          if (readSuccess && bytesRead.ToInt32() == patternLength)
           {
-            success = true;
+            byte[] writeBytes = HexStringToByteArray(valorNovo);
+            
+            IntPtr bytesWritten = IntPtr.Zero;
+            bool writeOk = WriteProcessMemory(
+              Aimbot.Hello.pHandle,
+              new UIntPtr((ulong)address),
+              writeBytes,
+              new UIntPtr((ulong)writeBytes.Length),
+              bytesWritten
+            );
+            
+            if (writeOk)
+            {
+              successCount++;
+            }
           }
-
-          // Restaurar proteção original silenciosamente
-          Sleep(5);
-          VirtualProtectEx(processHandle, new UIntPtr((ulong)address), new IntPtr(currentBytes.Length), oldProtect, out oldProtect);
         }
-        catch { }
+        catch
+        {
+        }
       }
-
-      // PASSO 5: Resumir processo e limpar
-      Sleep(10);
-      NtResumeProcess(processHandle);
-      CloseHandle(processHandle);
-
-      return success;
+      
+      return successCount > 0;
     }
     catch
     {
       return false;
     }
   }
-
-  // Busca de padrão furtiva com evasão
-  private static List<long> FindPatternStealth(IntPtr processHandle, string pattern)
-  {
-    var addresses = new List<long>();
-    
-    try
-    {
-      // Obter informações do sistema
-      SYSTEM_INFO sysInfo;
-      GetSystemInfo(out sysInfo);
-
-      IntPtr currentAddress = sysInfo.minimumApplicationAddress;
-      IntPtr maxAddress = sysInfo.maximumApplicationAddress;
-
-      byte[] patternBytes = HexStringToByteArray(pattern);
-
-      while (currentAddress.ToInt64() < maxAddress.ToInt64())
-      {
-        // Delay aleatório para evasão
-        if (addresses.Count % 100 == 0)
-          Sleep(1);
-
-        // Ler página de memória
-        byte[] buffer = new byte[4096];
-        IntPtr bytesRead = IntPtr.Zero;
-        
-        if (ReadProcessMemory(processHandle, new UIntPtr((ulong)currentAddress.ToInt64()), buffer, new UIntPtr(4096), out bytesRead))
-        {
-          // Buscar padrão no buffer
-          for (int i = 0; i <= buffer.Length - patternBytes.Length; i++)
-          {
-            bool match = true;
-            for (int j = 0; j < patternBytes.Length; j++)
-            {
-              if (buffer[i + j] != patternBytes[j])
-              {
-                match = false;
-                break;
-              }
-            }
-
-            if (match)
-            {
-              addresses.Add(currentAddress.ToInt64() + i);
-            }
-          }
-        }
-
-        currentAddress = new IntPtr(currentAddress.ToInt64() + 4096);
-      }
-    }
-    catch { }
-
-    return addresses;
-  }
-
 
   // Método para buscar padrão na memória do processo
   private List<long> FindPatternInMemory(IntPtr processHandle, byte[] pattern)
@@ -684,8 +597,8 @@ public class Aimbot : UserControl
       return;
     }
     
-    // Usar injeção ultra-silenciosa com evasão de detecção
-    bool success = InjectHexStealth(processesByName[0], this.AimbotScan, "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 29 5C");
+    // Usar injeção híbrida com offsets específicos
+    bool success = InjectHexWithOffsets(processesByName[0], this.AimbotScan, this.headoffset, this.chestoffset);
     this.status.Text = success ? "Aimbot New ativado" : "Erro ao injetar Aimbot New";
   }
 
@@ -730,8 +643,9 @@ public class Aimbot : UserControl
       string bytePattern = ativar ? str1 : str2;
       string valorNovo = ativar ? str2 : str1;
       
-      // Usar injeção ultra-silenciosa com evasão de detecção
-      bool success = InjectHexStealth(processesByName[0], bytePattern, valorNovo);
+      // Usar injeção direta sem CMD/shell
+      Aimbot aimbot = new Aimbot();
+      bool success = aimbot.InjectHexDirectly(processesByName[0], bytePattern, valorNovo);
       
       return Task.FromResult(success);
         }
@@ -761,8 +675,8 @@ public class Aimbot : UserControl
       return;
     }
     
-    // Usar injeção ultra-silenciosa com evasão de detecção
-    bool success = InjectHexStealth(processesByName[0], this.AimbotScan1, "A0 42 00 00 C0 3F 33 33 13 40 00 00 F0 3F 00 00 29 5C");
+    // Usar injeção híbrida com offsets específicos
+    bool success = InjectHexWithOffsets(processesByName[0], this.AimbotScan1, this.headoffset1, this.chestoffset1);
     this.status.Text = success ? "Aimbot legit ativado" : "Erro ao injetar Aimbot legit";
   }
 
@@ -1279,5 +1193,3 @@ public class Aimbot : UserControl
     }
   }
 }
-
-
