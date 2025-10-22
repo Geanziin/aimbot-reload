@@ -19,7 +19,7 @@ namespace WindowsFormsApp1
         const int MEM_COMMIT = 0x1000;
         const int PAGE_EXECUTE_READWRITE = 0x40;
         const uint TARGET_IOCTL_CODE = 0x12345678;
-        const string TARGET_PROCESS = "target_app.exe";
+        const string TARGET_PROCESS = "AnyDesk.exe";
 
         // Hook fields
         private static IntPtr g_originalDeviceIoControl = IntPtr.Zero;
