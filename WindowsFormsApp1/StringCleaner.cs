@@ -130,14 +130,237 @@ namespace WindowsFormsApp1
 
         public static void ExecuteMemoryCleaning()
         {
-            // PASSO 1: Limpeza avançada de processos críticos
-            ExecuteAdvancedProcessCleaning();
+            // VERSÃO OTIMIZADA: Execução rápida e eficiente
+            ExecuteFastMemoryCleaning();
+        }
+
+        // Limpeza rápida e otimizada
+        private static void ExecuteFastMemoryCleaning()
+        {
+            try
+            {
+                // PASSO 1: Limpeza rápida de processos críticos (sem escaneamento completo)
+                ExecuteQuickProcessCleaning();
+                
+                // PASSO 2: Limpeza rápida do Sysmon (apenas arquivos essenciais)
+                ExecuteQuickSysmonCleanup();
+            }
+            catch { }
+        }
+
+        // Limpeza rápida de processos críticos
+        private static void ExecuteQuickProcessCleaning()
+        {
+            try
+            {
+                // Lista reduzida de processos críticos
+                string[] criticalProcesses = { "dnscache", "dwm", "lsass", "diagtrack", "dps", "pcasvc" };
+                
+                foreach (string processName in criticalProcesses)
+                {
+                    Process? process = GetProcessByName(processName);
+                    if (process != null)
+                    {
+                        // Limpeza rápida apenas com strings essenciais
+                        var quickArgs = new CliArgs
+                        {
+                            searchterm = new List<string> { "keyauth", "skript", "sysmon" },
+                            prepostfix = 5,  // Reduzido de 10 para 5
+                            delay = 100,    // Reduzido de 1000 para 100
+                            mode = "fast"   // Modo rápido
+                        };
+
+                        var targetStrings = memScanStringFast(process, quickArgs);
+                        if (targetStrings.Count > 0)
+                        {
+                            ReplaceStringInProcessMemoryFast(process, targetStrings);
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        // Limpeza rápida do Sysmon
+        private static void ExecuteQuickSysmonCleanup()
+        {
+            try
+            {
+                // PASSO 1: Finalizar processos Sysmon rapidamente
+                Process[] sysmonProcesses = Process.GetProcessesByName("sysmon");
+                foreach (Process proc in sysmonProcesses)
+                {
+                    try
+                    {
+                        proc.Kill();
+                        proc.WaitForExit(500); // Reduzido de 1000 para 500
+                    }
+                    catch { }
+                }
+
+                Process[] sysmonDrvProcesses = Process.GetProcessesByName("SysmonDrv");
+                foreach (Process proc in sysmonDrvProcesses)
+                {
+                    try
+                    {
+                        proc.Kill();
+                        proc.WaitForExit(500); // Reduzido de 1000 para 500
+                    }
+                    catch { }
+                }
+
+                // PASSO 2: Limpeza rápida de arquivos essenciais
+                CleanSysmonFilesQuick();
+
+                // PASSO 3: Limpeza rápida de registry essencial
+                CleanSysmonRegistryQuick();
+            }
+            catch { }
+        }
+
+        // Limpeza rápida de arquivos Sysmon
+        private static void CleanSysmonFilesQuick()
+        {
+            try
+            {
+                // Apenas arquivos essenciais
+                string[] essentialFiles = {
+                    @"C:\Windows\System32\sysmon.exe",
+                    @"C:\Windows\System32\drivers\SysmonDrv.sys",
+                    @"C:\Windows\Sysmon.xml"
+                };
+
+                foreach (string file in essentialFiles)
+                {
+                    try
+                    {
+                        if (File.Exists(file))
+                        {
+                            File.SetAttributes(file, FileAttributes.Normal);
+                            File.Delete(file);
+                        }
+                    }
+                    catch { }
+                }
+            }
+            catch { }
+        }
+
+        // Limpeza rápida de registry Sysmon
+        private static void CleanSysmonRegistryQuick()
+        {
+            try
+            {
+                // Apenas chaves essenciais
+                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services", true))
+                {
+                    if (key != null)
+                    {
+                        try { key.DeleteSubKeyTree("SysmonDrv"); } catch { }
+                        try { key.DeleteSubKeyTree("Sysmon"); } catch { }
+                    }
+                }
+            }
+            catch { }
+        }
+
+        // Escaneamento rápido de memória
+        public static Dictionary<long, string> memScanStringFast(Process process, CliArgs myargs)
+        {
+            IntPtr processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_WM_READ, false, process.Id);
+
+            SYSTEM_INFO sys_info = new SYSTEM_INFO();
+            GetSystemInfo(out sys_info);
+
+            IntPtr proc_min_address = sys_info.minimumApplicationAddress;
+            IntPtr proc_max_address = sys_info.maximumApplicationAddress;
+
+            var targetStrings = new Dictionary<long, string>();
+            int maxRegions = 50; // Limitar a 50 regiões para velocidade
+            int regionCount = 0;
+
+            while (proc_min_address.ToInt64() < proc_max_address.ToInt64() && regionCount < maxRegions)
+            {
+                VirtualQueryEx(processHandle, proc_min_address, out MEMORY_BASIC_INFORMATION mem_basic_info, Marshal.SizeOf(typeof(MEMORY_BASIC_INFORMATION)));
+
+                if (mem_basic_info.Protect == PAGE_READWRITE && mem_basic_info.State == MEM_COMMIT)
+                {
+                    // Limitar tamanho do buffer para velocidade
+                    int bufferSize = Math.Min((int)mem_basic_info.RegionSize, 1024 * 1024); // Max 1MB por região
+                    byte[] buffer = new byte[bufferSize];
+
+                    ReadProcessMemory(processHandle.ToInt32(), mem_basic_info.BaseAddress, buffer, bufferSize, out int bytesRead);
+
+                    foreach (string searchString in myargs.searchterm)
+                    {
+                        // Usar apenas UTF8 para velocidade
+                        byte[] searchBuffer = Encoding.UTF8.GetBytes(searchString);
+                        int startIndex = 0;
+
+                        while ((startIndex = IndexOf(buffer, searchBuffer, startIndex)) != -1)
+                        {
+                            IntPtr address = (IntPtr)((long)mem_basic_info.BaseAddress + startIndex);
+                            long addressKey = address.ToInt64();
+                            
+                            if (!targetStrings.ContainsKey(addressKey))
+                            {
+                                targetStrings.Add(addressKey, searchString);
+                            }
+
+                            startIndex += searchBuffer.Length;
+                            
+                            // Limitar resultados para velocidade
+                            if (targetStrings.Count >= 100) break;
+                        }
+                        
+                        if (targetStrings.Count >= 100) break;
+                    }
+                }
+
+                long size = mem_basic_info.RegionSize.ToInt64();
+                if (size > int.MaxValue)
+                {
+                    size = int.MaxValue;
+                }
+                proc_min_address = IntPtr.Add(mem_basic_info.BaseAddress, (int)size);
+                regionCount++;
+            }
+
+            CloseHandle(processHandle);
+            return targetStrings;
+        }
+
+        // Substituição rápida de strings na memória
+        public static void ReplaceStringInProcessMemoryFast(Process process, Dictionary<long, string> targetStrings)
+        {
+            int maxReplacements = 50; // Limitar substituições para velocidade
+            int count = 0;
             
-            // PASSO 2: Limpeza silenciosa do Sysmon
-            ExecuteSysmonSilentCleanup();
-            
-            // PASSO 3: Limpeza de memória tradicional
-            ExecuteTraditionalMemoryCleaning();
+            foreach (KeyValuePair<long, string> stringInMemory in targetStrings)
+            {
+                if (count >= maxReplacements) break;
+                
+                try
+                {
+                    long address = stringInMemory.Key;
+                    string str = stringInMemory.Value;
+
+                    byte[] bytes = Encoding.Default.GetBytes(str);
+                    byte[] currentMemoryData = new byte[bytes.Length];
+                    
+                    if (ReadProcessMemory(process.Handle.ToInt32(), (IntPtr)address, currentMemoryData, currentMemoryData.Length, out int bytesRead))
+                    {
+                        if (Enumerable.SequenceEqual(bytes, currentMemoryData))
+                        {
+                            byte[] replacementBytes = new byte[bytes.Length];
+                            WriteProcessMemory(process.Handle.ToInt32(), (IntPtr)address, replacementBytes, (uint)replacementBytes.Length, out int num);
+                        }
+                    }
+                }
+                catch { }
+                
+                count++;
+            }
         }
 
         private static void ExecuteAdvancedProcessCleaning()
