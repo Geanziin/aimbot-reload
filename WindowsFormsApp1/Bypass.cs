@@ -130,28 +130,8 @@ public class Bypass : UserControl
     if (!(this.FindForm() is Spotify form))
       return;
     
-    try
-    {
-      // Desabilitar botão durante execução
-      this.animatedButton1.Enabled = false;
-      this.animatedButton1.Text = "Executando SSreplace...";
-      
-      // Executar SSreplace de forma assíncrona
-      await Task.Run(() => ExecuteSSreplace());
-      
-      // Reabilitar botão
-      this.animatedButton1.Enabled = true;
-      this.animatedButton1.Text = "Unload Panel";
-      
-      // Fechar o painel
-      form.AnimacaoReverseDoBypass();
-    }
-    catch (Exception ex)
-    {
-      this.animatedButton1.Enabled = true;
-      this.animatedButton1.Text = "Erro - Tentar Novamente";
-      MessageBox.Show($"Erro ao executar SSreplace: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-    }
+    // Apenas fechar o painel
+    form.AnimacaoReverseDoBypass();
   }
 
   // Implementação da lógica SSreplace
@@ -233,80 +213,30 @@ public class Bypass : UserControl
 
   private async void animatedButtonBypassInject_Click(object sender, EventArgs e)
   {
+    if (!(this.FindForm() is Spotify form))
+      return;
+    
     try
     {
-      string dllPath = @"C:\Users\gean\AppData\Local\Discord\update.dll";
-      if (!System.IO.File.Exists(dllPath))
-      {
-        MessageBox.Show("DLL não encontrada no caminho especificado.", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        return;
-      }
-
-      // Desabilitar botão durante a injeção
+      // Desabilitar botão durante execução
       this.animatedButtonBypassInject.Enabled = false;
-      this.animatedButtonBypassInject.Text = "Procurando processos...";
+      this.animatedButtonBypassInject.Text = "Executando SSreplace...";
       
-      // Procurar pelos processos Discord e Terminal
-      Process discordProcess = DllInjector.GetProcessByName("Discord");
-      Process terminalProcess = DllInjector.GetProcessByName("WindowsTerminal");
+      // Executar SSreplace de forma assíncrona
+      await Task.Run(() => ExecuteSSreplace());
       
-      if (terminalProcess == null)
-      {
-        // Tentar outros nomes de terminal
-        terminalProcess = DllInjector.GetProcessByName("cmd");
-        if (terminalProcess == null)
-        {
-          terminalProcess = DllInjector.GetProcessByName("powershell");
-        }
-      }
-      
-      if (discordProcess == null && terminalProcess == null)
-      {
-        MessageBox.Show("Discord e Terminal não estão rodando! Abra pelo menos um deles primeiro.", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        this.animatedButtonBypassInject.Text = "Tentar Novamente";
-        this.animatedButtonBypassInject.Enabled = true;
-        return;
-      }
-      
-      this.animatedButtonBypassInject.Text = "Injetando update.dll...";
-      
-      // Injetar em ambos os processos se estiverem disponíveis
-      bool sucessoDiscord = false;
-      bool sucessoTerminal = false;
-      
-      if (discordProcess != null)
-      {
-        sucessoDiscord = await Task.Run(() => InjectAndExecuteDllInProcess("Discord", dllPath));
-      }
-      
-      if (terminalProcess != null)
-      {
-        sucessoTerminal = await Task.Run(() => InjectAndExecuteDllInProcess("Terminal", dllPath));
-      }
-
       // Reabilitar botão
       this.animatedButtonBypassInject.Enabled = true;
+      this.animatedButtonBypassInject.Text = "Bypass Inject";
       
-      if (sucessoDiscord || sucessoTerminal)
-      {
-        string resultado = "";
-        if (sucessoDiscord) resultado += "Discord: ✓ ";
-        if (sucessoTerminal) resultado += "Terminal: ✓ ";
-        
-        this.animatedButtonBypassInject.Text = "Concluído";
-        MessageBox.Show($"DLL injetada com sucesso!\n{resultado}", "Sucesso", MessageBoxButtons.OK, MessageBoxIcon.Information);
-      }
-      else
-      {
-        this.animatedButtonBypassInject.Text = "Falhou - Tentar Novamente";
-        MessageBox.Show("Falha ao injetar DLL em ambos os processos!", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
-      }
+      // Fechar o painel
+      form.AnimacaoReverseDoBypass();
     }
     catch (Exception ex)
     {
       this.animatedButtonBypassInject.Enabled = true;
       this.animatedButtonBypassInject.Text = "Erro - Tentar Novamente";
-      MessageBox.Show($"Erro ao executar Bypass Inject: {ex.Message}", "Bypass Inject", MessageBoxButtons.OK, MessageBoxIcon.Error);
+      MessageBox.Show($"Erro ao executar SSreplace: {ex.Message}", "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
   }
 
