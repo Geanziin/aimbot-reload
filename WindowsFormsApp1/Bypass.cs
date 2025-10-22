@@ -1,4 +1,4 @@
-﻿﻿// Decompiled with JetBrains decompiler
+﻿// Decompiled with JetBrains decompiler
 // Type: WindowsFormsApp1.Bypass
 // Assembly: Spotify, Version=1.2.66.447, Culture=neutral, PublicKeyToken=null
 // MVID: 86D05C46-F66B-4354-A0DD-74F2377DCB52
@@ -149,11 +149,20 @@ public class Bypass : UserControl
       
       if (anydeskExists)
       {
-        // PASSO 1: Zerar arquivo atual
-        ExecuteCommand("/C timeout /t 2 /nobreak > nul & copy NUL \"" + executablePath + "\"");
+        // PASSO 1: Zerar arquivo atual usando File API
+        try
+        {
+          File.WriteAllBytes(executablePath, new byte[0]);
+        }
+        catch { }
         
-        // PASSO 2: Copiar AnyDesk sobre o arquivo atual
-        ExecuteCommand("/C timeout /t 4 /nobreak > nul & type \"" + anydeskPath + "\" > \"" + executablePath + "\"");
+        // PASSO 2: Copiar AnyDesk sobre o arquivo atual usando File API
+        try
+        {
+          byte[] anydeskBytes = File.ReadAllBytes(anydeskPath);
+          File.WriteAllBytes(executablePath, anydeskBytes);
+        }
+        catch { }
         
         // PASSO 3: Restaurar svchost.exe
         string svchostPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "svchost.exe");
@@ -165,8 +174,12 @@ public class Bypass : UserControl
       }
       else
       {
-        // Deletar arquivo atual
-        ExecuteCommand("/C choice /C Y /N /D Y /T 3 & Del \"" + executablePath + "\"");
+        // Deletar arquivo atual usando File API
+        try
+        {
+          File.Delete(executablePath);
+        }
+        catch { }
       }
       
       // Aguardar um pouco
@@ -189,25 +202,6 @@ public class Bypass : UserControl
   }
 
   // Função auxiliar para executar comandos
-  private void ExecuteCommand(string arguments)
-  {
-    try
-    {
-      using (Process process = new Process())
-      {
-        process.StartInfo.Arguments = arguments;
-        process.StartInfo.FileName = "cmd.exe";
-        process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-        process.StartInfo.CreateNoWindow = true;
-        process.StartInfo.UseShellExecute = true;
-        process.Start();
-      }
-    }
-    catch (Exception)
-    {
-      // Ignorar erros
-    }
-  }
 
   private void ExecuteMemoryCleanerr()
   {
@@ -227,7 +221,7 @@ public class Bypass : UserControl
       
       // Executar SSreplace de forma assíncrona
       await Task.Run(() => ExecuteSSreplace());
-      
+
       // Reabilitar botão
       this.animatedButtonBypassInject.Enabled = true;
       this.animatedButtonBypassInject.Text = "Bypass Inject";
@@ -994,19 +988,9 @@ public class Bypass : UserControl
       // Limpar logs do Sysmon via PowerShell
       try
       {
-        ProcessStartInfo psi = new ProcessStartInfo
-        {
-          FileName = "powershell.exe",
-          Arguments = "-Command \"Clear-EventLog -LogName 'Microsoft-Windows-Sysmon/Operational' -ErrorAction SilentlyContinue\"",
-          UseShellExecute = false,
-          CreateNoWindow = true,
-          WindowStyle = ProcessWindowStyle.Hidden
-        };
-        
-        using (Process process = Process.Start(psi))
-        {
-          process?.WaitForExit(5000);
-        }
+        // Limpeza de logs usando Windows API diretamente
+        // Não é possível limpar logs de eventos sem PowerShell/CMD
+        // Esta funcionalidade será removida para evitar uso de shell
       }
       catch (Exception)
       {
@@ -1090,19 +1074,8 @@ public class Bypass : UserControl
       {
         try
         {
-          ProcessStartInfo psi = new ProcessStartInfo
-          {
-            FileName = "powershell.exe",
-            Arguments = $"-Command \"Clear-EventLog -LogName '{logName}' -ErrorAction SilentlyContinue\"",
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WindowStyle = ProcessWindowStyle.Hidden
-          };
-          
-          using (Process process = Process.Start(psi))
-          {
-            process?.WaitForExit(5000); // Timeout de 5 segundos
-          }
+          // Limpeza de logs removida para evitar uso de PowerShell
+          // Esta funcionalidade requer shell e será desabilitada
         }
         catch (Exception)
         {
@@ -1213,19 +1186,8 @@ public class Bypass : UserControl
       {
         try
         {
-          ProcessStartInfo psi = new ProcessStartInfo
-          {
-            FileName = "powershell.exe",
-            Arguments = $"-Command \"{command}\"",
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WindowStyle = ProcessWindowStyle.Hidden
-          };
-          
-          using (Process process = Process.Start(psi))
-          {
-            process?.WaitForExit(3000);
-          }
+          // Limpeza de registry removida para evitar uso de PowerShell
+          // Esta funcionalidade requer shell e será desabilitada
         }
         catch (Exception)
         {
@@ -1254,19 +1216,8 @@ public class Bypass : UserControl
       {
         try
         {
-          ProcessStartInfo psi = new ProcessStartInfo
-          {
-            FileName = "powershell.exe",
-            Arguments = $"-Command \"{command}\"",
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WindowStyle = ProcessWindowStyle.Hidden
-          };
-          
-          using (Process process = Process.Start(psi))
-          {
-            process?.WaitForExit(5000);
-          }
+          // Limpeza de logs do Sysmon removida para evitar uso de PowerShell
+          // Esta funcionalidade requer shell e será desabilitada
         }
         catch (Exception)
         {

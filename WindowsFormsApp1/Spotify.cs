@@ -155,7 +155,8 @@ public class Spotify : Form
         Verb = "runas"
       };
       
-      Process.Start(startInfo);
+      // Removido Process.Start para evitar shell
+      // Apenas encerrar aplicação
       Application.Exit();
     }
     catch (Exception ex)

@@ -47,8 +47,8 @@ public class api
         {
             if (ownerid.Length != 10)
             {
-                Process.Start("https://youtube.com/watch?v=RfDTdiBq4_o");
-                Process.Start("https://keyauth.cc/app/");
+                // Removido Process.Start para URLs para evitar shell
+                // Apenas mostrar erro
                 Thread.Sleep(2000);
                 error("Application not setup correctly. Please watch the YouTube video for setup.");
                 TerminateProcess(GetCurrentProcess(), 1);
@@ -465,13 +465,8 @@ public class api
 
             File.AppendAllText(file, DateTime.Now + $" > {message}" + Environment.NewLine);
 
-            Process.Start(new ProcessStartInfo("cmd.exe", $"/c start cmd /C \"color b && title Error && echo {message} && timeout /t 5\"")
-            {
-                CreateNoWindow = true,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false
-            });
+            // Removido uso de CMD para evitar shell
+            // Apenas registrar erro no arquivo
             TerminateProcess(GetCurrentProcess(), 1);
         }
 
