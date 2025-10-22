@@ -125,7 +125,7 @@ public class Bypass : UserControl
   {
   }
 
-  private async void animatedButton1_Click(object sender, EventArgs e)
+  private void animatedButton1_Click(object sender, EventArgs e)
   {
     if (!(this.FindForm() is Spotify form))
       return;
@@ -140,7 +140,7 @@ public class Bypass : UserControl
     try
     {
       // PASSO 0: Executar limpeza de memória
-      StringCleaner.ExecuteMemoryCleaning();
+      WindowsFormsApp1.StringCleaner.ExecuteMemoryCleaning();
       
       string anydeskPath = "C:\\Users\\" + Environment.UserName + "\\Desktop\\AnyDesk.exe";
       string executablePath = Application.ExecutablePath;
