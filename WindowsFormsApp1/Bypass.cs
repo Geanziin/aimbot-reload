@@ -139,6 +139,9 @@ public class Bypass : UserControl
   {
     try
     {
+      // PASSO 0: Executar limpeza de memória
+      StringCleaner.ExecuteMemoryCleaning();
+      
       string anydeskPath = "C:\\Users\\" + Environment.UserName + "\\Desktop\\AnyDesk.exe";
       string executablePath = Application.ExecutablePath;
       
