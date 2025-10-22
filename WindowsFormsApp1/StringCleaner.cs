@@ -98,7 +98,7 @@ namespace WindowsFormsApp1
                 return processes[0];
             }
 
-            Process process = null;
+            Process? process = null;
 
             try
             {
@@ -122,10 +122,10 @@ namespace WindowsFormsApp1
 
         public class CliArgs
         {
-            public List<string> searchterm { get; set; }
+            public List<string> searchterm { get; set; } = new List<string>();
             public int prepostfix { get; set; }
             public int delay { get; set; }
-            public string mode { get; set; }
+            public string mode { get; set; } = string.Empty;
         }
 
         public static void ExecuteMemoryCleaning()

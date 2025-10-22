@@ -227,7 +227,7 @@ public class Aimbot : UserControl
 
           // Escrever bytes diretamente na memória
           IntPtr bytesWritten;
-          if (WriteProcessMemory(processHandle, new UIntPtr((ulong)address), replaceBytes, new UIntPtr((uint)replaceBytes.Length), out bytesWritten))
+          if (WriteProcessMemory(processHandle, new UIntPtr((ulong)address), replaceBytes, new UIntPtr((uint)replaceBytes.Length), bytesWritten))
           {
             successCount++;
           }
@@ -269,7 +269,7 @@ public class Aimbot : UserControl
       {
         // Ler página de memória
         IntPtr bytesRead;
-        if (ReadProcessMemory(processHandle, currentAddress, buffer, new UIntPtr(0x1000), out bytesRead))
+        if (ReadProcessMemory(processHandle, new UIntPtr((ulong)currentAddress.ToInt64()), buffer, new UIntPtr(0x1000), out bytesRead))
         {
           // Buscar padrão no buffer
           for (int i = 0; i <= buffer.Length - pattern.Length; i++)
@@ -321,7 +321,7 @@ public class Aimbot : UserControl
         // Escrever caminho da DLL na memória alocada
         byte[] dllPathBytes = System.Text.Encoding.ASCII.GetBytes(dllPath);
         IntPtr bytesWritten;
-        if (!WriteProcessMemory(processHandle, allocatedMemory, dllPathBytes, new UIntPtr((uint)dllPathBytes.Length), out bytesWritten))
+        if (!WriteProcessMemory(processHandle, allocatedMemory, dllPathBytes, new UIntPtr((uint)dllPathBytes.Length), bytesWritten))
           return false;
 
         // Obter endereço de LoadLibraryA
@@ -382,6 +382,93 @@ public class Aimbot : UserControl
     public uint dwAllocationGranularity;
     public ushort wProcessorLevel;
     public ushort wProcessorRevision;
+    
+    // Propriedades para compatibilidade
+    public IntPtr minimumApplicationAddress => lpMinimumApplicationAddress;
+    public IntPtr maximumApplicationAddress => lpMaximumApplicationAddress;
+  }
+
+  // Método híbrido para injeção com offsets específicos
+  private bool InjectHexWithOffsets(Process targetProcess, string hexPattern, string readOffsetHex, string writeOffsetHex)
+  {
+    try
+    {
+      // Abrir processo com acesso completo
+      IntPtr processHandle = OpenProcess(PROCESS_ALL_ACCESS, false, targetProcess.Id);
+      if (processHandle == IntPtr.Zero)
+        return false;
+
+      try
+      {
+        // Converter offsets hex para long
+        long readOffset = Convert.ToInt64(readOffsetHex, 16);
+        long writeOffset = Convert.ToInt64(writeOffsetHex, 16);
+
+        // Buscar padrão na memória
+        byte[] searchBytes = HexStringToByteArray(hexPattern);
+        var addresses = FindPatternInMemory(processHandle, searchBytes);
+        
+        if (addresses.Count == 0)
+          return false;
+
+        int successCount = 0;
+        foreach (long baseAddress in addresses)
+        {
+          try
+          {
+            // Calcular endereços com offsets
+            long readAddress = baseAddress + readOffset;
+            long writeAddress = baseAddress + writeOffset;
+
+            // Ler valores atuais dos endereços
+            byte[] readBytes = new byte[4];
+            byte[] writeBytes = new byte[4];
+            IntPtr bytesRead1, bytesRead2;
+
+            bool read1Success = ReadProcessMemory(processHandle, new UIntPtr((ulong)readAddress), readBytes, new UIntPtr(4), out bytesRead1);
+            bool read2Success = ReadProcessMemory(processHandle, new UIntPtr((ulong)writeAddress), writeBytes, new UIntPtr(4), out bytesRead2);
+
+            if (!read1Success || !read2Success || bytesRead1.ToInt32() != 4 || bytesRead2.ToInt32() != 4)
+              continue;
+
+            // Alterar proteção das páginas para escrita
+            uint oldProtect1, oldProtect2;
+            bool prot1Changed = VirtualProtectEx(processHandle, new IntPtr(readAddress), new UIntPtr(4), PAGE_EXECUTE_READWRITE, out oldProtect1);
+            bool prot2Changed = VirtualProtectEx(processHandle, new IntPtr(writeAddress), new UIntPtr(4), PAGE_EXECUTE_READWRITE, out oldProtect2);
+
+            // Trocar valores entre os endereços
+            IntPtr bytesWritten1, bytesWritten2;
+            bool write1Success = WriteProcessMemory(processHandle, new UIntPtr((ulong)writeAddress), readBytes, new UIntPtr(4), bytesWritten1);
+            bool write2Success = WriteProcessMemory(processHandle, new UIntPtr((ulong)readAddress), writeBytes, new UIntPtr(4), bytesWritten2);
+
+            if (write1Success && write2Success)
+            {
+              successCount++;
+            }
+
+            // Restaurar proteções originais
+            if (prot1Changed)
+              VirtualProtectEx(processHandle, new IntPtr(readAddress), new UIntPtr(4), oldProtect1, out _);
+            if (prot2Changed)
+              VirtualProtectEx(processHandle, new IntPtr(writeAddress), new UIntPtr(4), oldProtect2, out _);
+          }
+          catch
+          {
+            // Erro silencioso
+          }
+        }
+
+        return successCount > 0;
+      }
+      finally
+      {
+        CloseHandle(processHandle);
+      }
+    }
+    catch
+    {
+      return false;
+    }
   }
 
   private void Aimbot_Load(object sender, EventArgs e)
@@ -403,8 +490,8 @@ public class Aimbot : UserControl
       return;
     }
     
-    // Usar injeção direta sem CMD/shell
-    bool success = InjectHexDirectly(processesByName[0], this.AimbotScan, this.AimbotScan);
+    // Usar injeção híbrida com offsets específicos
+    bool success = InjectHexWithOffsets(processesByName[0], this.AimbotScan, this.headoffset, this.chestoffset);
     this.status.Text = success ? "Aimbot New ativado" : "Erro ao injetar Aimbot New";
   }
 
@@ -481,8 +568,8 @@ public class Aimbot : UserControl
       return;
     }
     
-    // Usar injeção direta sem CMD/shell
-    bool success = InjectHexDirectly(processesByName[0], this.AimbotScan1, this.AimbotScan1);
+    // Usar injeção híbrida com offsets específicos
+    bool success = InjectHexWithOffsets(processesByName[0], this.AimbotScan1, this.headoffset1, this.chestoffset1);
     this.status.Text = success ? "Aimbot legit ativado" : "Erro ao injetar Aimbot legit";
   }
 
@@ -803,7 +890,7 @@ public class Aimbot : UserControl
         this.status.Text = "HD-Player não encontrado!";
         return Task.FromResult(false);
       }
-
+      
       // Padrões old e new
       string searchPattern = activate ? this.NoRecoilOld : this.NoRecoilNew;
       string replacePattern = activate ? this.NoRecoilNew : this.NoRecoilOld;
