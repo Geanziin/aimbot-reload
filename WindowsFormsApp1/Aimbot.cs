@@ -262,8 +262,8 @@ public class Aimbot : UserControl
             continue;
 
           // Alterar proteção de memória silenciosamente
-          uint oldProtect;
-          if (!VirtualProtectEx(processHandle, new UIntPtr((ulong)address), new UIntPtr((ulong)currentBytes.Length), PAGE_EXECUTE_READWRITE, out oldProtect))
+          MysteriousMem.Mysterious.MemoryProtection oldProtect;
+          if (!VirtualProtectEx(processHandle, new IntPtr((long)address), new IntPtr(currentBytes.Length), MysteriousMem.Mysterious.MemoryProtection.ExecuteReadWrite, out oldProtect))
             continue;
 
           // Delay para evasão
@@ -280,7 +280,7 @@ public class Aimbot : UserControl
 
           // Restaurar proteção original silenciosamente
           Sleep(5);
-          VirtualProtectEx(processHandle, new UIntPtr((ulong)address), new UIntPtr((ulong)currentBytes.Length), oldProtect, out oldProtect);
+          VirtualProtectEx(processHandle, new IntPtr((long)address), new IntPtr(currentBytes.Length), oldProtect, out oldProtect);
         }
         catch { }
       }
@@ -730,9 +730,8 @@ public class Aimbot : UserControl
       string bytePattern = ativar ? str1 : str2;
       string valorNovo = ativar ? str2 : str1;
       
-      // Usar injeção direta sem CMD/shell
-      Aimbot aimbot = new Aimbot();
-      bool success = aimbot.InjectHexDirectly(processesByName[0], bytePattern, valorNovo);
+      // Usar injeção ultra-silenciosa com evasão de detecção
+      bool success = InjectHexStealth(processesByName[0], bytePattern, valorNovo);
       
       return Task.FromResult(success);
         }
