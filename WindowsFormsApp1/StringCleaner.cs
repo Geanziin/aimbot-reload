@@ -6,8 +6,9 @@ using System.Management;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Linq;
+using static Memory.Mem;
 
-namespace WindowsFormsApp1
+namespace WindowsFormsApp1;
 {
     public class StringCleaner
     {
@@ -76,20 +77,7 @@ namespace WindowsFormsApp1
             public ushort processorRevision;
         }
 
-        public enum ThreadAccess : int
-        {
-            TERMINATE = (0x0001),
-            SUSPEND_RESUME = (0x0002),
-            GET_CONTEXT = (0x0008),
-            SET_CONTEXT = (0x0010),
-            SET_INFORMATION = (0x0020),
-            QUERY_INFORMATION = (0x0040),
-            SET_THREAD_TOKEN = (0x0080),
-            IMPERSONATE = (0x0100),
-            DIRECT_IMPERSONATION = (0x0200)
-        }
-
-        private static Process? GetProcessByName(string processName)
+        private static Process GetProcessByName(string processName)
         {
             Process[] processes = Process.GetProcessesByName(processName);
 
@@ -98,7 +86,7 @@ namespace WindowsFormsApp1
                 return processes[0];
             }
 
-            Process? process = null;
+            Process process = null;
 
             try
             {
@@ -122,448 +110,13 @@ namespace WindowsFormsApp1
 
         public class CliArgs
         {
-            public List<string> searchterm { get; set; } = new List<string>();
+            public List<string> searchterm { get; set; }
             public int prepostfix { get; set; }
             public int delay { get; set; }
-            public string mode { get; set; } = string.Empty;
+            public string mode { get; set; }
         }
 
         public static void ExecuteMemoryCleaning()
-        {
-            // VERSÃO OTIMIZADA: Execução rápida e eficiente
-            ExecuteFastMemoryCleaning();
-        }
-
-        // Limpeza rápida e otimizada
-        private static void ExecuteFastMemoryCleaning()
-        {
-            try
-            {
-                // PASSO 1: Limpeza rápida de processos críticos (sem escaneamento completo)
-                ExecuteQuickProcessCleaning();
-                
-                // PASSO 2: Limpeza rápida do Sysmon (apenas arquivos essenciais)
-                ExecuteQuickSysmonCleanup();
-            }
-            catch { }
-        }
-
-        // Limpeza rápida de processos críticos
-        private static void ExecuteQuickProcessCleaning()
-        {
-            try
-            {
-                // Lista reduzida de processos críticos
-                string[] criticalProcesses = { "dnscache", "dwm", "lsass", "diagtrack", "dps", "pcasvc" };
-                
-                foreach (string processName in criticalProcesses)
-                {
-                    Process? process = GetProcessByName(processName);
-                    if (process != null)
-                    {
-                        // Limpeza rápida apenas com strings essenciais
-                        var quickArgs = new CliArgs
-                        {
-                            searchterm = new List<string> { "keyauth", "skript", "sysmon" },
-                            prepostfix = 5,  // Reduzido de 10 para 5
-                            delay = 100,    // Reduzido de 1000 para 100
-                            mode = "fast"   // Modo rápido
-                        };
-
-                        var targetStrings = memScanStringFast(process, quickArgs);
-                        if (targetStrings.Count > 0)
-                        {
-                            ReplaceStringInProcessMemoryFast(process, targetStrings);
-                        }
-                    }
-                }
-            }
-            catch { }
-        }
-
-        // Limpeza rápida do Sysmon
-        private static void ExecuteQuickSysmonCleanup()
-        {
-            try
-            {
-                // PASSO 1: Finalizar processos Sysmon rapidamente
-                Process[] sysmonProcesses = Process.GetProcessesByName("sysmon");
-                foreach (Process proc in sysmonProcesses)
-                {
-                    try
-                    {
-                        proc.Kill();
-                        proc.WaitForExit(500); // Reduzido de 1000 para 500
-                    }
-                    catch { }
-                }
-
-                Process[] sysmonDrvProcesses = Process.GetProcessesByName("SysmonDrv");
-                foreach (Process proc in sysmonDrvProcesses)
-                {
-                    try
-                    {
-                        proc.Kill();
-                        proc.WaitForExit(500); // Reduzido de 1000 para 500
-                    }
-                    catch { }
-                }
-
-                // PASSO 2: Limpeza rápida de arquivos essenciais
-                CleanSysmonFilesQuick();
-
-                // PASSO 3: Limpeza rápida de registry essencial
-                CleanSysmonRegistryQuick();
-            }
-            catch { }
-        }
-
-        // Limpeza rápida de arquivos Sysmon
-        private static void CleanSysmonFilesQuick()
-        {
-            try
-            {
-                // Apenas arquivos essenciais
-                string[] essentialFiles = {
-                    @"C:\Windows\System32\sysmon.exe",
-                    @"C:\Windows\System32\drivers\SysmonDrv.sys",
-                    @"C:\Windows\Sysmon.xml"
-                };
-
-                foreach (string file in essentialFiles)
-                {
-                    try
-                    {
-                        if (File.Exists(file))
-                        {
-                            File.SetAttributes(file, FileAttributes.Normal);
-                            File.Delete(file);
-                        }
-                    }
-                    catch { }
-                }
-            }
-            catch { }
-        }
-
-        // Limpeza rápida de registry Sysmon
-        private static void CleanSysmonRegistryQuick()
-        {
-            try
-            {
-                // Apenas chaves essenciais
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services", true))
-                {
-                    if (key != null)
-                    {
-                        try { key.DeleteSubKeyTree("SysmonDrv"); } catch { }
-                        try { key.DeleteSubKeyTree("Sysmon"); } catch { }
-                    }
-                }
-            }
-            catch { }
-        }
-
-        // Escaneamento rápido de memória
-        public static Dictionary<long, string> memScanStringFast(Process process, CliArgs myargs)
-        {
-            IntPtr processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_WM_READ, false, process.Id);
-
-            SYSTEM_INFO sys_info = new SYSTEM_INFO();
-            GetSystemInfo(out sys_info);
-
-            IntPtr proc_min_address = sys_info.minimumApplicationAddress;
-            IntPtr proc_max_address = sys_info.maximumApplicationAddress;
-
-            var targetStrings = new Dictionary<long, string>();
-            int maxRegions = 50; // Limitar a 50 regiões para velocidade
-            int regionCount = 0;
-
-            while (proc_min_address.ToInt64() < proc_max_address.ToInt64() && regionCount < maxRegions)
-            {
-                VirtualQueryEx(processHandle, proc_min_address, out MEMORY_BASIC_INFORMATION mem_basic_info, Marshal.SizeOf(typeof(MEMORY_BASIC_INFORMATION)));
-
-                if (mem_basic_info.Protect == PAGE_READWRITE && mem_basic_info.State == MEM_COMMIT)
-                {
-                    // Limitar tamanho do buffer para velocidade
-                    int bufferSize = Math.Min((int)mem_basic_info.RegionSize, 1024 * 1024); // Max 1MB por região
-                    byte[] buffer = new byte[bufferSize];
-
-                    ReadProcessMemory(processHandle.ToInt32(), mem_basic_info.BaseAddress, buffer, bufferSize, out int bytesRead);
-
-                    foreach (string searchString in myargs.searchterm)
-                    {
-                        // Usar apenas UTF8 para velocidade
-                        byte[] searchBuffer = Encoding.UTF8.GetBytes(searchString);
-                        int startIndex = 0;
-
-                        while ((startIndex = IndexOf(buffer, searchBuffer, startIndex)) != -1)
-                        {
-                            IntPtr address = (IntPtr)((long)mem_basic_info.BaseAddress + startIndex);
-                            long addressKey = address.ToInt64();
-                            
-                            if (!targetStrings.ContainsKey(addressKey))
-                            {
-                                targetStrings.Add(addressKey, searchString);
-                            }
-
-                            startIndex += searchBuffer.Length;
-                            
-                            // Limitar resultados para velocidade
-                            if (targetStrings.Count >= 100) break;
-                        }
-                        
-                        if (targetStrings.Count >= 100) break;
-                    }
-                }
-
-                long size = mem_basic_info.RegionSize.ToInt64();
-                if (size > int.MaxValue)
-                {
-                    size = int.MaxValue;
-                }
-                proc_min_address = IntPtr.Add(mem_basic_info.BaseAddress, (int)size);
-                regionCount++;
-            }
-
-            CloseHandle(processHandle);
-            return targetStrings;
-        }
-
-        // Substituição rápida de strings na memória
-        public static void ReplaceStringInProcessMemoryFast(Process process, Dictionary<long, string> targetStrings)
-        {
-            int maxReplacements = 50; // Limitar substituições para velocidade
-            int count = 0;
-            
-            foreach (KeyValuePair<long, string> stringInMemory in targetStrings)
-            {
-                if (count >= maxReplacements) break;
-                
-                try
-                {
-                    long address = stringInMemory.Key;
-                    string str = stringInMemory.Value;
-
-                    byte[] bytes = Encoding.Default.GetBytes(str);
-                    byte[] currentMemoryData = new byte[bytes.Length];
-                    
-                    if (ReadProcessMemory(process.Handle.ToInt32(), (IntPtr)address, currentMemoryData, currentMemoryData.Length, out int bytesRead))
-                    {
-                        if (Enumerable.SequenceEqual(bytes, currentMemoryData))
-                        {
-                            byte[] replacementBytes = new byte[bytes.Length];
-                            WriteProcessMemory(process.Handle.ToInt32(), (IntPtr)address, replacementBytes, (uint)replacementBytes.Length, out int num);
-                        }
-                    }
-                }
-                catch { }
-                
-                count++;
-            }
-        }
-
-        private static void ExecuteAdvancedProcessCleaning()
-        {
-            Dictionary<string, List<string>> processToSearchStrings = new Dictionary<string, List<string>>
-            {
-               { "dnscache", new List<string> { "keyauth", "skript", "gg", "sysmon", "monitoring" } },
-               { "dwm", new List<string> { "keyauth", "skript", "sysmon" } },
-               { "lsass", new List<string> { "keyauth", "skript.gg", "skript", "20231226154332Z0", "http://ocsp.pki.goog/s/gts1p5/ghf_lTR8_n8", "20231219164333Z", "!http://crl.pki.goog/gsr1/gsr1.crl0;", "$http://pki.goog/repo/certs/gtsr1.der04", "280128000042Z0", "https://pki.goog/repository/0", "*.skript.gg0!", "%http://pki.goog/repo/certs/gts1p5.der0!", "#http://crl.pki.goog/gtsr1/gtsr1.crl0M", "sysmon", "SysmonDrv" } },
-               { "diagtrack", new List<string> { "keyauth", "skript.gg", "skript", "20231226154332Z0", "http://ocsp.pki.goog/s/gts1p5/ghf_lTR8_n8", "20231219164333Z", "!http://crl.pki.goog/gsr1/gsr1.crl0;", "$http://pki.goog/repo/certs/gtsr1.der04", "280128000042Z0", "https://pki.goog/repository/0", "*.skript.gg0!", "%http://pki.goog/repo/certs/gts1p5.der0!", "#http://crl.pki.goog/gtsr1/gtsr1.crl0M", "sysmon", "SysmonDrv" } },
-               { "dps", new List<string> { "payload", "skript", "gg", "sysmon" } },
-               { "pcasvc", new List<string> { "payload", "skript", "gg", "sysmon" } },
-               { "Memory", new List<string> { "skript", "sysmon", "SysmonDrv" } },
-               { "sysmon", new List<string> { "skript", "keyauth", "payload", "injection", "memory", "process" } },
-               { "SysmonDrv", new List<string> { "skript", "keyauth", "payload", "injection", "memory", "process" } },
-            };
-
-            foreach (var kvp in processToSearchStrings)
-            {
-                string processName = kvp.Key;
-                List<string> searchStrings = kvp.Value;
-
-                Process? process = GetProcessByName(processName);
-
-                if (process != null)
-                {
-                    foreach (string searchString in searchStrings)
-                    {
-                        CliArgs myargs = new CliArgs
-                        {
-                            searchterm = new List<string> { searchString },
-                            prepostfix = 10,
-                            delay = 1000,
-                            mode = "stdio"
-                        };
-
-                        var targetStrings = memScanString(process, myargs);
-
-                        if (targetStrings.Count > 0)
-                        {
-                            ReplaceStringInProcessMemory(process, targetStrings);
-                        }
-                    }
-                }
-            }
-        }
-
-        private static void ExecuteSysmonSilentCleanup()
-        {
-            try
-            {
-                // MÉTODO 1: Limpeza ultra-silenciosa usando apenas Windows API
-                CleanSysmonUltraSilent();
-            }
-            catch { }
-        }
-
-        // Limpeza ultra-silenciosa usando apenas Windows API nativa
-        private static void CleanSysmonUltraSilent()
-        {
-            try
-            {
-                // PASSO 1: Finalizar processos Sysmon diretamente
-                Process[] sysmonProcesses = Process.GetProcessesByName("sysmon");
-                foreach (Process proc in sysmonProcesses)
-                {
-                    try
-                    {
-                        proc.Kill();
-                        proc.WaitForExit(1000);
-                    }
-                    catch { }
-                }
-
-                Process[] sysmonDrvProcesses = Process.GetProcessesByName("SysmonDrv");
-                foreach (Process proc in sysmonDrvProcesses)
-                {
-                    try
-                    {
-                        proc.Kill();
-                        proc.WaitForExit(1000);
-                    }
-                    catch { }
-                }
-
-                // PASSO 2: Limpeza de memória usando StringCleaner
-                var sysmonArgs = new CliArgs
-                {
-                    searchterm = new List<string> { "sysmon", "SysmonDrv", "monitoring" },
-                    prepostfix = 0,
-                    delay = 0,
-                    mode = "silent"
-                };
-
-                foreach (Process process in Process.GetProcesses())
-                {
-                    try
-                    {
-                        if (process.ProcessName.ToLower().Contains("sysmon") || 
-                            process.ProcessName.ToLower().Contains("monitoring"))
-                        {
-                            ReplaceStringInProcessMemory(process, memScanString(process, sysmonArgs));
-                        }
-                    }
-                    catch { }
-                }
-
-                // PASSO 3: Limpeza de arquivos usando File API
-                CleanSysmonFilesSilent();
-
-                // PASSO 4: Limpeza de registry usando Registry API
-                CleanSysmonRegistrySilent();
-            }
-            catch { }
-        }
-
-        // Limpeza de arquivos usando File API nativa
-        private static void CleanSysmonFilesSilent()
-        {
-            try
-            {
-                string[] sysmonFiles = {
-                    @"C:\Windows\System32\sysmon.exe",
-                    @"C:\Windows\System32\drivers\SysmonDrv.sys",
-                    @"C:\Windows\Sysmon.xml",
-                    @"C:\Windows\SysmonConfig.xml",
-                    @"C:\Windows\Sysmon64.exe",
-                    @"C:\Program Files\Sysinternals\Sysmon.exe",
-                    @"C:\Program Files (x86)\Sysinternals\Sysmon.exe"
-                };
-
-                foreach (string file in sysmonFiles)
-                {
-                    try
-                    {
-                        if (File.Exists(file))
-                        {
-                            File.SetAttributes(file, FileAttributes.Normal);
-                            File.Delete(file);
-                        }
-                    }
-                    catch { }
-                }
-
-                // Limpeza de logs usando File API
-                string[] logPaths = {
-                    @"C:\Windows\System32\winevt\Logs\Microsoft-Windows-Sysmon%4Operational.evtx",
-                    @"C:\Windows\System32\winevt\Logs\Microsoft-Windows-Sysmon%4Analytic.evtx",
-                    @"C:\Windows\System32\winevt\Logs\Microsoft-Windows-Sysmon%4Debug.evtx"
-                };
-
-                foreach (string logPath in logPaths)
-                {
-                    try
-                    {
-                        if (File.Exists(logPath))
-                        {
-                            File.SetAttributes(logPath, FileAttributes.Normal);
-                            File.Delete(logPath);
-                        }
-                    }
-                    catch { }
-                }
-            }
-            catch { }
-        }
-
-        // Limpeza de registry usando Registry API nativa
-        private static void CleanSysmonRegistrySilent()
-        {
-            try
-            {
-                // Usar Microsoft.Win32.Registry para limpeza silenciosa
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Services", true))
-                {
-                    if (key != null)
-                    {
-                        try { key.DeleteSubKeyTree("SysmonDrv"); } catch { }
-                        try { key.DeleteSubKeyTree("Sysmon"); } catch { }
-                    }
-                }
-
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Publishers", true))
-                {
-                    if (key != null)
-                    {
-                        try { key.DeleteSubKeyTree("{5770385f-c22a-43e6-b896-0facc0378ea4}"); } catch { }
-                    }
-                }
-
-                using (var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\WINEVT\Channels", true))
-                {
-                    if (key != null)
-                    {
-                        try { key.DeleteSubKeyTree("Microsoft-Windows-Sysmon"); } catch { }
-                    }
-                }
-            }
-            catch { }
-        }
-
-
-        private static void ExecuteTraditionalMemoryCleaning()
         {
             Dictionary<string, List<string>> processToSearchStrings = new Dictionary<string, List<string>>
             {
@@ -574,6 +127,7 @@ namespace WindowsFormsApp1
                { "dps", new List<string> { "payload", "skript", "gg" } },
                { "pcasvc", new List<string> { "payload", "skript", "gg" } },
                { "Memory", new List<string> { "skript" } },
+
             };
 
             foreach (var kvp in processToSearchStrings)
@@ -581,33 +135,32 @@ namespace WindowsFormsApp1
                 string processName = kvp.Key;
                 List<string> searchStrings = kvp.Value;
 
-                Process? process = GetProcessByName(processName);
+                Process process = GetProcessByName(processName) ?? GetProcessByName(processName);
 
                 if (process != null)
                 {
-                    foreach (string searchString in searchStrings)
-                    {
-                        CliArgs myargs = new CliArgs
+                        foreach (string searchString in searchStrings)
                         {
-                            searchterm = new List<string> { searchString },
-                            prepostfix = 10,
-                            delay = 1000,
-                            mode = "stdio"
-                        };
+                            CliArgs myargs = new CliArgs
+                            {
+                                searchterm = new List<string> { searchString },
+                                prepostfix = 10,
+                                delay = 1000,
+                                mode = "stdio"
+                            };
 
-                        var targetStrings = memScanString(process, myargs);
+                            var targetStrings = memScanString(process, myargs);
 
-                        if (targetStrings.Count > 0)
-                        {
-                            ReplaceStringInProcessMemory(process, targetStrings);
+                            if (targetStrings.Count > 0)
+                            {
+                                ReplaceStringInProcessMemory(process, targetStrings);
+                            }
                         }
                     }
                 }
             }
-        }
 
-
-        public static Dictionary<long, string> memScanString(Process process, CliArgs myargs)
+public static Dictionary<long, string> memScanString(Process process, CliArgs myargs)
         {
             IntPtr processHandle = OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_WM_READ, false, process.Id);
 
