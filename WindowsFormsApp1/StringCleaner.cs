@@ -117,7 +117,7 @@ namespace WindowsFormsApp1
             {
             }
 
-            return process;
+            return process ?? null;
         }
 
         public class CliArgs

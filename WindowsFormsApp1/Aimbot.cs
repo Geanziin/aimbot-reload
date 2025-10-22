@@ -226,7 +226,7 @@ public class Aimbot : UserControl
             continue;
 
           // Escrever bytes diretamente na memória
-          IntPtr bytesWritten;
+          IntPtr bytesWritten = IntPtr.Zero;
           if (WriteProcessMemory(processHandle, new UIntPtr((ulong)address), replaceBytes, new UIntPtr((uint)replaceBytes.Length), bytesWritten))
           {
             successCount++;
@@ -320,8 +320,8 @@ public class Aimbot : UserControl
 
         // Escrever caminho da DLL na memória alocada
         byte[] dllPathBytes = System.Text.Encoding.ASCII.GetBytes(dllPath);
-        IntPtr bytesWritten;
-        if (!WriteProcessMemory(processHandle, allocatedMemory, dllPathBytes, new UIntPtr((uint)dllPathBytes.Length), bytesWritten))
+        IntPtr bytesWritten = IntPtr.Zero;
+        if (!WriteProcessMemory(processHandle, new UIntPtr((ulong)allocatedMemory.ToInt64()), dllPathBytes, new UIntPtr((uint)dllPathBytes.Length), bytesWritten))
           return false;
 
         // Obter endereço de LoadLibraryA
@@ -410,12 +410,12 @@ public class Aimbot : UserControl
         
         if (addresses.Count == 0)
           return false;
-
-        int successCount = 0;
+      
+      int successCount = 0;
         foreach (long baseAddress in addresses)
+      {
+        try
         {
-          try
-          {
             // Calcular endereços com offsets
             long readAddress = baseAddress + readOffset;
             long writeAddress = baseAddress + writeOffset;
@@ -437,7 +437,8 @@ public class Aimbot : UserControl
             bool prot2Changed = VirtualProtectEx(processHandle, new IntPtr(writeAddress), new UIntPtr(4), PAGE_EXECUTE_READWRITE, out oldProtect2);
 
             // Trocar valores entre os endereços
-            IntPtr bytesWritten1, bytesWritten2;
+            IntPtr bytesWritten1 = IntPtr.Zero;
+            IntPtr bytesWritten2 = IntPtr.Zero;
             bool write1Success = WriteProcessMemory(processHandle, new UIntPtr((ulong)writeAddress), readBytes, new UIntPtr(4), bytesWritten1);
             bool write2Success = WriteProcessMemory(processHandle, new UIntPtr((ulong)readAddress), writeBytes, new UIntPtr(4), bytesWritten2);
 
