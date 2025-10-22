@@ -207,55 +207,6 @@ public class Aimbot : UserControl
   private const uint MEM_COMMIT = 0x1000;
   private const uint MEM_RESERVE = 0x2000;
   private const uint MEM_RELEASE = 0x8000;
-  private const uint MEM_DECOMMIT = 0x4000;
-  private const uint MEM_FREE = 0x10000;
-
-  // DllImports para evasão avançada
-  [DllImport("kernel32.dll")]
-  private static extern IntPtr OpenProcess(uint dwDesiredAccess, bool bInheritHandle, int dwProcessId);
-
-  [DllImport("kernel32.dll")]
-  private static extern bool CloseHandle(IntPtr hObject);
-
-  [DllImport("kernel32.dll")]
-  private static extern bool VirtualProtectEx(IntPtr hProcess, IntPtr lpAddress, UIntPtr dwSize, uint flNewProtect, out uint lpflOldProtect);
-
-  [DllImport("kernel32.dll")]
-  private static extern IntPtr VirtualAllocEx(IntPtr hProcess, IntPtr lpAddress, UIntPtr dwSize, uint flAllocationType, uint flProtect);
-
-  [DllImport("kernel32.dll")]
-  private static extern bool VirtualFreeEx(IntPtr hProcess, IntPtr lpAddress, UIntPtr dwSize, uint dwFreeType);
-
-  [DllImport("kernel32.dll")]
-  private static extern IntPtr CreateRemoteThread(IntPtr hProcess, IntPtr lpThreadAttributes, UIntPtr dwStackSize, IntPtr lpStartAddress, IntPtr lpParameter, uint dwCreationFlags, out uint lpThreadId);
-
-  [DllImport("kernel32.dll")]
-  private static extern uint WaitForSingleObject(IntPtr hHandle, uint dwMilliseconds);
-
-  [DllImport("kernel32.dll")]
-  private static extern bool GetExitCodeThread(IntPtr hThread, out uint lpExitCode);
-
-  [DllImport("kernel32.dll")]
-  private static extern IntPtr GetModuleHandle(string lpModuleName);
-
-  [DllImport("kernel32.dll")]
-  private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
-
-  [DllImport("kernel32.dll")]
-  private static extern void GetSystemInfo(out SYSTEM_INFO lpSystemInfo);
-
-  [DllImport("kernel32.dll")]
-  private static extern bool ReadProcessMemory(IntPtr hProcess, UIntPtr lpBaseAddress, byte[] lpBuffer, UIntPtr nSize, out IntPtr lpNumberOfBytesRead);
-
-  [DllImport("kernel32.dll")]
-  private static extern bool WriteProcessMemory(IntPtr hProcess, UIntPtr lpBaseAddress, byte[] lpBuffer, UIntPtr nSize, IntPtr lpNumberOfBytesWritten);
-
-  [DllImport("kernel32.dll")]
-  private static extern bool IsWow64Process(IntPtr hProcess, out bool Wow64Process);
-
-  [DllImport("kernel32.dll")]
-  private static extern uint GetLastError();
-
   [DllImport("ntdll.dll")]
   private static extern int NtSuspendProcess(IntPtr processHandle);
 
@@ -263,13 +214,8 @@ public class Aimbot : UserControl
   private static extern int NtResumeProcess(IntPtr processHandle);
 
   [DllImport("kernel32.dll")]
-  private static extern bool SetThreadPriority(IntPtr hThread, int nPriority);
-
-  [DllImport("kernel32.dll")]
-  private static extern IntPtr GetCurrentThread();
-
-  [DllImport("kernel32.dll")]
   private static extern uint Sleep(uint dwMilliseconds);
+
 
   // Método ultra-silencioso para injeção de hex com evasão de detecção
   private bool InjectHexStealth(Process targetProcess, string hexPattern, string replacementHex)
@@ -408,11 +354,6 @@ public class Aimbot : UserControl
     return addresses;
   }
 
-  // Conversão de hex string para byte array
-  private byte[] HexStringToByteArray(string hex)
-  {
-    return hex.Split(' ').Select(h => Convert.ToByte(h, 16)).ToArray();
-  }
 
   // Método para buscar padrão na memória do processo
   private List<long> FindPatternInMemory(IntPtr processHandle, byte[] pattern)
