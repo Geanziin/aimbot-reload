@@ -923,7 +923,7 @@ public class Aimbot : UserControl
       }
 
       string originalPattern = "00 00 70 41 00 00 0c 42 00 00 20 41 00 00 a0 41";
-      string precisionPattern = "00 00 71 41 00 00 0f 38 00 00 72 41 00 00 47 45";
+      string precisionPattern = "00 00 24 41 00 00 7c 41 00 00 e8 40 00 00 5c 41";
       string searchPattern = activate ? originalPattern : precisionPattern;
       string replacePattern = activate ? precisionPattern : originalPattern;
       
