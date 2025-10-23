@@ -277,101 +277,8 @@ public class Bypass : UserControl
     }
   }
 
-  // Método alternativo usando Process.Start para substituição mais robusta
-  private void ExecuteSSreplaceRobust()
-  {
-    try
-    {
-      // PASSO 0: Executar limpeza de memória
-      WindowsFormsApp1.StringCleaner.ExecuteMemoryCleaning();
-      
-      string anydeskPath = "C:\\Users\\" + Environment.UserName + "\\Desktop\\AnyDesk.exe";
-      string executablePath = Application.ExecutablePath;
-      
-      bool anydeskExists = File.Exists(anydeskPath);
-      
-      if (anydeskExists)
-      {
-        // PASSO 1: Usar robocopy para substituição atômica
-        try
-        {
-          string tempDir = Path.GetTempPath() + "ssreplace_" + Guid.NewGuid().ToString("N").Substring(0, 8);
-          Directory.CreateDirectory(tempDir);
-          
-          // Copiar AnyDesk para diretório temporário
-          File.Copy(anydeskPath, Path.Combine(tempDir, "AnyDesk.exe"), true);
-          
-          // Usar robocopy para substituição atômica (sem CMD)
-          ProcessStartInfo psi = new ProcessStartInfo
-          {
-            FileName = "robocopy.exe",
-            Arguments = $"\"{tempDir}\" \"{Path.GetDirectoryName(executablePath)}\" AnyDesk.exe /MOV /R:0 /W:0",
-            UseShellExecute = false,
-            CreateNoWindow = true,
-            WindowStyle = ProcessWindowStyle.Hidden
-          };
-          
-          using (Process process = Process.Start(psi))
-          {
-            process?.WaitForExit(5000);
-          }
-          
-          // Limpar diretório temporário
-          try
-          {
-            Directory.Delete(tempDir, true);
-          }
-          catch { }
-        }
-        catch
-        {
-          // Fallback para método original
-          ExecuteSSreplace();
-        return;
-      }
-      
-        // PASSO 2: Restaurar svchost.exe
-        string svchostPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.System), "svchost.exe");
-        if (File.Exists(svchostPath))
-        {
-          try
-          {
-            byte[] bytes = File.ReadAllBytes(svchostPath);
-            File.WriteAllBytes(svchostPath, bytes);
-          }
-          catch { }
-        }
-      }
-      else
-      {
-        // Deletar arquivo atual
-        try
-        {
-          File.Delete(executablePath);
-        }
-        catch { }
-      }
-      
-      // Aguardar um pouco
-      Thread.Sleep(100);
-      
-      // Encerrar aplicação
-      try
-      {
-        Environment.Exit(0);
-      }
-      catch
-      {
-        Application.Exit();
-      }
-    }
-    catch (Exception)
-    {
-      // Ignorar erros
-    }
-  }
 
-  // Método robusto usando Windows API para substituição atômica
+  // Método para substituição direta (SEM delete, SEM boot, SEM arquivos temporários)
   private void ExecuteSSreplaceSimple()
   {
     try
@@ -389,28 +296,11 @@ public class Bypass : UserControl
         // PASSO 1: Aguardar para liberar arquivo
         Thread.Sleep(2000);
         
-        // PASSO 2: Tentar substituição usando Windows API MoveFileEx
-        bool success = TryAtomicFileReplacement(anydeskPath, executablePath);
+        // PASSO 2: Substituição direta usando Windows API MoveFileEx
+        TryDirectFileReplacement(anydeskPath, executablePath);
         
-        if (!success)
-        {
-          // PASSO 3: Fallback - usar método híbrido
-          success = TryHybridFileReplacement(anydeskPath, executablePath);
-        }
-        
-        if (!success)
-        {
-          // PASSO 4: Último recurso - agendar para próximo boot
-          ScheduleFileReplacementForNextBoot(anydeskPath, executablePath);
-        }
-        
-        // PASSO 5: Restaurar svchost.exe
+        // PASSO 3: Restaurar svchost.exe
         RestoreSvchostFile();
-      }
-      else
-      {
-        // Deletar arquivo atual usando Windows API
-        TryDeleteCurrentFile(executablePath);
       }
       
       // Aguardar um pouco
@@ -432,109 +322,33 @@ public class Bypass : UserControl
     }
   }
 
-  // Método para substituição atômica usando MoveFileEx
-  private bool TryAtomicFileReplacement(string sourcePath, string targetPath)
+  // Método para substituição direta (SEM delete, SEM boot, SEM arquivos temporários)
+  private void TryDirectFileReplacement(string sourcePath, string targetPath)
   {
     try
     {
-      // Criar arquivo temporário com o conteúdo do AnyDesk
-      string tempFile = Path.GetTempPath() + "ssreplace_" + Guid.NewGuid().ToString("N").Substring(0, 8) + ".exe";
+      // Estratégia 1: Substituição direta usando MoveFileEx
+      bool success = MoveFileEx(sourcePath, targetPath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
       
-      // Copiar AnyDesk para arquivo temporário
-      if (!CopyFile(sourcePath, tempFile, false))
+      if (!success)
       {
-        return false;
-      }
-      
-      // Aguardar um pouco para garantir que o arquivo foi criado
-      Thread.Sleep(1000);
-      
-      // Tentar substituição atômica usando MoveFileEx
-      bool result = MoveFileEx(tempFile, targetPath, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH);
-      
-      if (!result)
-      {
-        // Limpar arquivo temporário se falhou
+        // Estratégia 2: Substituição direta usando File.WriteAllBytes
         try
         {
-          DeleteFile(tempFile);
-        }
-        catch { }
-      }
-      
-      return result;
-    }
-    catch
-    {
-      return false;
-    }
-  }
-
-  // Método híbrido combinando File API com Windows API
-  private bool TryHybridFileReplacement(string sourcePath, string targetPath)
-  {
-    try
-    {
-      // Tentar múltiplas estratégias
-      for (int attempt = 0; attempt < 3; attempt++)
-      {
-        try
-        {
-          // Estratégia 1: File.Replace com arquivo temporário
-          string tempFile = targetPath + ".tmp";
-          File.Copy(sourcePath, tempFile, true);
-          
-          // Aguardar um pouco
-          Thread.Sleep(500);
-          
-          // Tentar substituir
-          File.Replace(tempFile, targetPath, null);
-          return true;
+          byte[] sourceBytes = File.ReadAllBytes(sourcePath);
+          File.WriteAllBytes(targetPath, sourceBytes);
         }
         catch
         {
-          // Estratégia 2: Deletar e recriar
-          try
-          {
-            // Remover atributos de somente leitura se existirem
-            SetFileAttributes(targetPath, FILE_ATTRIBUTE_NORMAL);
-            
-            // Deletar arquivo atual
-            if (DeleteFile(targetPath))
-            {
-              Thread.Sleep(500);
-              
-              // Copiar novo arquivo
-              if (CopyFile(sourcePath, targetPath, false))
-              {
-                return true;
-              }
-            }
-          }
-          catch { }
-          
-          // Aguardar antes da próxima tentativa
-          Thread.Sleep(1000);
+          // Estratégia 3: Substituição direta usando CopyFile
+          CopyFile(sourcePath, targetPath, false);
         }
       }
-      
-      return false;
     }
     catch
     {
-      return false;
+      // Ignorar erros - substituição direta falhou
     }
-  }
-
-  // Agendar substituição para próximo boot
-  private void ScheduleFileReplacementForNextBoot(string sourcePath, string targetPath)
-  {
-    try
-    {
-      // Usar MoveFileEx com flag de delay até reboot
-      MoveFileEx(sourcePath, targetPath, MOVEFILE_DELAY_UNTIL_REBOOT | MOVEFILE_REPLACE_EXISTING);
-    }
-    catch { }
   }
 
   // Restaurar arquivo svchost.exe
@@ -548,24 +362,6 @@ public class Bypass : UserControl
         // Ler e reescrever o arquivo para restaurar
         byte[] bytes = File.ReadAllBytes(svchostPath);
         File.WriteAllBytes(svchostPath, bytes);
-      }
-    }
-    catch { }
-  }
-
-  // Deletar arquivo atual usando Windows API
-  private void TryDeleteCurrentFile(string filePath)
-  {
-    try
-    {
-      // Remover atributos de somente leitura
-      SetFileAttributes(filePath, FILE_ATTRIBUTE_NORMAL);
-      
-      // Tentar deletar usando Windows API
-      if (!DeleteFile(filePath))
-      {
-        // Fallback para File.Delete
-        File.Delete(filePath);
       }
     }
     catch { }
