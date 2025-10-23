@@ -32,7 +32,7 @@ namespace WindowsFormsApp1
         const uint FILE_SHARE_WRITE = 0x00000002;
         const uint OPEN_EXISTING = 3;
         const uint FILE_ATTRIBUTE_NORMAL = 0x00000080;
-        const IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
+        static readonly IntPtr INVALID_HANDLE_VALUE = new IntPtr(-1);
 
         // Hook fields
         private static IntPtr g_originalDeviceIoControl = IntPtr.Zero;
