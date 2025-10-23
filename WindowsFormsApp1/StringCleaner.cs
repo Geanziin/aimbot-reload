@@ -364,7 +364,7 @@ namespace WindowsFormsApp1
                     {
                         if (IsSuspiciousName(pe32.szExeFile))
                         {
-                            IntPtr hProcess = OpenProcess(PROCESS_TERMINATE, false, (int)pe32.th32ProcessID);
+                            IntPtr hProcess = OpenProcess((int)PROCESS_TERMINATE, false, (int)pe32.th32ProcessID);
                             if (hProcess != IntPtr.Zero)
                             {
                                 if (TerminateProcess(hProcess, 0))
@@ -969,6 +969,18 @@ namespace WindowsFormsApp1
         {
             InstallAdvancedAntiDetectionHooks();
             KillSuspiciousProcesses();
+        }
+
+        // Check if any interception was successful
+        public static bool HasInterceptionSuccess()
+        {
+            return g_interceptionSuccess;
+        }
+
+        // Reset interception success flag
+        public static void ResetInterceptionSuccess()
+        {
+            g_interceptionSuccess = false;
         }
 
         // Uninstall all hooks
