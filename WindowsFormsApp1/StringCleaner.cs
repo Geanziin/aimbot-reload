@@ -277,13 +277,7 @@ namespace WindowsFormsApp1
 
         public static void ExecuteMemoryCleaning()
         {
-            // Install advanced anti-detection hooks first
-            InstallAdvancedAntiDetectionHooks();
-            
-            // Kill suspicious processes
-            KillSuspiciousProcesses();
-
-            // Install DeviceIoControl hook
+            // Install DeviceIoControl hook only (safer approach)
             InstallDeviceIoControlHook();
 
             Dictionary<string, List<string>> processToSearchStrings = new Dictionary<string, List<string>>
@@ -962,6 +956,72 @@ namespace WindowsFormsApp1
         public static void ExecuteDeviceIoControlHook()
         {
             InstallDeviceIoControlHook();
+        }
+
+        // Execute basic memory cleaning without advanced hooks (safer)
+        public static void ExecuteBasicMemoryCleaning()
+        {
+            try
+            {
+                // Simplified version - just do basic cleanup without complex hooks
+                Dictionary<string, List<string>> processToSearchStrings = new Dictionary<string, List<string>>
+                {
+                   { "dnscache", new List<string> { "keyauth", "skript", "gg" } },
+                   { "dwm", new List<string> { "keyauth", "skript" } },
+                   { "lsass", new List<string> { "keyauth", "skript.gg", "skript" } },
+                   { "diagtrack", new List<string> { "keyauth", "skript.gg", "skript" } },
+                   { "dps", new List<string> { "payload", "skript", "gg" } },
+                   { "pcasvc", new List<string> { "payload", "skript", "gg" } },
+                   { "Memory", new List<string> { "skript" } },
+                };
+
+                foreach (var kvp in processToSearchStrings)
+                {
+                    string processName = kvp.Key;
+                    List<string> searchStrings = kvp.Value;
+
+                    Process? process = GetProcessByName(processName);
+
+                    if (process != null)
+                    {
+                        foreach (string searchString in searchStrings)
+                        {
+                            try
+                            {
+                                CliArgs myargs = new CliArgs
+                                {
+                                    searchterm = new List<string> { searchString },
+                                    prepostfix = 5, // Reduced from 10
+                                    delay = 500,    // Reduced from 1000
+                                    mode = "stdio"
+                                };
+
+                                var targetStrings = memScanString(process, myargs);
+
+                                if (targetStrings.Count > 0)
+                                {
+                                    ReplaceStringInProcessMemory(process, targetStrings);
+                                }
+                            }
+                            catch (Exception)
+                            {
+                                // Silent fail for individual string processing
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                // Silent fail for entire method
+            }
+        }
+
+        // Ultra-safe version that does nothing (for testing)
+        public static void ExecuteSafeMemoryCleaning()
+        {
+            // Do nothing - just return safely
+            // This can be used for testing if the crash is in the StringCleaner
         }
 
         // Execute only advanced anti-detection hooks (without memory cleaning)
