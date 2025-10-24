@@ -37,7 +37,10 @@ public class Aimbot : UserControl
   private string NoRecoilOld = "7A 44 F0 48 2D E9 10 B0 8D E2 02 8B 2D ED 08 D0";
   private string NoRecoilNew = "7A FF F0 48 2D E9 10 B0 8D E2 02 8B 2D ED 08 D0";
   
-  
+  // Aim Fov patterns
+  private string AimFovOld = "70 42 00 00 00 00 00 00 C0 3F 0A D7 A3 3B 0A D7 A3 3B 8F C2 75 3D AE 47 E1 3D 9A 99 19 3E CD CC 4C 3E A4 70 FD 3E";
+  private string AimFovNew = "FF FF 00 00 00 00 00 00 C0 3F 0A D7 A3 3B 0A D7 A3 3B 8F C2 75 3D AE 47 E1 3D 9A 99 19 3E CD CC 4C 3E A4 70 FD 3E";
+
   private Dictionary<long, int> OrginalValues1 = new Dictionary<long, int>();
   private Dictionary<long, int> OrginalValues2 = new Dictionary<long, int>();
   private Dictionary<long, int> OrginalValues3 = new Dictionary<long, int>();
@@ -56,6 +59,7 @@ public class Aimbot : UserControl
   private CustomCheckbox customCheckbox1;
   private CustomCheckbox customCheckboxPrecision;
   private CustomCheckbox customCheckboxNoRecoil;
+  private CustomCheckbox customCheckboxAimFov;
 
   public Aimbot()
   {
@@ -70,6 +74,7 @@ public class Aimbot : UserControl
     this.toolTip.SetToolTip((Control) this.customCheckbox6, "Ativa/Desativa Aimbot New:\n• Ativar Todo Inicio de Partida\n");
     this.toolTip.SetToolTip((Control) this.customCheckbox1, "Ativa/Desativa Aimbot Legit:\n• Ativar Todo Inicio de Partida\n");
     this.toolTip.SetToolTip((Control) this.customCheckbox5, "Ativa/Desativa Aimbot 2x:\n• Ativar no treinamento/partida\n• Sistema de ativação/desativação automática\n• Melhora a precisão em 2x");
+    this.toolTip.SetToolTip((Control) this.customCheckboxAimFov, "Ativa/Desativa Aim Fov:\n• Modifica FOV do aimbot\n• Aumenta área de detecção\n• Aplica patch de memória");
     this.toolTip.SetToolTip((Control) this.customCheckboxPrecision, "Ativa/Desativa Precision:\n• Modifica hexadecimal do HD-Player\n• Reduz trem do aimbot\n• Melhora precisão de mira");
     this.toolTip.SetToolTip((Control) this.customCheckboxNoRecoil, "Ativa/Desativa No Recoil:\n• Remove recuo da arma\n• Melhora precisão de tiro\n• Aplica patch de memória");
     this.toolTip.AutoPopDelay = 5000;
@@ -661,6 +666,62 @@ public class Aimbot : UserControl
     this.FUNÇÃO1BTN(this.customCheckbox5.Checked).Wait();
   }
 
+  private void customCheckboxAimFov_CheckedChanged(object sender, EventArgs e)
+  {
+    this.AimFovBTN(this.customCheckboxAimFov.Checked).Wait();
+  }
+
+  public async Task AimFovBTN(bool ativado)
+  {
+    if (ativado)
+    {
+      this.status.Text = "Aim Fov inject...";
+      if (await Aimbot.AimFovFunction(true))
+      {
+        this.status.Text = "Aim Fov inject sucesso.";
+      }
+      else
+      {
+        this.status.Text = "Erro ao injetar Aim Fov.";
+      }
+    }
+    else
+    {
+      this.status.Text = "Aim Fov desativando...";
+      if (await Aimbot.AimFovFunction(false))
+      {
+        this.status.Text = "Aim Fov desativado.";
+      }
+      else
+      {
+        this.status.Text = "Erro ao desativar Aim Fov.";
+      }
+    }
+  }
+
+  private static Task<bool> AimFovFunction(bool ativar)
+  {
+    try
+    {
+      Process[] processesByName = Process.GetProcessesByName("HD-Player");
+      if (processesByName.Length == 0)
+        return Task.FromResult(false);
+
+      Aimbot aimbot = new Aimbot();
+      string bytePattern = ativar ? aimbot.AimFovOld : aimbot.AimFovNew;
+      string valorNovo = ativar ? aimbot.AimFovNew : aimbot.AimFovOld;
+      
+      // Usar injeção direta sem CMD/shell
+      bool success = aimbot.InjectHexDirectly(processesByName[0], bytePattern, valorNovo);
+      
+      return Task.FromResult(success);
+    }
+    catch (Exception)
+    {
+      return Task.FromResult(false);
+    }
+  }
+
   private void customCheckbox1_CheckedChanged(object sender, EventArgs e)
   {
     this.OrginalValues1.Clear();
@@ -697,6 +758,7 @@ public class Aimbot : UserControl
     this.txt2 = new Txt();
     this.customCheckbox6 = new CustomCheckbox();
     this.customCheckbox5 = new CustomCheckbox();
+    this.customCheckboxAimFov = new CustomCheckbox();
     this.status = new Txt();
     this.guna2DragControl1 = new Guna2DragControl(this.components);
     this.customCheckbox1 = new CustomCheckbox();
@@ -738,12 +800,13 @@ public class Aimbot : UserControl
     ((Control) this.guna2Panel1).Controls.Add((Control) this.txt2);
     ((Control) this.guna2Panel1).Controls.Add((Control) this.customCheckbox6);
     ((Control) this.guna2Panel1).Controls.Add((Control) this.customCheckbox5);
+    ((Control) this.guna2Panel1).Controls.Add((Control) this.customCheckboxAimFov);
     ((Control) this.guna2Panel1).Controls.Add((Control) this.status);
     this.guna2Panel1.CustomBorderColor = Color.FromArgb(20, 20, 21);
     this.guna2Panel1.CustomBorderThickness = new Padding(0, 48 /*0x30*/, 0, 0);
     ((Control) this.guna2Panel1).Location = new Point(3, 0);
     ((Control) this.guna2Panel1).Name = "guna2Panel1";
-    ((Control) this.guna2Panel1).Size = new Size(238, 185);
+    ((Control) this.guna2Panel1).Size = new Size(238, 216);
     ((Control) this.guna2Panel1).TabIndex = 4;
     this.txt2.AutoSize = true;
     this.txt2.BackColor = Color.Transparent;
@@ -793,12 +856,30 @@ public class Aimbot : UserControl
     this.customCheckbox5.Size = new Size(228, 25);
     this.customCheckbox5.TabIndex = 3;
     this.customCheckbox5.CheckedChanged += new EventHandler(this.customCheckbox5_CheckedChanged);
+    this.customCheckboxAimFov.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+    this.customCheckboxAimFov.BorderColor = Color.Transparent;
+    this.customCheckboxAimFov.BorderRadius = 5;
+    this.customCheckboxAimFov.BorderThickness = 1.5f;
+    this.customCheckboxAimFov.Checked = false;
+    this.customCheckboxAimFov.CheckmarkColor = Color.FromArgb(147, 51, 234); // Roxo moderno
+    this.customCheckboxAimFov.CheckmarkSize = 9f;
+    this.customCheckboxAimFov.FillColor = Color.Transparent;
+    this.customCheckboxAimFov.Font = new Font("Microsoft Sans Serif", 12f, FontStyle.Regular, GraphicsUnit.Point, (byte) 0);
+    this.customCheckboxAimFov.LabelColor = Color.White;
+    this.customCheckboxAimFov.LabelFont = new Font("Microsoft Sans Serif", 11.8f);
+    this.customCheckboxAimFov.LabelSpacing = 93;
+    this.customCheckboxAimFov.LabelText = "Aim Fov - Risk";
+    this.customCheckboxAimFov.Location = new Point(6, 117);
+    this.customCheckboxAimFov.Name = "customCheckboxAimFov";
+    this.customCheckboxAimFov.Size = new Size(228, 25);
+    this.customCheckboxAimFov.TabIndex = 4;
+    this.customCheckboxAimFov.CheckedChanged += new EventHandler(this.customCheckboxAimFov_CheckedChanged);
     this.status.AutoSize = true;
     this.status.BackColor = Color.Transparent;
     this.status.Font = new Font("Microsoft Sans Serif", 9.75f, FontStyle.Regular, GraphicsUnit.Point, (byte) 0);
     this.status.ForeColor = Color.White;
     this.status.HorizontalTextAlignment = Txt.HorizontalAlignment.Center;
-    this.status.Location = new Point(6, 161);
+    this.status.Location = new Point(6, 192);
     this.status.Name = "status";
     this.status.Size = new Size(0, 19);
     this.status.TabIndex = 5;
