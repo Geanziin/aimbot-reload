@@ -320,7 +320,7 @@ public class Main : UserControl
     this.Controls.Add((Control) this.aimbot1);
     this.Controls.Add((Control) this.bypass1);
     this.Name = nameof (Main);
-    this.Size = new Size(528, 375);
+    this.Size = new Size(525, 375);
     this.Load += new EventHandler(this.Main_Load);
     ((ISupportInitialize) this.pictureBox1).EndInit();
     this.ResumeLayout(false);
