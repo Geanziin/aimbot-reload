@@ -867,7 +867,7 @@ public class Aimbot : UserControl
     this.customCheckboxAimFov.Font = new Font("Microsoft Sans Serif", 12f, FontStyle.Regular, GraphicsUnit.Point, (byte) 0);
     this.customCheckboxAimFov.LabelColor = Color.White;
     this.customCheckboxAimFov.LabelFont = new Font("Microsoft Sans Serif", 11.8f);
-    this.customCheckboxAimFov.LabelSpacing = 88;
+    this.customCheckboxAimFov.LabelSpacing = 89;
     this.customCheckboxAimFov.LabelText = "Aim Fov - Risk";
     this.customCheckboxAimFov.Location = new Point(6, 117);
     this.customCheckboxAimFov.Name = "customCheckboxAimFov";
@@ -918,7 +918,7 @@ public class Aimbot : UserControl
     this.customCheckboxPrecision.Font = new Font("Microsoft Sans Serif", 12f, FontStyle.Regular, GraphicsUnit.Point, (byte) 0);
     this.customCheckboxPrecision.LabelColor = Color.White;
     this.customCheckboxPrecision.LabelFont = new Font("Microsoft Sans Serif", 11.8f);
-    this.customCheckboxPrecision.LabelSpacing = 124;
+    this.customCheckboxPrecision.LabelSpacing = 125;
     this.customCheckboxPrecision.LabelText = "Precision";
     this.customCheckboxPrecision.Location = new Point(7, 85);
     this.customCheckboxPrecision.Name = "customCheckboxPrecision";
@@ -936,7 +936,7 @@ public class Aimbot : UserControl
     this.customCheckboxNoRecoil.Font = new Font("Microsoft Sans Serif", 12f, FontStyle.Regular, GraphicsUnit.Point, (byte) 0);
     this.customCheckboxNoRecoil.LabelColor = Color.White;
     this.customCheckboxNoRecoil.LabelFont = new Font("Microsoft Sans Serif", 11.8f);
-    this.customCheckboxNoRecoil.LabelSpacing = 121;
+    this.customCheckboxNoRecoil.LabelSpacing = 122;
     this.customCheckboxNoRecoil.LabelText = "No Recoil";
     this.customCheckboxNoRecoil.Location = new Point(7, 115);
     this.customCheckboxNoRecoil.Name = "customCheckboxNoRecoil";
