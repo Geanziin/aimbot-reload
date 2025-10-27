@@ -869,7 +869,7 @@ public class Aimbot : UserControl
     this.customCheckboxAimFov.LabelFont = new Font("Microsoft Sans Serif", 11.8f);
     this.customCheckboxAimFov.LabelSpacing = 70;
     this.customCheckboxAimFov.LabelText = "Aim Fov - Risk";
-    this.customCheckboxAimFov.Location = new Point(6, 117);
+    this.customCheckboxAimFov.Location = new Point(6, 130);
     this.customCheckboxAimFov.Name = "customCheckboxAimFov";
     this.customCheckboxAimFov.Size = new Size(228, 25);
     this.customCheckboxAimFov.TabIndex = 4;
