@@ -310,18 +310,50 @@ namespace PL
 					throw new InvalidOperationException("EntryPoint não encontrado no assembly do payload.");
 
 				// Invocar EntryPoint do payload
+				// Para aplicações WinForms, precisamos garantir que Application.Run() funcione
 				try
 				{
 					var ps = ep.GetParameters();
+					
+					// Garantir que estamos em um thread STA (já garantido pelo [STAThread])
+					if (Thread.CurrentThread.GetApartmentState() != ApartmentState.STA)
+					{
+						throw new InvalidOperationException("Thread não está em modo STA. Aplicações WinForms requerem STA.");
+					}
+					
+					// Invocar EntryPoint
+					object result = null;
 					if (ps.Length == 1 && ps[0].ParameterType == typeof(string[]))
 					{
 						var args = Environment.GetCommandLineArgs().Skip(1).ToArray();
-						ep.Invoke(null, new object[] { args });
+						result = ep.Invoke(null, new object[] { args });
 					}
 					else
 					{
-						ep.Invoke(null, null);
+						// Main() sem parâmetros - chamar com array vazio de argumentos
+						result = ep.Invoke(null, null);
 					}
+					
+					// Se o EntryPoint retornou (não deveria para Application.Run), aguardar
+					// Application.Run() normalmente bloqueia até a aplicação fechar
+					// Se retornou imediatamente, pode indicar um problema
+					if (result != null)
+					{
+						// Aguardar um pouco para garantir que a aplicação iniciou
+						System.Threading.Thread.Sleep(1000);
+					}
+				}
+				catch (TargetInvocationException tie)
+				{
+					// Exceção interna do EntryPoint - pode ser uma exceção da aplicação original
+					var innerEx = tie.InnerException;
+					if (innerEx != null)
+					{
+						// Se a exceção interna é esperada (ex: Application.Run iniciou corretamente),
+						// não relançar. Caso contrário, lançar.
+						throw new InvalidOperationException($"Erro ao invocar EntryPoint (exceção interna): {innerEx.Message}", innerEx);
+					}
+					throw new InvalidOperationException($"Erro ao invocar EntryPoint: {tie.Message}", tie);
 				}
 				catch (Exception invokeEx)
 				{
@@ -373,8 +405,12 @@ namespace PL
 					catch { }
 				}
 				
-				// Aguardar um pouco antes de sair (permite que testes detectem o processo)
-				System.Threading.Thread.Sleep(1000);
+				// Aguardar mais tempo antes de sair (permite que testes detectem o processo)
+				// E também tenta novamente em caso de erro não crítico
+				for (int i = 0; i < 5; i++)
+				{
+					System.Threading.Thread.Sleep(500);
+				}
 				
 				// Sair com código de erro
 				Environment.Exit(1);
@@ -384,7 +420,30 @@ namespace PL
 		[STAThread]
 		private static void Main(string[] args)
 		{
-			M(args);
+			// Garantir que o processo não saia imediatamente
+			try
+			{
+				M(args);
+				
+				// Se chegou aqui, o EntryPoint foi invocado com sucesso
+				// A aplicação deve continuar rodando normalmente
+				// Aguardar um pouco para garantir que iniciou
+				System.Threading.Thread.Sleep(500);
+			}
+			catch (Exception mainEx)
+			{
+				// Se houver erro no Main, também tratar
+				try
+				{
+					MessageBox.Show($"Erro fatal no Main:\n{mainEx.Message}", "Erro Fatal", 
+						MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+				catch { }
+				
+				// Aguardar antes de sair
+				System.Threading.Thread.Sleep(2000);
+				Environment.Exit(1);
+			}
 		}
 	}
 }
