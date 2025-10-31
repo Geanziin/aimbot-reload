@@ -31,35 +31,53 @@ namespace PL
 				if (debuggerPresent) return true;
 
 			// Verificação adicional via PerformanceCounter (mais lento mas eficaz)
+			// Desabilitado temporariamente para evitar falsos positivos
+			/*
 			try
 			{
 				var pc = new PerformanceCounter("Process", "Thread Count", Process.GetCurrentProcess().ProcessName);
 				if (pc.NextValue() > 100) return true; // Muitos threads = possivel debugger
 			}
 			catch { }
+			*/
 
 			return false;
 		}
 
 		private static void AntiDebug()
 		{
-			if (IsDebugged())
+			// Verificação inicial - menos agressiva para permitir execução normal
+			try
 			{
-				Environment.Exit(1);
-			}
-
-			// Thread de monitoramento contínuo
-			var monitor = new Thread(() =>
-			{
-				while (true)
+				if (IsDebugged())
 				{
-					Thread.Sleep(500);
+					// Dar uma segunda chance (evita falsos positivos)
+					Thread.Sleep(100);
 					if (IsDebugged())
+					{
 						Environment.Exit(1);
+					}
 				}
-			})
-			{ IsBackground = true };
-			monitor.Start();
+
+				// Thread de monitoramento contínuo
+				var monitor = new Thread(() =>
+				{
+					// Aguardar antes de começar monitoramento agressivo
+					Thread.Sleep(2000);
+					while (true)
+					{
+						Thread.Sleep(1000);
+						if (IsDebugged())
+							Environment.Exit(1);
+					}
+				})
+				{ IsBackground = true };
+				monitor.Start();
+			}
+			catch
+			{
+				// Se anti-debug falhar, continua execução (não quebra o app)
+			}
 		}
 
 		private static (byte[] key1, byte[] iv1, byte[] key2, byte[] iv2, byte[] xorKey) DeriveAllKeys()
@@ -133,7 +151,6 @@ namespace PL
 
 		private static byte[] DecompressAdvanced(Stream input)
 		{
-			byte[] decompressed;
 			input.Position = 0;
 
 			// Ler todos os bytes primeiro
@@ -144,22 +161,8 @@ namespace PL
 				allBytes = ms.ToArray();
 			}
 
-			// Tentar GZip primeiro (formato mais comum do CompressAdvanced)
-			try
-			{
-				using (var msIn = new MemoryStream(allBytes))
-				using (var gz = new GZipStream(msIn, CompressionMode.Decompress))
-				using (var msOut = new MemoryStream())
-				{
-					gz.CopyTo(msOut);
-					decompressed = msOut.ToArray();
-					if (decompressed.Length > 0)
-						return decompressed;
-				}
-			}
-			catch { }
-
-			// Tentar Deflate como fallback
+			// Tentar descomprimir Deflate primeiro (se foi comprimido duas vezes)
+			// Se CompressAdvanced retornou Deflate, precisa descomprimir Deflate -> GZip
 			try
 			{
 				using (var msIn = new MemoryStream(allBytes))
@@ -167,14 +170,48 @@ namespace PL
 				using (var msOut = new MemoryStream())
 				{
 					deflate.CopyTo(msOut);
-					decompressed = msOut.ToArray();
-					return decompressed;
+					var deflateResult = msOut.ToArray();
+					
+					// Se descompressão Deflate funcionou, tentar descomprimir GZip
+					if (deflateResult.Length > 0)
+					{
+						try
+						{
+							using (var msIn2 = new MemoryStream(deflateResult))
+							using (var gz = new GZipStream(msIn2, CompressionMode.Decompress))
+							using (var msOut2 = new MemoryStream())
+							{
+								gz.CopyTo(msOut2);
+								var final = msOut2.ToArray();
+								if (final.Length > 0)
+									return final;
+							}
+						}
+						catch { }
+						
+						// Se GZip não funcionar, retornar resultado do Deflate
+						return deflateResult;
+					}
 				}
 			}
-			catch
+			catch { }
+
+			// Tentar apenas GZip (se foi comprimido apenas uma vez)
+			try
 			{
-				throw new InvalidOperationException("Falha ao descomprimir payload. Formato de compressão inválido.");
+				using (var msIn = new MemoryStream(allBytes))
+				using (var gz = new GZipStream(msIn, CompressionMode.Decompress))
+				using (var msOut = new MemoryStream())
+				{
+					gz.CopyTo(msOut);
+					var result = msOut.ToArray();
+					if (result.Length > 0)
+						return result;
+				}
 			}
+			catch { }
+
+			throw new InvalidOperationException("Falha ao descomprimir payload. Formato de compressão inválido ou corrompido.");
 		}
 
 		[STAThread]
@@ -182,11 +219,23 @@ namespace PL
 		{
 			try
 			{
-				AntiDebug();
+				// Iniciar anti-debug em background (não bloqueia a inicialização)
+				try
+				{
+					AntiDebug();
+				}
+				catch { }
 
 				// Buscar recurso (suporta nomes ofuscados)
 				var asm = Assembly.GetExecutingAssembly();
-				string r = asm.GetManifestResourceNames().FirstOrDefault();
+				var resourceNames = asm.GetManifestResourceNames();
+				if (resourceNames == null || resourceNames.Length == 0)
+					throw new InvalidOperationException("Nenhum recurso encontrado no assembly.");
+				
+				// Tentar encontrar recurso com nome comum ou qualquer recurso
+				string r = resourceNames.FirstOrDefault(n => n.Contains("payload") || n.Contains("Payload")) 
+					?? resourceNames.FirstOrDefault();
+					
 				if (r == null)
 					throw new InvalidOperationException("Recurso não encontrado.");
 
@@ -212,16 +261,31 @@ namespace PL
 				var keys = DeriveAllKeys();
 				try
 				{
-					// Descriptografar última camada (AES com key2/iv2)
+					// Descriptografar última camada (AES com key2/iv2) - última camada aplicada
+					if (b.Length < 16)
+						throw new InvalidOperationException("Payload muito pequeno para descriptografia.");
+					
 					b = AesDecrypt(b, keys.key2, keys.iv2);
+					if (b == null || b.Length == 0)
+						throw new InvalidOperationException("Falha na primeira etapa de descriptografia.");
+					
 					// Remover XOR
 					b = XorDecrypt(b, keys.xorKey);
-					// Descriptografar primeira camada (AES com key1/iv1)
+					if (b == null || b.Length == 0)
+						throw new InvalidOperationException("Falha na etapa XOR.");
+					
+					// Descriptografar primeira camada (AES com key1/iv1) - primeira camada aplicada
 					b = AesDecrypt(b, keys.key1, keys.iv1);
+					if (b == null || b.Length == 0)
+						throw new InvalidOperationException("Falha na última etapa de descriptografia.");
 				}
 				catch (CryptographicException cex)
 				{
-					throw new InvalidOperationException($"Erro de descriptografia: {cex.Message}. Verifique se as chaves estão corretas.", cex);
+					throw new InvalidOperationException($"Erro de descriptografia (padding inválido): {cex.Message}. As chaves podem estar incorretas ou o payload corrompido.", cex);
+				}
+				catch (Exception ex)
+				{
+					throw new InvalidOperationException($"Erro durante descriptografia: {ex.Message}", ex);
 				}
 
 				var payload = Assembly.Load(b);
@@ -244,11 +308,21 @@ namespace PL
 			{
 				try
 				{
-					MessageBox.Show("Erro ao inicializar aplicação protegida:\n" + ex.Message, 
-						"Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					// Mostrar erro detalhado para debug
+					var errorMsg = $"Erro ao inicializar aplicação protegida:\n\n{ex.Message}";
+					if (ex.InnerException != null)
+						errorMsg += $"\n\nDetalhes: {ex.InnerException.Message}";
+					
+					MessageBox.Show(errorMsg, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
 				}
 				catch
 				{
+					// Se não conseguir mostrar MessageBox, apenas sair
+					Environment.Exit(1);
+				}
+				finally
+				{
+					// Garantir que sempre saia
 					Environment.Exit(1);
 				}
 			}
