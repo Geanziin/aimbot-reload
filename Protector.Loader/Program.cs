@@ -91,8 +91,10 @@ namespace PL
 			using (var pbkdf2 = new Rfc2898DeriveBytes(salt4, Encoding.UTF8.GetBytes(baseStr + salt4), 5000))
 				iv2 = pbkdf2.GetBytes(16);
 
+			// XOR key deve ser derivado da mesma forma que no Protector: DeriveKeyIv("PX", "SX")
+			// No Protector: salt1="PX" + machineId[...], usa salt1 com baseStr+salt1, 10000 iterações
 			byte[] xorKey;
-			using (var pbkdf2 = new Rfc2898DeriveBytes(saltX, Encoding.UTF8.GetBytes(baseStr + saltSX), 8000))
+			using (var pbkdf2 = new Rfc2898DeriveBytes(saltX, Encoding.UTF8.GetBytes(baseStr + saltX), 10000))
 				xorKey = pbkdf2.GetBytes(32);
 
 			return (key1, iv1, key2, iv2, xorKey);
@@ -132,29 +134,47 @@ namespace PL
 		private static byte[] DecompressAdvanced(Stream input)
 		{
 			byte[] decompressed;
+			input.Position = 0;
 
-			// Tentar Deflate primeiro, se falhar tenta GZip
+			// Ler todos os bytes primeiro
+			byte[] allBytes;
+			using (var ms = new MemoryStream())
+			{
+				input.CopyTo(ms);
+				allBytes = ms.ToArray();
+			}
+
+			// Tentar GZip primeiro (formato mais comum do CompressAdvanced)
 			try
 			{
-				using (var deflate = new DeflateStream(input, CompressionMode.Decompress, leaveOpen: true))
-				using (var ms = new MemoryStream())
+				using (var msIn = new MemoryStream(allBytes))
+				using (var gz = new GZipStream(msIn, CompressionMode.Decompress))
+				using (var msOut = new MemoryStream())
 				{
-					deflate.CopyTo(ms);
-					decompressed = ms.ToArray();
+					gz.CopyTo(msOut);
+					decompressed = msOut.ToArray();
+					if (decompressed.Length > 0)
+						return decompressed;
+				}
+			}
+			catch { }
+
+			// Tentar Deflate como fallback
+			try
+			{
+				using (var msIn = new MemoryStream(allBytes))
+				using (var deflate = new DeflateStream(msIn, CompressionMode.Decompress))
+				using (var msOut = new MemoryStream())
+				{
+					deflate.CopyTo(msOut);
+					decompressed = msOut.ToArray();
+					return decompressed;
 				}
 			}
 			catch
 			{
-				input.Position = 0;
-				using (var gz = new GZipStream(input, CompressionMode.Decompress, leaveOpen: true))
-				using (var ms = new MemoryStream())
-				{
-					gz.CopyTo(ms);
-					decompressed = ms.ToArray();
-				}
+				throw new InvalidOperationException("Falha ao descomprimir payload. Formato de compressão inválido.");
 			}
-
-			return decompressed;
 		}
 
 		[STAThread]
@@ -172,13 +192,37 @@ namespace PL
 
 				byte[] b;
 				using (var s = asm.GetManifestResourceStream(r))
-					b = DecompressAdvanced(s);
+				{
+					if (s == null)
+						throw new InvalidOperationException("Não foi possível ler o recurso.");
+					
+					// Ler todos os bytes do recurso primeiro
+					using (var ms = new MemoryStream())
+					{
+						s.CopyTo(ms);
+						var resourceBytes = ms.ToArray();
+						
+						// Tentar descomprimir
+						using (var ms2 = new MemoryStream(resourceBytes))
+							b = DecompressAdvanced(ms2);
+					}
+				}
 
-				// Descriptografia reversa: AES -> XOR -> AES
+				// Descriptografia reversa: AES -> XOR -> AES (ordem inversa da criptografia)
 				var keys = DeriveAllKeys();
-				b = AesDecrypt(b, keys.key2, keys.iv2);
-				b = XorDecrypt(b, keys.xorKey);
-				b = AesDecrypt(b, keys.key1, keys.iv1);
+				try
+				{
+					// Descriptografar última camada (AES com key2/iv2)
+					b = AesDecrypt(b, keys.key2, keys.iv2);
+					// Remover XOR
+					b = XorDecrypt(b, keys.xorKey);
+					// Descriptografar primeira camada (AES com key1/iv1)
+					b = AesDecrypt(b, keys.key1, keys.iv1);
+				}
+				catch (CryptographicException cex)
+				{
+					throw new InvalidOperationException($"Erro de descriptografia: {cex.Message}. Verifique se as chaves estão corretas.", cex);
+				}
 
 				var payload = Assembly.Load(b);
 				var ep = payload.EntryPoint;
