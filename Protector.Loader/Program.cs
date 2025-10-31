@@ -251,9 +251,15 @@ namespace PL
 						s.CopyTo(ms);
 						var resourceBytes = ms.ToArray();
 						
+						if (resourceBytes == null || resourceBytes.Length == 0)
+							throw new InvalidOperationException("Recurso vazio ou corrompido.");
+						
 						// Tentar descomprimir
 						using (var ms2 = new MemoryStream(resourceBytes))
 							b = DecompressAdvanced(ms2);
+							
+						if (b == null || b.Length == 0)
+							throw new InvalidOperationException("Descompressão resultou em dados vazios.");
 					}
 				}
 
@@ -288,43 +294,90 @@ namespace PL
 					throw new InvalidOperationException($"Erro durante descriptografia: {ex.Message}", ex);
 				}
 
-				var payload = Assembly.Load(b);
+				// Carregar assembly do payload
+				Assembly payload;
+				try
+				{
+					payload = Assembly.Load(b);
+				}
+				catch (Exception loadEx)
+				{
+					throw new InvalidOperationException($"Falha ao carregar assembly do payload: {loadEx.Message}", loadEx);
+				}
+
 				var ep = payload.EntryPoint;
 				if (ep == null)
-					throw new InvalidOperationException("EntryPoint não encontrado.");
+					throw new InvalidOperationException("EntryPoint não encontrado no assembly do payload.");
 
-				var ps = ep.GetParameters();
-				if (ps.Length == 1 && ps[0].ParameterType == typeof(string[]))
+				// Invocar EntryPoint do payload
+				try
 				{
-					var args = Environment.GetCommandLineArgs().Skip(1).ToArray();
-					ep.Invoke(null, new object[] { args });
+					var ps = ep.GetParameters();
+					if (ps.Length == 1 && ps[0].ParameterType == typeof(string[]))
+					{
+						var args = Environment.GetCommandLineArgs().Skip(1).ToArray();
+						ep.Invoke(null, new object[] { args });
+					}
+					else
+					{
+						ep.Invoke(null, null);
+					}
 				}
-				else
+				catch (Exception invokeEx)
 				{
-					ep.Invoke(null, null);
+					throw new InvalidOperationException($"Erro ao invocar EntryPoint: {invokeEx.Message}", invokeEx);
 				}
 			}
 			catch (Exception ex)
 			{
+				// Log detalhado do erro (útil para debug)
+				var errorDetails = new System.Text.StringBuilder();
+				errorDetails.AppendLine($"Erro ao inicializar aplicação protegida:");
+				errorDetails.AppendLine($"Tipo: {ex.GetType().Name}");
+				errorDetails.AppendLine($"Mensagem: {ex.Message}");
+				
+				if (ex.InnerException != null)
+				{
+					errorDetails.AppendLine($"\nErro interno:");
+					errorDetails.AppendLine($"Tipo: {ex.InnerException.GetType().Name}");
+					errorDetails.AppendLine($"Mensagem: {ex.InnerException.Message}");
+				}
+				
+				errorDetails.AppendLine($"\nStack Trace:");
+				errorDetails.AppendLine(ex.StackTrace);
+				
+				// Tentar mostrar erro em MessageBox (visível mesmo em modo Hidden)
 				try
 				{
-					// Mostrar erro detalhado para debug
-					var errorMsg = $"Erro ao inicializar aplicação protegida:\n\n{ex.Message}";
-					if (ex.InnerException != null)
-						errorMsg += $"\n\nDetalhes: {ex.InnerException.Message}";
+					// Forçar criação de janela visível
+					var form = new System.Windows.Forms.Form
+					{
+						WindowState = System.Windows.Forms.FormWindowState.Normal,
+						ShowInTaskbar = true,
+						TopMost = true
+					};
+					form.Show();
 					
-					MessageBox.Show(errorMsg, "Erro", MessageBoxButtons.OK, MessageBoxIcon.Error);
+					MessageBox.Show(errorDetails.ToString(), "Erro - Aplicação Protegida", 
+						MessageBoxButtons.OK, MessageBoxIcon.Error);
+					
+					form.Close();
 				}
 				catch
 				{
-					// Se não conseguir mostrar MessageBox, apenas sair
-					Environment.Exit(1);
+					// Se MessageBox falhar, tentar escrever no console de erro
+					try
+					{
+						Console.Error.WriteLine(errorDetails.ToString());
+					}
+					catch { }
 				}
-				finally
-				{
-					// Garantir que sempre saia
-					Environment.Exit(1);
-				}
+				
+				// Aguardar um pouco antes de sair (permite que testes detectem o processo)
+				System.Threading.Thread.Sleep(1000);
+				
+				// Sair com código de erro
+				Environment.Exit(1);
 			}
 		}
 
