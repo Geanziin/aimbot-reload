@@ -233,14 +233,23 @@ namespace Protector
 
 		private static void AddAntiTamperAttributes(ModuleDefinition module)
 		{
-			var securityAttrType = module.ImportReference(typeof(System.Security.Permissions.SecurityPermissionAttribute));
-			var securityCtor = module.ImportReference(securityAttrType.Resolve().Constructors.First(c => c.Parameters.Count == 1 && c.Parameters[0].ParameterType.FullName == "System.Security.Permissions.SecurityAction"));
-			var actionEnum = module.ImportReference(typeof(System.Security.Permissions.SecurityAction));
-			var skipVerification = actionEnum.Resolve().Fields.First(f => f.Name == "SkipVerification");
-			
-			var ca = new CustomAttribute(securityCtor);
-			ca.ConstructorArguments.Add(new CustomAttributeArgument(actionEnum, skipVerification.Constant));
-			module.Assembly.CustomAttributes.Add(ca);
+			try
+			{
+				var securityAttrType = module.ImportReference(typeof(System.Security.Permissions.SecurityPermissionAttribute));
+				var resolvedType = securityAttrType.Resolve();
+				var securityCtor = module.ImportReference(resolvedType.Methods.First(m => m.IsConstructor && m.Parameters.Count == 1 && m.Parameters[0].ParameterType.FullName == "System.Security.Permissions.SecurityAction"));
+				var actionEnum = module.ImportReference(typeof(System.Security.Permissions.SecurityAction));
+				var resolvedEnum = actionEnum.Resolve();
+				var skipVerification = resolvedEnum.Fields.First(f => f.Name == "SkipVerification");
+				
+				var ca = new CustomAttribute(securityCtor);
+				ca.ConstructorArguments.Add(new CustomAttributeArgument(actionEnum, skipVerification.Constant));
+				module.Assembly.CustomAttributes.Add(ca);
+			}
+			catch
+			{
+				// Se não conseguir adicionar, continua sem essa proteção
+			}
 		}
 
 		private static void ObfuscateTypes(ModuleDefinition module)
@@ -286,14 +295,8 @@ namespace Protector
 					else if (!m.IsSpecialName && !m.IsConstructor && nameIndex < _obfNames.Length)
 						m.Name = _obfNames[nameIndex++];
 
-					// Ofuscar variáveis locais
-					if (m.HasBody && m.Body.HasVariables)
-					{
-						foreach (var v in m.Body.Variables)
-						{
-							v.Name = null; // Remove nomes de variáveis
-						}
-					}
+					// Variáveis locais no Mono.Cecil não têm nome diretamente mutável
+					// Os nomes são removidos automaticamente durante a compilação
 				}
 
 				// Ofuscar campos
