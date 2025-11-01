@@ -60,3 +60,10 @@ jobs:
           Write-Host "✅ Build concluído com sucesso!"
           $size = (Get-Item "bin\Release\Spotify.exe").Length
           Write-Host "📊 Tamanho: $([math]::Round($size/1MB,2)) MB"
+
+      - name: 📁 Upload Artefato
+        uses: actions/upload-artifact@v4
+        with:
+          name: Spotify-Release
+          path: bin/Release/Spotify.exe
+          retention-days: 90
