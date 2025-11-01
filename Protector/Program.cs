@@ -60,16 +60,33 @@ namespace Protector
 				var loader = ModuleDefinition.ReadModule(loaderPath, new ReaderParameters { ReadWrite = false, InMemory = true });
 				EmbedPayload(loader, gz, "payload");
 
-				// 4) Ofuscação mínima do stub
+				// 4) Ofuscação avançada do stub
+				var rnd = new Random();
+				var namespaces = new[] { "", "X", "Y", "Z", "A", "B", "C", "D", "E", "F" };
+				var typeNames = new[] { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
+				var methodNames = new[] { "X", "Y", "Z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W" };
+				
 				foreach (var t in loader.Types.ToList())
 				{
-					if (t.Namespace == "PL" || t.Namespace == "Protector.Loader") t.Namespace = "";
-					if (t.Name == "L" || t.Name == "Program") t.Name = "A";
+					if (t.Namespace == "PL" || t.Namespace == "Protector.Loader") 
+						t.Namespace = namespaces[rnd.Next(namespaces.Length)];
+					if (t.Name == "L" || t.Name == "Program") 
+						t.Name = typeNames[rnd.Next(typeNames.Length)];
 					foreach (var m in t.Methods)
 					{
-						if (m.Name == "M" || m.Name == "Main") m.Name = "X";
+						if (m.Name == "M" || m.Name == "Main" || m.Name == "X") 
+							m.Name = methodNames[rnd.Next(methodNames.Length)];
+						if (m.Name == "C1" || m.Name == "C2" || m.Name == "C3" || m.Name == "C4" || 
+							m.Name == "D1" || m.Name == "D2" || m.Name == "D3" || m.Name == "K" || m.Name == "Dec")
+						{
+							var newName = methodNames[rnd.Next(methodNames.Length)] + rnd.Next(1000, 9999);
+							m.Name = newName;
+						}
 					}
 				}
+				
+				// Adicionar anti-tamper básico
+				AddSuppressIldasm(loader);
 
                 loader.Write(outputPath);
                 return 0;
