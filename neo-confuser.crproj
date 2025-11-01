@@ -27,95 +27,55 @@
 
   <!-- REGRA GLOBAL (aplicada a tudo) -->
   <rule pattern="true" inherit="false">
-    <!-- Proteções Anti-Analysis -->
-    <protection id="anti tamper">
-      <argument name="key" value="StrongAntiTamperKey2025" />
-      <argument name="seed" value="random" />
-    </protection>
-    <protection id="anti debug">
-      <argument name="mode" value="strong" />
-      <argument name="forceSleep" value="true" />
-      <argument name="sleep" value="10" />
-    </protection>
-    <protection id="anti dump">
-      <argument name="mode" value="preemptive" />
-    </protection>
+    <protection id="anti tamper" />
+    <protection id="anti debug" />
+    <protection id="anti dump" />
     <protection id="anti ildasm" />
-    <protection id="anti debugger">
-      <argument name="mode" value="strong" />
-    </protection>
 
-    <!-- Ofuscação de Constantes -->
     <protection id="constants">
       <argument name="mode" value="dynamic" />
-      <argument name="decoderCount" value="10" />
+      <argument name="decoderCount" value="5" />
       <argument name="cfg" value="true" />
-      <argument name="predicate" value="x86" />
-      <argument name="x86" value="true" />
     </protection>
 
-    <!-- Control Flow Obfuscation Avançada -->
     <protection id="ctrl flow">
       <argument name="type" value="switch" />
-      <argument name="intensity" value="maximum" />
+      <argument name="intensity" value="high" />
       <argument name="junk" value="true" />
-      <argument name="predicate" value="x86" />
-      <argument name="x86" value="true" />
     </protection>
 
-    <!-- Reference Proxy (Proteção de Chamadas) -->
     <protection id="ref proxy">
       <argument name="mode" value="strong" />
       <argument name="typeErasure" value="true" />
-      <argument name="depth" value="10" />
-      <argument name="initCount" value="2" />
-      <argument name="mild" value="false" />
+      <argument name="depth" value="5" />
     </protection>
 
-    <!-- Renomeação Agressiva -->
     <protection id="rename">
       <argument name="mode" value="unicode" />
-      <argument name="password" value="SpotifyProtection2025SecureKey" />
+      <argument name="password" value="SpotifyProtection2025" />
       <argument name="renPublic" value="true" />
       <argument name="flatten" value="true" />
       <argument name="renameArgs" value="true" />
-      <argument name="renPdb" value="true" />
-      <argument name="renXaml" value="true" />
     </protection>
 
-    <!-- Proteção de Recursos -->
     <protection id="resources">
       <argument name="mode" value="dynamic" />
       <argument name="compress" value="true" />
-      <argument name="encrypt" value="true" />
     </protection>
 
-    <!-- Watermark (Rastreamento) -->
     <protection id="watermark">
-      <argument name="msg" value="Protected by Neo-ConfuserEx v2.0" />
-      <argument name="key" value="StrongWatermarkKey2025" />
-      <argument name="owner" value="SpotifyProtection" />
+      <argument name="msg" value="Protected by Neo-ConfuserEx" />
+      <argument name="key" value="StrongWatermark" />
     </protection>
 
-    <!-- Invalid Metadata -->
-    <protection id="invalid metadata">
-      <argument name="mode" value="strong" />
-    </protection>
-
-    <!-- Hardening -->
+    <protection id="invalid metadata" />
     <protection id="harden" />
   </rule>
 
   <!-- Packer/Compressor -->
   <packer id="compressor">
     <argument name="compat" value="true" />
-    <argument name="level" value="maximum" />
   </packer>
-
-  <!-- Configurações Avançadas -->
-  <settings>
-    <seed>random</seed>
-  </settings>
 
 </project>
 
