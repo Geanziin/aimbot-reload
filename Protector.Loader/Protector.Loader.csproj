@@ -10,4 +10,7 @@
   <ItemGroup>
     <None Include="..\Spotify.ico" Pack="false" Visible="false" />
   </ItemGroup>
+  <ItemGroup>
+    <Reference Include="System.Management" />
+  </ItemGroup>
 </Project>
